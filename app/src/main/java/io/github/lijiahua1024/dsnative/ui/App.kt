@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalDensity
@@ -106,43 +107,40 @@ fun DrawerFrame(
             Modifier
                 .fillMaxSize()
                 .pointerInput(edgePx) {
-                    var dragStart = 0f
-                    var lastX = 0f
-                    var lastT = 0L
-                    var vx = 0f
-                    var lastMoveT = 0L
+                    // Port of useAndroidDrawerGesture.ts: drag anywhere,
+                    // horizontal wins via slop; distance = |dx| - 8px,
+                    // gain 1.031; velocity from last-60ms samples,
+                    // pause > 56ms => 0; settle: fling sign else p >= 0.5.
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
-                        val canOpen = progress < 1f && down.position.x < with(density) { 20.dp.toPx() } * 4
-                        val canClose = progress > 0f
-                        if (!canOpen && !canClose) return@awaitEachGesture
-                        dragStart = progress * edgePx
-                        lastX = down.position.x
-                        lastT = down.uptimeMillis
-                        lastMoveT = down.uptimeMillis
-                        vx = 0f
+                        val startedOpen = progress >= 0.999f
+                        val startProgress = progress
+                        val downX = down.position.x
+                        val samples = java.util.ArrayDeque<Pair<Float, Long>>()
+                        samples.add(down.position.x to down.uptimeMillis)
+                        val slopPx = 8f * density.density // 8px CSS ≈ 3dp at x2.63
                         val drag = awaitHorizontalTouchSlopOrCancellation(down.id) { change, _ ->
                             change.consume()
                         } ?: return@awaitEachGesture
                         horizontalDrag(drag.id) { change: PointerInputChange ->
                             val now = change.uptimeMillis
-                            val dx = change.positionChange().x
-                            val dt = now - lastMoveT
-                            if (dt in 1..56) vx = dx / dt
-                            lastMoveT = now
-                            val raw = dragStart + (change.position.x - down.position.x)
-                            val gained = raw * 1.031f
-                            settleTo(gained / edgePx)
+                            if (now > samples.last().second) {
+                                samples.add(change.position.x to now)
+                                while (samples.size > 1 && now - samples.first().second > 60) samples.removeFirst()
+                            }
+                            val dx = change.position.x - downX
+                            val distance = kotlin.math.sign(dx) * max(0f, abs(dx) - slopPx)
+                            settleTo(startProgress + (1.031f * distance) / edgePx)
                             change.consume()
                         }
-                        // pointer released: settle by fling or position
-                        val target = when {
-                            vx > 0.33f -> 1f
-                            vx < -0.33f -> 0f
-                            progress >= 0.5f -> 1f
-                            else -> 0f
-                        }
-                        settleTo(target)
+                        val now = android.os.SystemClock.uptimeMillis()
+                        val first = samples.first()
+                        val last = samples.last()
+                        val velocity = if (first != last && now - last.second < 56)
+                            (last.first - first.first) / (last.second - first.second) else 0f
+                        val flick = abs(velocity) >= 0.33f
+                        val open = if (flick) velocity > 0 else progress >= 0.5f
+                        settleTo(if (open) 1f else 0f)
                     }
                 }
         ) {
@@ -179,7 +177,12 @@ fun DrawerFrame(
             ) {
                 mainContent { settleTo(1f) }
                 if (progress > 0f) {
-                    Box(Modifier.fillMaxSize().graphicsLayer { alpha = 0.7f * progress }.background(Color.Black))
+                    Box(Modifier.fillMaxSize()
+                        .graphicsLayer { alpha = 0.7f * progress }
+                        .background(Color.Black)
+                        .pointerInput(Unit) {
+                            detectTapGestures { settleTo(0f) }
+                        })
                 }
             }
         }

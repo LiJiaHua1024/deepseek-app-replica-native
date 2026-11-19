@@ -30,3 +30,9 @@
 - Written: theme/Theme.kt (DsColors light/dark full tokens), data/ApiKeyStore.kt (Keystore AES/GCM), data/SettingsStore.kt, data/Models.kt (serializable Session/Message/ReplyBlock), data/ChatStore.kt (file JSON store, drafts, sendMessage/streamReply with SSE applyEvent, branching appendBranch/selectVersion, groupSessions), api/DeepSeekApi.kt (verifyApiKey GET /models, openMessageStream SSE reader).
 - TODO next: Strings.kt (zh copy from reference zh.ts), App.kt + drawer gesture composable, ui/sider/Sider.kt, ui/session/{SessionView,Welcome,MessageList,ReplyArea}.kt, ui/input/ChatInput.kt, ui/settings/{AndroidSettings,ApiKeyScreen}.kt, MainActivity.kt, tools/mock-api/server.js, then ./gradlew assembleDebug.
 - Reference key files: src/components/{sider,session,chatInput,messages,settings}/*.tsx + .module.css; services in src/services/{api,chat}; i18n src/i18n/zh.ts.
+
+## M2 state (checkpoint)
+- DrawerFrame ported: drag anywhere horizontal, distance=|dx|-8px, gain 1.031, 60ms velocity window, 56ms pause, fling 0.33px/ms, settle p>=0.5. Tap-dim closes. Verified: mid-drag screenshot OK, tap-outside closes.
+- Sider: search + new chat + grouped list + long-press menu (pin/rename/delete/multi-select) + settings row built. Session title fallback "untitledChat".
+- Known gap: sider search TextField bg invisible (bgLayer3 too light?), check vs reference .search bg color in M3.
+- Mock emits title "问候" in message_delta; applied only when titleSessions (untitled) per reference.
