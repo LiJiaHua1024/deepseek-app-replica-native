@@ -40,6 +40,7 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
     }
     val streaming by chatStore.streaming.collectAsState()
     val listState = rememberLazyListState()
+    var sourcesPanel by remember { mutableStateOf<List<Source>?>(null) }
 
     // ref top inset = 128px@2.75dpr: gray status bar + ~17px gray filler
     Column(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0xFF757575)).statusBarsPadding()) {
@@ -49,6 +50,7 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
     // (27css px) above the screen bottom, so the disclaimer must overlay rather
     // than consume flow space below ChatInput.
     Box(Modifier.weight(1f).fillMaxWidth()) {
+    CompositionLocalProvider(LocalOpenSources provides { sourcesPanel = it }) {
     Column(Modifier.fillMaxSize()) {
         // header: h52, padding 0 2 0 4
         Row(Modifier.fillMaxWidth().height(52.dp).padding(start = 4.dp, end = 2.dp),
@@ -151,6 +153,8 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
         // content caveat + input
         ChatInput(settings, chatStore)
     }
+    }
+    sourcesPanel?.let { SearchSourcesPanel(it, numbered = true) { sourcesPanel = null } }
     if (session != null) {
         val keyboardOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
         if (!keyboardOpen) {
@@ -231,13 +235,24 @@ fun WaitingDots() {
 fun AssistantView(msg: Message.Assistant, sessionId: String, chatStore: ChatStore, onOpenSettings: () -> Unit = {}) {
     val c = DsTheme.colors
     val ctx = LocalContext.current
+    val sources = remember(msg.blocks) { searchSources(msg.blocks) }
+    val openSources = LocalOpenSources.current
     Column(Modifier.fillMaxWidth().padding(start = 24.dp, end = 19.dp)) {
-        for (block in msg.blocks) {
+    CompositionLocalProvider(LocalSources provides sources) {
+        var prevWasStep = false
+        for (block in withCitationMarkers(msg.blocks, sources)) {
             when (block) {
-                is ReplyBlock.Thinking -> ThinkingBlock(block, msg)
-                is ReplyBlock.Text -> MarkdownBody(block.text)
-                is ReplyBlock.Tool -> {}
+                is ReplyBlock.Thinking -> ThinkingBlock(block, msg).also { prevWasStep = true }
+                is ReplyBlock.Text -> MarkdownBody(block.text,
+                    Modifier.padding(top = if (prevWasStep) 5.dp else 0.dp))
+                    .also { prevWasStep = false }
+                is ReplyBlock.Tool -> toolStep(block, msg.blocks, sources)?.let { (stepSources, done) ->
+                    SearchStepRow(stepSources, done, openSources)
+                }.also { prevWasStep = true }
             }
+        }
+        if (msg.status != ReplyStatus.STREAMING && msg.status != ReplyStatus.ERROR && sources.isNotEmpty()) {
+            SourcesSummary(sources) { openSources(sources) }
         }
         when (msg.status) {
             // ref .waiting: three 6px dots fading in a 34px row
@@ -307,6 +322,7 @@ fun AssistantView(msg: Message.Assistant, sessionId: String, chatStore: ChatStor
                 }
             }
         }
+    }
     }
 }
 

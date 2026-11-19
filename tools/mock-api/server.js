@@ -100,6 +100,52 @@ function blockReply({ thinking, text, delay = 25, drop = false, holdAfter = 0 })
   };
 }
 
+const SEARCH_SOURCES = [
+  { url: 'https://www.example-a.com/deepseek-v3', title: 'DeepSeek-V3 Technical Report 详解：671B MoE 架构与创新', page_age: '2024-12-27T08:00:00Z', site_name: 'Example A', site_icon: null, snippet: 'DeepSeek-V3 采用混合专家架构，总参数量达到 671B，每个 token 激活 37B 参数。其创新的多头潜注意力（MLA）机制显著降低了推理时的 KV 缓存开销。' },
+  { url: 'https://www.example-b.net/news/deepseek', title: 'DeepSeek 发布新一代推理模型，开源权重引发关注', page_age: '2025-01-15T12:30:00Z', site_name: 'Example B', site_icon: null, snippet: 'DeepSeek 团队最新发布的模型在多项基准测试中表现亮眼，开源策略受到社区广泛好评，被认为推动了开源大模型生态的发展。' },
+  { url: 'https://www.example-c.org/blog/moe', title: '从 DeepSeek 看混合专家模型的工程化实践', page_age: null, site_name: null, site_icon: null, snippet: '混合专家模型通过路由机制只激活部分参数，在保持模型容量的同时大幅降低计算成本，已成为大模型架构的主流选择之一。' },
+];
+
+function searchReply(res) {
+  sse(res, [
+    'event: message_start\ndata: {"type":"message_start","message":{"id":"msg_mock","model":"deepseek-flash"}}\n\n',
+  ]);
+  res.write('event: content_block_start\ndata: ' + JSON.stringify({
+    type: 'content_block_start', index: 0,
+    content_block: { type: 'server_tool_use', id: 'toolu_search_1', name: 'deepseek_web_search', kind: 'search', input: { action: 'search', queries: ['DeepSeek'] } },
+  }) + '\n\n');
+  res.write('event: content_block_stop\ndata: {"type":"content_block_stop","index":0}\n\n');
+  res.write('event: content_block_start\ndata: ' + JSON.stringify({
+    type: 'content_block_start', index: 1,
+    content_block: { type: 'web_search_tool_result', tool_use_id: 'toolu_search_1', kind: 'search', content: SEARCH_SOURCES.map((s) => ({ type: 'web_search_result', ...s })) },
+  }) + '\n\n');
+  res.write('event: content_block_stop\ndata: {"type":"content_block_stop","index":1}\n\n');
+  const TEXT = '根据搜索结果，DeepSeek-V3 采用了混合专家架构，总参数量 671B。其 MLA 机制有效降低了推理开销';
+  res.write('event: content_block_start\ndata: ' + JSON.stringify({
+    type: 'content_block_start', index: 2, content_block: { type: 'text', text: '' },
+  }) + '\n\n');
+  let n = 0;
+  const chars = [...TEXT];
+  const citations = [{ url: SEARCH_SOURCES[0].url, title: SEARCH_SOURCES[0].title }, { url: SEARCH_SOURCES[1].url, title: SEARCH_SOURCES[1].title }];
+  const tick = setInterval(() => {
+    if (n >= chars.length) {
+      clearInterval(tick);
+      for (const c of citations) {
+        res.write('event: content_block_delta\ndata: ' + JSON.stringify({ type: 'content_block_delta', index: 2, delta: { type: 'citations_delta', citation: c } }) + '\n\n');
+      }
+      res.write('event: content_block_stop\ndata: {"type":"content_block_stop","index":2}\n\n');
+      res.write('event: message_delta\ndata: {"type":"message_delta","delta":{"stop_reason":"end_turn","title":"搜索"},"usage":{"output_tokens":64}}\n\n');
+      res.write('event: message_stop\ndata: {"type":"message_stop"}\n\n');
+      res.end();
+      return;
+    }
+    const ch = chars.slice(n, n + 2).join('');
+    n += 2;
+    res.write('event: content_block_delta\ndata: ' + JSON.stringify({ type: 'content_block_delta', index: 2, delta: { type: 'text_delta', text: ch } }) + '\n\n');
+  }, 15);
+  res.on('close', () => clearInterval(tick));
+}
+
 let globalDelayMs = 0;
 const server = http.createServer((req, res) => {
   // runtime delay toggle for capturing transient UI states (e.g. "verifying")
@@ -136,7 +182,7 @@ function handle(req, res) {
         const parsed = JSON.parse(body);
         const last = (parsed.messages || []).filter((m) => m.role === 'user').pop();
         const text = last && (last.content?.[0]?.text || last.content) || '';
-        const m = /^(thinking|long|slow|interrupted|401|402|429|500|refused|hold)$/i.exec(String(text).trim());
+        const m = /^(thinking|long|slow|interrupted|401|402|429|500|refused|hold|search)$/i.exec(String(text).trim());
         if (m) scenario = m[1].toLowerCase();
       } catch (e) {}
       switch (scenario) {
@@ -149,6 +195,7 @@ function handle(req, res) {
         case 'slow': return blockReply({ text: REPLY, delay: 120 })(res);
         case 'hold': return blockReply({ text: REPLY, delay: 60, holdAfter: REPLY.indexOf('- 列表项一') - 2 })(res);
         case 'interrupted': return blockReply({ text: REPLY, drop: true })(res);
+        case 'search': return searchReply(res);
         case 'refused':
           return blockReply({ text: '你好，这个问题我暂时无法回答，让我们换个话题再聊聊吧。' })(res);
         default: return blockReply({ text: REPLY })(res);

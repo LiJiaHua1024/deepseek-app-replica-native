@@ -45,6 +45,17 @@ sealed class ReplyBlock {
 
 enum class ReplyStatus { PENDING, STREAMING, DONE, STOPPED, ERROR }
 
+/** 渲染用的搜索来源条目（对应参照物 Source；index 为全回复注册顺序） */
+data class Source(
+    val index: Int,
+    val url: String,
+    val title: String?,
+    val siteName: String,
+    val publishedAt: String? = null,
+    val snippet: String? = null,
+    val siteIcon: String? = null,
+)
+
 @Serializable
 data class ReplyError(
     val kind: String,

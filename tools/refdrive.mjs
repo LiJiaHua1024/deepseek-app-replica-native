@@ -496,6 +496,18 @@ const scenes = {
     await until('stream done (title)', async () => /问候/.test(await evaluate(bodyText)), 60000)
     await delay(800)
   },
+  async 'searchpanel.default'(evaluate) {
+    await enterKey(evaluate)
+    await sendMessage(evaluate, 'search')
+    // .summary chip = role=button containing "N 个网页"; tap opens the bottom-sheet
+    await until('sources chip', async () => evaluate(`(() => {
+      const el = [...document.querySelectorAll('[role=button]')].find(e => /个网页|pages?$/i.test((e.textContent||'').trim()));
+      if (!el) return false; el.click(); return true
+    })()`), 40000)
+    await until('panel open', async () =>
+      evaluate(`(() => { const d = document.querySelector('section[role=dialog][aria-modal="true"]'); return !!(d && d.getBoundingClientRect().height > 0) })()`), 10000)
+    await delay(800)
+  },
   async 'settings.root'(evaluate) {
     await openDrawer(evaluate)
     await evaluate(`(() => { const b=document.querySelector('[aria-label="设置"],[aria-label="Settings"]') || [...document.querySelectorAll('button,a,li')].find(e=>/设置|API Key/.test(e.textContent.trim())); if(b){b.click();return true} return false })()`)

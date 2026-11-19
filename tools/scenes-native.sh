@@ -134,6 +134,10 @@ case "$SCENE" in
     send_msg "你好"; sleep 2; shot
     curl -s "http://127.0.0.1:8321/__set_delay?ms=0" >/dev/null
     exit 0 ;;
+  searchpanel|searchpanel.default)
+    enter_key; send_msg "search"
+    wait_text "个网页|pages" 45; sleep 0.6
+    tap_node "个网页|pages$"; sleep 1 ;;
   settings|settings.root)
     enter_key; open_drawer
     tap_node "^设置$|^Settings$|^API Key$"; wait_text "API Key|通用设置|语言|主题" 10; sleep 0.4 ;;

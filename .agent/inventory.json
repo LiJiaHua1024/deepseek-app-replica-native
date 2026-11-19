@@ -466,12 +466,12 @@
   "path": "src/components/search/AndroidSearchPanel.tsx",
   "type": "screen-state",
   "reach": "shot searchpanel.default",
-  "status": "todo",
-  "blurred_ssim": null,
-  "color_mad": null,
-  "attempts": 0,
+  "status": "residual",
+  "blurred_ssim": 0.8862,
+  "color_mad": 4.58,
+  "attempts": 7,
   "commit": null,
-  "notes": ""
+  "notes": "worst (293,1758)ssim0.7449 (586,1758)0.749 (586,1465)0.769; per-item text-band wrap/raster diffs"
  },
  {
   "id": "imageviewer.default",

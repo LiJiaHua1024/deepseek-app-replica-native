@@ -1,6 +1,8 @@
 package io.github.lijiahua1024.dsnative.ui.session
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -100,6 +102,9 @@ private val mathInline = Regex("\\$([^$\\n]+?)\\$")
 // would overlap the next glyph; zero-height placeholders reproduce the gap.
 private const val CHIP_PAD = "ds-inline-chip-pad"
 
+// [citation:N] in reply markdown -> 来源角标（见 Sources.kt 的面板与 Registry）
+private val CITE_RE = Regex("\\[citation:(\\d+)\\]")
+
 // CSS half-leading + no last-line trim, applied wherever a line box's own
 // height feeds layout (paragraphs, tables, code, headings, math).
 private val dsLineStyle = LineHeightStyle(
@@ -116,6 +121,44 @@ private val chipPadContent = mapOf(
         ),
     ) {},
 )
+
+// ref .ds-markdown-cite: 14px 高角标（top -5px），圆角 6px 6px 6px 0，
+// 0.5px l1 边框，markdown-placeholder 底，9px/500 等宽三级色数字
+@Composable
+private fun citeContent(c: io.github.lijiahua1024.dsnative.theme.DsColors): Map<String, InlineTextContent> {
+    val sources = LocalSources.current
+    val open = LocalOpenSources.current
+    val map = HashMap<String, InlineTextContent>()
+    val badgeShape = androidx.compose.foundation.shape.RoundedCornerShape(
+        topStart = 6.dp, topEnd = 6.dp, bottomEnd = 6.dp, bottomStart = 0.dp)
+    for (s in sources) {
+        val src = s
+        map["cite_" + s.index] = InlineTextContent(
+            Placeholder(
+                width = 18.sp,
+                height = 14.sp,
+                placeholderVerticalAlign = PlaceholderVerticalAlign.TextTop,
+            ),
+        ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(
+                    Modifier
+                        .size(width = 14.dp, height = 14.dp)
+                        .clip(badgeShape)
+                        .background(c.markdownPlaceholder)
+                        .border(0.5.dp, c.borderL1, badgeShape)
+                        .clickable { open(listOf(src)) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(src.index.toString(), fontSize = 9.sp, lineHeight = 14.sp,
+                        fontWeight = FontWeight.Medium, fontFamily = FontFamily.Monospace,
+                        color = c.labelTertiary)
+                }
+            }
+        }
+    }
+    return map
+}
 
 // CSS margins collapse between siblings: the visible gap is the max of the
 // bottom margin of the previous block and the top margin of the next.
@@ -309,6 +352,7 @@ private fun RenderParagraph(text: AnnotatedString, c: io.github.lijiahua1024.dsn
 private fun ParagraphText(str: AnnotatedString, c: io.github.lijiahua1024.dsnative.theme.DsColors) {
     val styled = withInlineMath(str, c)
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    val inlineContent = chipPadContent + citeContent(c)
     Text(
         styled, fontSize = 16.sp, lineHeight = 28.sp, color = c.labelPrimary,
         fontFamily = DsTheme.fontFamily,
@@ -318,7 +362,7 @@ private fun ParagraphText(str: AnnotatedString, c: io.github.lijiahua1024.dsnati
         // half-leading exactly for this font.
         style = cssLeading,
         onTextLayout = { layout = it },
-        inlineContent = chipPadContent,
+        inlineContent = inlineContent,
         modifier = Modifier.drawBehind {
             val l = layout ?: return@drawBehind
             val padX = 5.dp.toPx()
@@ -501,7 +545,18 @@ private fun inlineText(
     var ch = node.firstChild
     while (ch != null) {
         when (ch) {
-            is CText -> append(ch.literal)
+            is CText -> {
+                // ref joinTextBlocks 在文本末尾插入 [citation:N]，Markdown 里渲染为角标
+                var pos = 0
+                var hit = false
+                for (m in CITE_RE.findAll(ch.literal)) {
+                    hit = true
+                    if (m.range.first > pos) append(ch.literal.substring(pos, m.range.first))
+                    appendInlineContent("cite_" + m.groupValues[1], m.value)
+                    pos = m.range.last + 1
+                }
+                if (!hit || pos < ch.literal.length) append(ch.literal.substring(pos))
+            }
             is SoftLineBreak -> append('\n')
             is HardLineBreak -> append('\n')
             is StrongEmphasis -> withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) {
