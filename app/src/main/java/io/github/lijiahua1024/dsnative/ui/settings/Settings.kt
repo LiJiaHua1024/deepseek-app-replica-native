@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -89,7 +90,14 @@ fun AndroidSettings(settings: SettingsStore, chatStore: ChatStore, onBack: () ->
     val sessions by chatStore.sessions.collectAsState()
     var confirmDeleteAll by remember { mutableStateOf(false) }
     var confirmImport by remember { mutableStateOf(false) }
+    var importResult by remember { mutableStateOf<Int?>(null) }
     val ctx = LocalContext.current
+    val exportLauncher = rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/zip"),
+    ) { uri -> if (uri != null) chatStore.exportArchive(ctx, uri) }
+    val importLauncher = rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+    ) { uri -> importResult = uri?.let { chatStore.importArchive(ctx, it) } }
 
     Column(Modifier.fillMaxSize().background(c.bgLayer2).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().height(52.dp).padding(start = 4.dp),
@@ -124,7 +132,9 @@ fun AndroidSettings(settings: SettingsStore, chatStore: ChatStore, onBack: () ->
                 }
                 SettingRow(Strings.get("exportAllLabel")) {
                     Text(Strings.get("exportAllDownload"), color = c.brandPrimary, fontSize = 14.sp,
-                        modifier = Modifier.clickable { chatStore.exportAll(ctx) })
+                        modifier = Modifier.clickable {
+                            exportLauncher.launch("deepseek-chats-${System.currentTimeMillis()}.zip")
+                        })
                 }
                 SettingRow(Strings.get("deleteAllSessions")) {
                     Text(Strings.get("delete"), color = c.stateErrorPrimary, fontSize = 14.sp,
@@ -157,11 +167,20 @@ fun AndroidSettings(settings: SettingsStore, chatStore: ChatStore, onBack: () ->
             title = { Text(Strings.get("historyImportConfirmTitle")) },
             text = { Text(Strings.get("historyImportConfirmDescription")) },
             confirmButton = {
-                TextButton({ chatStore.importHistory(ctx); confirmImport = false }) {
+                TextButton({
+                    confirmImport = false
+                    importLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*"))
+                }) {
                     Text(Strings.get("historyImportConfirm"))
                 }
             },
             dismissButton = { TextButton({ confirmImport = false }) { Text(Strings.get("cancel")) } })
+    }
+    importResult?.let { count ->
+        AlertDialog(onDismissRequest = { importResult = null },
+            title = { Text(Strings.get("historyImport")) },
+            text = { Text(if (count >= 0) "Imported $count session(s)" else "Invalid archive") },
+            confirmButton = { TextButton({ importResult = null }) { Text(Strings.get("confirm")) } })
     }
 }
 
