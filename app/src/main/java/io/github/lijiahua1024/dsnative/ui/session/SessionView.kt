@@ -38,7 +38,9 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
     val streaming by chatStore.streaming.collectAsState()
     val listState = rememberLazyListState()
 
-    Column(Modifier.fillMaxSize().background(c.bgBase).statusBarsPadding()) {
+    // ref top inset = 128px@2.75dpr: gray status bar + ~17px gray filler
+    Column(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0xFF757575)).statusBarsPadding()) {
+    Column(Modifier.fillMaxSize().background(c.bgBase).padding(top = 6.2.dp)) {
         // header: h52, padding 0 2 0 4
         Row(Modifier.fillMaxWidth().height(52.dp).padding(start = 4.dp, end = 2.dp),
             verticalAlignment = Alignment.CenterVertically) {
@@ -50,6 +52,20 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
                 fontWeight = FontWeight.Medium, color = c.labelPrimary,
                 maxLines = 1, modifier = Modifier.weight(1f),
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            val autoRead by settings.autoRead.collectAsState()
+            val ctx = LocalContext.current
+            IconButton(onClick = {
+                settings.setAutoRead(!autoRead)
+                android.widget.Toast.makeText(
+                    ctx,
+                    Strings.get(if (autoRead) "androidAutoReadDisabled" else "androidAutoReadEnabled"),
+                    android.widget.Toast.LENGTH_SHORT,
+                ).show()
+            }, modifier = Modifier.size(40.dp).padding(end = 28.dp)) {
+                Icon(
+                    painterResource(if (autoRead) R.drawable.ic_sound else R.drawable.ic_sound_muted),
+                    null, tint = c.labelPrimary, modifier = Modifier.size(22.dp))
+            }
             IconButton(onClick = { chatStore.newChat() }, modifier = Modifier.size(40.dp)) {
                 Icon(painterResource(R.drawable.ic_new_chat), null, tint = c.labelPrimary, modifier = Modifier.size(20.dp))
             }
@@ -59,7 +75,8 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
         if (visible.isEmpty()) {
             Welcome(Modifier.weight(1f))
         } else {
-            LazyColumn(state = listState, modifier = Modifier.weight(1f)) {
+            LazyColumn(state = listState, modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(bottom = 20.5.dp)) {
                 items(visible, key = { it.id }) { msg ->
                     when (msg) {
                         is Message.User -> UserBubble(msg)
@@ -103,10 +120,40 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
                     }
                 }
             }
+            // Re-check after layout settles: a growth-triggered scroll can land
+            // short when the last item measured taller afterwards.
+            LaunchedEffect(session?.id) {
+                snapshotFlow {
+                    val info = listState.layoutInfo
+                    val last = info.visibleItemsInfo.lastOrNull()
+                    if (last == null || info.totalItemsCount == 0) false
+                    else last.index == info.totalItemsCount - 1 &&
+                        last.offset + last.size - info.viewportEndOffset < stickyPx
+                }.collect { atEnd ->
+                    val msgs = session?.let { visibleMessages(it) } ?: return@collect
+                    if (sticky && !atEnd && msgs.isNotEmpty()) {
+                        listState.scrollToItem(msgs.size - 1, Int.MAX_VALUE)
+                    }
+                }
+            }
         }
 
         // content caveat + input
         ChatInput(settings, chatStore)
+        if (session != null) {
+            val keyboardOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+            if (!keyboardOpen) {
+                Text(
+                    Strings.get("androidContentCaveat"),
+                    fontSize = 11.sp, lineHeight = 16.sp,
+                    color = c.labelTertiary.copy(alpha = 0.26f),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(top = 2.dp, bottom = 31.dp),
+                )
+            }
+        }
+    }
     }
 }
 
@@ -142,7 +189,7 @@ fun UserBubble(msg: Message.User) {
 fun AssistantView(msg: Message.Assistant, sessionId: String, chatStore: ChatStore) {
     val c = DsTheme.colors
     val ctx = LocalContext.current
-    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+    Column(Modifier.fillMaxWidth().padding(start = 24.dp, end = 20.dp)) {
         for (block in msg.blocks) {
             when (block) {
                 is ReplyBlock.Thinking -> ThinkingBlock(block, msg)
@@ -167,7 +214,8 @@ fun AssistantView(msg: Message.Assistant, sessionId: String, chatStore: ChatStor
             else -> {}
         }
         if (msg.status == ReplyStatus.DONE || msg.status == ReplyStatus.STOPPED) {
-            Row(Modifier.padding(top = 12.dp, bottom = 10.dp),
+            // 6px main-content padding-bottom + 12px .bottom padding-top
+            Row(Modifier.padding(top = 18.dp, bottom = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 val clipboard = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
@@ -176,12 +224,14 @@ fun AssistantView(msg: Message.Assistant, sessionId: String, chatStore: ChatStor
                 }, modifier = Modifier.size(32.dp)) {
                     Icon(painterResource(R.drawable.ic_copy), null, tint = c.labelTertiary, modifier = Modifier.size(16.dp))
                 }
+                IconButton({ /* read aloud */ }, modifier = Modifier.size(32.dp)) {
+                    Icon(painterResource(R.drawable.ic_speaker), null, tint = c.labelTertiary, modifier = Modifier.size(16.dp))
+                }
                 IconButton({ chatStore.regenerateReply(sessionId, msg.id) }, modifier = Modifier.size(32.dp)) {
                     Icon(painterResource(R.drawable.ic_refresh), null, tint = c.labelTertiary, modifier = Modifier.size(16.dp))
                 }
             }
         }
-        Spacer(Modifier.height(16.dp))
     }
 }
 

@@ -1,0 +1,14 @@
+{
+  "method": "ref app, apikey scene, 3 repeat shots, pairwise",
+  "scenes": {
+    "apikey": {
+      "ssim_min": 1.0,
+      "ssim_loss": 0.0,
+      "mad": 0.0
+    }
+  },
+  "global": {
+    "ssim_loss": 0.0,
+    "mad": 0.0
+  }
+}

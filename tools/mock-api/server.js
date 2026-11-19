@@ -65,14 +65,14 @@ function blockReply({ thinking, text, delay = 25, drop = false }) {
     ]);
     let i = 0;
     if (thinking) {
-      res.write('event: content_block_start\ndata: {"type":"content_block_start","index":0,"content_block":{"type":"thinking"}}\n\n');
+      res.write('event: content_block_start\ndata: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":""}}\n\n');
       for (const ch of thinking) {
         res.write(`event: content_block_delta\ndata: ${JSON.stringify({ type: 'content_block_delta', index: 0, delta: { type: 'thinking_delta', thinking: ch } })}\n\n`);
       }
       res.write('event: content_block_stop\ndata: {"type":"content_block_stop","index":0}\n\n');
       i = 1;
     }
-    res.write(`event: content_block_start\ndata: {"type":"content_block_start","index":${i},"content_block":{"type":"text"}}\n\n`);
+    res.write(`event: content_block_start\ndata: {"type":"content_block_start","index":${i},"content_block":{"type":"text","text":""}}\n\n`);
     const chars = [...text];
     const limit = drop ? Math.floor(chars.length / 2) : chars.length;
     let n = 0;
@@ -96,6 +96,14 @@ function blockReply({ thinking, text, delay = 25, drop = false }) {
 }
 
 const server = http.createServer((req, res) => {
+  const delayMatch = /[?&]__delay=(\d+)/.exec(req.url || '');
+  if (delayMatch) {
+    req.url = req.url.replace(/[?&]__delay=\d+/, '').replace(/[?&]$/, '') || '/';
+    return setTimeout(() => handle(req, res), Number(delayMatch[1]));
+  }
+  handle(req, res);
+});
+function handle(req, res) {
   let key = req.headers['x-api-key'] || '';
   const auth = req.headers['authorization'] || '';
   if (!key && /^Bearer\s+/i.test(auth)) key = auth.replace(/^Bearer\s+/i, '');
@@ -134,6 +142,6 @@ const server = http.createServer((req, res) => {
     return;
   }
   send(res, 404, { error: { message: 'not found' } });
-});
+}
 
 server.listen(PORT, () => console.log(`mock-api on :${PORT}, key=${TEST_KEY}`));

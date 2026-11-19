@@ -16,9 +16,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -28,10 +31,10 @@ import io.github.lijiahua1024.dsnative.data.SettingsStore
 import io.github.lijiahua1024.dsnative.theme.DsTheme
 import io.github.lijiahua1024.dsnative.theme.Strings
 
-// Android composer per ChatInput.module.css: radius 30dp wrapper,
-// textarea min-height 56px / padding-top 14.75px / font 16.75,
-// functionRow h48 padding 0 7 4 11, toggles h32 r18 font 14,
-// send button 30dp circle.
+// Android composer per ChatInput.module.css: radius 24dp wrapper with 1px
+// border-l2-darkmode-thin; textarea padding 12/12/0/16, font 16/24;
+// functionRow h48 padding 0/7/4/11; toggles h32 r18 px11 font 14/20 w400;
+// add + voice circle buttons right; send button 30dp circle when text present.
 @Composable
 fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     val c = DsTheme.colors
@@ -39,8 +42,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     val streaming by chatStore.streaming.collectAsState()
     val drafts by chatStore.drafts.collectAsState()
     var text by remember(activeId) { mutableStateOf(drafts[activeId ?: ""] ?: "") }
-    val sessionCache by chatStore.sessionCache.collectAsState()
-    val sessionHasMessages = sessionCache[activeId]?.let { io.github.lijiahua1024.dsnative.data.visibleMessages(it).isNotEmpty() } == true
+    var focused by remember { mutableStateOf(false) }
     val thinking by settings.thinking.collectAsState()
     val search by settings.search.collectAsState()
     val isStreaming = activeId != null && streaming.contains(activeId)
@@ -49,18 +51,21 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     Column(
         Modifier.fillMaxWidth()
             .imePadding()
-            .padding(start = 12.dp, end = 12.dp, bottom = 8.dp)
-            .shadow(6.dp, RoundedCornerShape(30.dp))
-            .clip(RoundedCornerShape(30.dp))
-            .background(c.bgBase)
-            .border(1.dp, c.labelPrimary.copy(alpha = 0.07f), RoundedCornerShape(30.dp))
+            .padding(start = 12.dp, end = 12.dp)
+            // ref .session box-shadow: 0 4px 10px rgba(0,0,0,.02), 0 2px 4px rgba(0,0,0,.04)
+            .shadow(4.dp, RoundedCornerShape(24.dp), clip = false,
+                ambientColor = Color.Black.copy(alpha = 0.02f),
+                spotColor = Color.Black.copy(alpha = 0.04f))
+            .clip(RoundedCornerShape(24.dp))
+            .background(c.inputMajor)
+            .border(1.dp, c.borderL2DarkmodeThin, RoundedCornerShape(24.dp))
     ) {
-        Box(Modifier.fillMaxWidth().padding(start = 17.dp, end = 17.dp, top = 14.75.dp)) {
+        Box(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 21.dp)) {
             BasicTextField(
                 value = text,
                 onValueChange = { text = it; chatStore.setDraft(activeId, it) },
-                textStyle = TextStyle(fontSize = 16.75.sp, color = c.labelPrimary, lineHeight = 24.sp),
-                cursorBrush = SolidColor(c.brandPrimary),
+                textStyle = TextStyle(fontSize = 16.sp, color = c.labelPrimary, lineHeight = 24.sp),
+                cursorBrush = SolidColor(c.brandText),
                 singleLine = false,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(onSend = {
@@ -70,39 +75,47 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                     Box {
                         if (text.isEmpty()) {
                             Text(
-                                Strings.get(if (sessionHasMessages) "androidMessageHint" else "androidHoldHint"),
-                                fontSize = 16.75.sp, color = c.labelTertiary,
+                                Strings.get(if (focused) "androidMessageHint" else "androidHoldHint"),
+                                fontSize = 16.sp, color = c.labelCaption,
                             )
                         }
                         inner()
                     }
                 },
-                modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp),
+                modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 38.4.dp)
+                    .onFocusChanged { focused = it.isFocused },
             )
         }
         Row(
-            Modifier.fillMaxWidth().height(48.dp).padding(start = 11.dp, end = 7.dp, bottom = 4.dp),
+            Modifier.fillMaxWidth().height(48.dp).padding(start = 11.dp, end = 7.dp, bottom = 6.5.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TogglePill(Strings.get("thinkingSwitch"), thinking, { settings.setThinking(!thinking) }, R.drawable.ic_think)
             Spacer(Modifier.width(8.dp))
             TogglePill(Strings.get("search"), search, { settings.setSearch(!search) }, R.drawable.ic_globe)
             Spacer(Modifier.weight(1f))
-            Box(
-                Modifier.size(30.dp).clip(CircleShape)
-                    .background(if (isStreaming || canSend) c.brandPrimary else c.buttonElevatedFill)
-                    .clickable {
-                        if (isStreaming) chatStore.stopReply(activeId!!)
-                        else if (canSend) { chatStore.setDraft(activeId, text); chatStore.sendMessage(activeId); text = "" }
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painterResource(if (isStreaming) R.drawable.ic_stop else R.drawable.ic_send),
-                    null,
-                    tint = androidx.compose.ui.graphics.Color.White,
-                    modifier = Modifier.size(16.dp),
-                )
+            Icon(painterResource(R.drawable.ic_add_circle), null,
+                tint = c.labelPrimary, modifier = Modifier.size(44.dp).padding(9.5.dp))
+            Icon(painterResource(R.drawable.ic_voice_circle), null,
+                tint = c.labelPrimary, modifier = Modifier.size(44.dp).padding(9.5.dp))
+            if (canSend || isStreaming) {
+                Box(
+                    Modifier.padding(start = 6.dp, end = 7.dp)
+                        .size(30.dp).clip(CircleShape)
+                        .background(if (isStreaming) c.labelPrimary else c.buttonPrimaryFill)
+                        .clickable {
+                            if (isStreaming) chatStore.stopReply(activeId!!)
+                            else { chatStore.setDraft(activeId, text); chatStore.sendMessage(activeId); text = "" }
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painterResource(if (isStreaming) R.drawable.ic_stop else R.drawable.ic_send),
+                        null,
+                        tint = androidx.compose.ui.graphics.Color.White,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
             }
         }
     }
@@ -113,16 +126,17 @@ private fun TogglePill(label: String, on: Boolean, onClick: () -> Unit, icon: In
     val c = DsTheme.colors
     Row(
         Modifier.height(32.dp).clip(RoundedCornerShape(18.dp))
-            .background(if (on) c.brandPrimary else c.bgBase)
+            .background(if (on) c.buttonGhostActiveFill else androidx.compose.ui.graphics.Color.Transparent)
+            .border(1.dp, if (on) c.buttonGhostActiveBorder else c.borderL2, RoundedCornerShape(18.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(painterResource(icon), null,
-            tint = if (on) androidx.compose.ui.graphics.Color.White else c.labelSecondary,
+            tint = if (on) c.brandText else c.labelPrimary,
             modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(4.dp))
-        Text(label, fontSize = 14.sp,
-            color = if (on) androidx.compose.ui.graphics.Color.White else c.labelSecondary)
+        Text(label, fontSize = 14.sp, lineHeight = 20.sp,
+            color = if (on) c.brandText else c.labelPrimary)
     }
 }

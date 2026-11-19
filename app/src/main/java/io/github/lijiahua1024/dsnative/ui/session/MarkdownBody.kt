@@ -1,16 +1,18 @@
 package io.github.lijiahua1024.dsnative.ui.session
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
@@ -20,15 +22,13 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.lijiahua1024.dsnative.theme.DsTheme
 import org.commonmark.ext.autolink.AutolinkExtension
-import org.commonmark.ext.gfm.strikethrough.Strikethrough
-import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension
 import org.commonmark.ext.gfm.tables.TableBlock
 import org.commonmark.ext.gfm.tables.TableBody
 import org.commonmark.ext.gfm.tables.TableCell
@@ -39,7 +39,6 @@ import org.commonmark.node.BlockQuote
 import org.commonmark.node.BulletList
 import org.commonmark.node.Code
 import org.commonmark.node.CustomNode
-import org.commonmark.node.Document
 import org.commonmark.node.Emphasis
 import org.commonmark.node.FencedCodeBlock
 import org.commonmark.node.HardLineBreak
@@ -59,16 +58,16 @@ import org.commonmark.node.Text as CText
 import org.commonmark.node.ThematicBreak
 import org.commonmark.parser.Parser
 
-// Full markdown body per reference markdown.css: paragraphs 16/26,
-// code block markdownCodeBlock r12 mono 13/22, inline code on
-// markdownInlineCode, GFM tables with l2 borders, blockquote bar,
-// KaTeX math rendered as TeX text (see .agent/decisions.md residual).
+// Full markdown body per reference markdown.css: body 16/28, block margins
+// 16px (collapsed → 16dp gaps), h1-h3 32/16, list items 6px, marker
+// label-secondary, blockquote 2px labelCaption bar + 14 padding, table
+// bottom-borders only 15/25, code block banner + radius 12 + 13/22 mono,
+// inline code 14 on markdownInlineCode r6, display math fallback = raw tex.
 private val parser: Parser by lazy {
     Parser.builder()
         .extensions(
             listOf(
                 TablesExtension.create(),
-                StrikethroughExtension.create(),
                 AutolinkExtension.create(),
             )
         )
@@ -78,16 +77,38 @@ private val parser: Parser by lazy {
 private val mathBlock = Regex("\\$\\$([\\s\\S]+?)\\$\\$")
 private val mathInline = Regex("\\$([^$\\n]+?)\\$")
 
+// CSS margins collapse between siblings: the visible gap is the max of the
+// bottom margin of the previous block and the top margin of the next.
+private fun topMargin(n: Node): Int = when (n) {
+    is Heading -> if (n.level <= 3) 32 else 16
+    is TableBlock -> 0
+    is ThematicBreak -> 32
+    else -> 16
+}
+
+private fun bottomMargin(n: Node, isLast: Boolean): Int = when (n) {
+    is TableBlock -> 0
+    is BlockQuote -> 0
+    is FencedCodeBlock, is IndentedCodeBlock -> if (isLast) 16 else 11
+    is ThematicBreak -> 32
+    else -> 16
+}
+
 @Composable
 fun MarkdownBody(text: String, modifier: Modifier = Modifier) {
     val c = DsTheme.colors
     val uriHandler = LocalUriHandler.current
     val doc = remember(text) { parser.parse(text) }
     SelectionContainer {
-        Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier) {
             var node = doc.firstChild
+            var prev: Node? = null
             while (node != null) {
+                if (prev != null) {
+                    Spacer(Modifier.height(maxOf(bottomMargin(prev, false), topMargin(node)).dp))
+                }
                 RenderBlock(node, c, uriHandler)
+                prev = node
                 node = node.next
             }
         }
@@ -101,35 +122,16 @@ private fun RenderBlock(
     uriHandler: androidx.compose.ui.platform.UriHandler,
 ) {
     when (node) {
-        is Paragraph -> {
-            val segs = splitMath(inlineText(node, c, uriHandler))
-            if (segs.size == 1 && segs[0].second == null) {
-                Text(segs[0].first, fontSize = 16.sp, lineHeight = 26.sp, color = c.labelPrimary)
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    for ((str, math) in segs) {
-                        if (math != null) {
-                            Text(math, fontFamily = FontFamily.Monospace, fontSize = 14.sp,
-                                color = c.labelSecondary,
-                                modifier = Modifier.fillMaxWidth()
-                                    .background(c.markdownCodeBlock, androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 12.dp, vertical = 10.dp))
-                        } else {
-                            Text(str, fontSize = 16.sp, lineHeight = 26.sp, color = c.labelPrimary)
-                        }
-                    }
-                }
-            }
-        }
+        is Paragraph -> RenderParagraph(inlineText(node, c, uriHandler), c)
         is Heading -> {
-            val (size, weight) = when (node.level) {
-                1 -> 24.sp to FontWeight.Bold
-                2 -> 20.sp to FontWeight.Bold
-                3 -> 18.sp to FontWeight.SemiBold
-                else -> 16.sp to FontWeight.SemiBold
+            val (size, lh) = when (node.level) {
+                1 -> 24.sp to 34.sp
+                2 -> 22.sp to 32.sp
+                3 -> 20.sp to 30.sp
+                else -> 16.sp to 28.sp
             }
             Text(inlineText(node, c, uriHandler), fontSize = size,
-                lineHeight = (size.value * 1.4).sp, fontWeight = weight,
+                lineHeight = lh, fontWeight = if (node.level <= 3) FontWeight.Bold else FontWeight.SemiBold,
                 color = c.labelPrimary)
         }
         is FencedCodeBlock, is IndentedCodeBlock -> {
@@ -137,35 +139,51 @@ private fun RenderBlock(
                 is FencedCodeBlock -> node.literal ?: ""
                 else -> (node as IndentedCodeBlock).literal ?: ""
             }
-            Box(
+            val lang = (node as? FencedCodeBlock)?.info ?: ""
+            Column(
                 Modifier.fillMaxWidth()
-                    .background(c.markdownCodeBlock, androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                    .horizontalScroll(rememberScrollState())
-                    .padding(12.dp),
+                    .background(c.markdownCodeBlock, androidx.compose.foundation.shape.RoundedCornerShape(12.dp)),
             ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(lang.ifEmpty { "text" }, fontFamily = FontFamily.Monospace,
+                        fontSize = 12.sp, lineHeight = 18.sp, color = c.labelPrimary,
+                        modifier = Modifier.padding(start = 8.dp))
+                    Spacer(Modifier.weight(1f))
+                    Text(io.github.lijiahua1024.dsnative.theme.Strings.get("copy"),
+                        fontSize = 13.sp, lineHeight = 20.sp, color = c.labelSecondary,
+                        modifier = Modifier.padding(horizontal = 10.dp))
+                }
                 Text(
                     highlightCode(literal.trimEnd('\n'), c),
                     fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 22.sp,
+                    modifier = Modifier.fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(16.dp),
                 )
             }
         }
         is BlockQuote -> {
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-                Box(Modifier.width(3.dp).fillMaxHeight().background(c.labelDimmed))
-                Column(Modifier.padding(start = 12.dp)) {
+                Box(Modifier.width(2.dp).fillMaxHeight().background(c.labelCaption))
+                Column(Modifier.padding(start = 14.dp)) {
                     var ch = node.firstChild
                     while (ch != null) { RenderBlock(ch, c, uriHandler); ch = ch.next }
                 }
             }
         }
         is BulletList -> {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 var item = node.firstChild
                 while (item != null) {
                     if (item is ListItem) {
-                        Row(Modifier.fillMaxWidth()) {
-                            Text("•", fontSize = 16.sp, color = c.labelPrimary,
-                                modifier = Modifier.padding(end = 8.dp))
+                        Row(Modifier.fillMaxWidth().padding(start = 2.dp)) {
+                            // ::marker disc ≈5.8dp centered on first 28dp line
+                            Box(Modifier.width(16.dp).height(28.dp), contentAlignment = Alignment.Center) {
+                                Box(Modifier.size(5.8.dp).background(c.labelSecondary, CircleShape))
+                            }
                             Column(Modifier.weight(1f)) {
                                 var ch = item.firstChild
                                 while (ch != null) { RenderBlock(ch, c, uriHandler); ch = ch.next }
@@ -177,14 +195,14 @@ private fun RenderBlock(
             }
         }
         is OrderedList -> {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 var i = node.startNumber
                 var item = node.firstChild
                 while (item != null) {
                     if (item is ListItem) {
-                        Row(Modifier.fillMaxWidth()) {
-                            Text("$i.", fontSize = 16.sp, color = c.labelPrimary,
-                                modifier = Modifier.padding(end = 8.dp))
+                        Row(Modifier.fillMaxWidth().padding(start = 2.dp)) {
+                            Text("$i.", fontSize = 16.sp, lineHeight = 28.sp, color = c.labelSecondary,
+                                modifier = Modifier.width(16.dp))
                             Column(Modifier.weight(1f)) {
                                 var ch = item.firstChild
                                 while (ch != null) { RenderBlock(ch, c, uriHandler); ch = ch.next }
@@ -212,36 +230,58 @@ private fun RenderBlock(
 }
 
 @Composable
+private fun RenderParagraph(text: AnnotatedString, c: io.github.lijiahua1024.dsnative.theme.DsColors) {
+    val segs = splitMath(text)
+    if (segs.size == 1 && segs[0].second == null) {
+        Text(withInlineMath(segs[0].first, c), fontSize = 16.sp, lineHeight = 28.sp, color = c.labelPrimary)
+        return
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        for ((str, math) in segs) {
+            if (math != null) {
+                // Reference falls back to the raw tex source when KaTeX is
+                // unavailable; render it as plain paragraph text.
+                Text(math, fontSize = 16.sp, lineHeight = 28.sp, color = c.labelPrimary)
+            } else {
+                Text(withInlineMath(str, c), fontSize = 16.sp, lineHeight = 28.sp, color = c.labelPrimary)
+            }
+        }
+    }
+}
+
+@Composable
 private fun RenderTable(
     table: TableBlock,
     c: io.github.lijiahua1024.dsnative.theme.DsColors,
     uriHandler: androidx.compose.ui.platform.UriHandler,
 ) {
-    Column(
-        Modifier.fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .border(1.dp, c.borderL2, androidx.compose.foundation.shape.RoundedCornerShape(8.dp)),
-    ) {
+    Column(Modifier.horizontalScroll(rememberScrollState())) {
         var section = table.firstChild
         while (section != null) {
             val header = section is TableHead
             var row = section.firstChild
             while (row != null) {
                 if (row is TableRow) {
-                    Row(Modifier.fillMaxWidth()) {
+                    Row {
                         var cell = row.firstChild
+                        var first = true
                         while (cell != null) {
                             if (cell is TableCell) {
+                                val line = if (header) c.borderL3 else c.borderL2
                                 Text(
                                     inlineText(cell, c, uriHandler),
-                                    fontSize = 14.sp, lineHeight = 20.sp,
-                                    fontWeight = if (header) FontWeight.SemiBold else FontWeight.Normal,
+                                    fontSize = 15.sp, lineHeight = 25.sp,
+                                    fontWeight = if (header) FontWeight.Medium else FontWeight.Normal,
                                     color = c.labelPrimary,
                                     modifier = Modifier
-                                        .border(0.5.dp, c.borderL2)
-                                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                                        .defaultMinSize(minWidth = 100.dp)
+                                        .drawBehind {
+                                            drawLine(line, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
+                                        }
+                                        .padding(start = if (first) 0.dp else 16.dp, end = 16.dp, top = 10.dp, bottom = 10.dp),
                                 )
                             }
+                            first = false
                             cell = cell.next
                         }
                     }
@@ -262,11 +302,94 @@ private fun splitMath(styled: AnnotatedString): List<Pair<AnnotatedString, Strin
     var i = 0
     for (m in matches) {
         if (m.range.first > i) out.add(styled.subSequence(androidx.compose.ui.text.TextRange(i, m.range.first)) to null)
-        out.add(AnnotatedString("") to m.groupValues[1].trim())
+        out.add(AnnotatedString("") to stripTex(m.groupValues[1].trim()))
         i = m.range.last + 1
     }
     if (i < plain.length) out.add(styled.subSequence(androidx.compose.ui.text.TextRange(i, plain.length)) to null)
     return out
+}
+
+/** Reference fallback for math: the tex source with control-word backslashes dropped. */
+private fun stripTex(tex: String): String = tex.replace("\\", "")
+
+/**
+ * Approximate KaTeX inline math: serif italic base, ^ -> superscript,
+ * _ -> subscript, braces consumed. \$...\$ segments inside a paragraph
+ * become serif-styled spans; other styling (bold/italic/code) is preserved
+ * via the incoming AnnotatedString.
+ */
+private fun withInlineMath(text: AnnotatedString, c: io.github.lijiahua1024.dsnative.theme.DsColors): AnnotatedString {
+    val plain = text.text
+    if (!mathInline.containsMatchIn(plain)) return text
+    return buildAnnotatedString {
+        var i = 0
+        for (m in mathInline.findAll(plain)) {
+            if (m.range.first > i) append(text.subSequence(i, m.range.first))
+            append(texStyled(m.groupValues[1]))
+            i = m.range.last + 1
+        }
+        if (i < plain.length) append(text.subSequence(i, plain.length))
+    }
+}
+
+private fun texStyled(tex: String): AnnotatedString = buildAnnotatedString {
+    var i = 0
+    fun group(): String {
+        if (i < tex.length && tex[i] == '{') {
+            val end = tex.indexOf('}', i)
+            if (end > 0) { val g = tex.substring(i + 1, end); i = end + 1; return g }
+        }
+        return if (i < tex.length) tex[i++].toString() else ""
+    }
+    while (i < tex.length) {
+        when (tex[i]) {
+            '^' -> {
+                i++
+                val sup = group()
+                withStyle(SpanStyle(baselineShift = BaselineShift.Superscript, fontSize = 11.sp,
+                    fontFamily = FontFamily.Serif)) { append(sup) }
+            }
+            '_' -> {
+                i++
+                val sub = group()
+                withStyle(SpanStyle(baselineShift = BaselineShift.Subscript, fontSize = 11.sp,
+                    fontFamily = FontFamily.Serif)) { append(sub) }
+            }
+            '\\' -> {
+                i++
+                val name = StringBuilder()
+                while (i < tex.length && tex[i].isLetter()) name.append(tex[i++])
+                append(when (name.toString()) {
+                    "alpha" -> "α"; "beta" -> "β"; "gamma" -> "γ"; "delta" -> "δ"
+                    "theta" -> "θ"; "lambda" -> "λ"; "mu" -> "μ"; "pi" -> "π"
+                    "sigma" -> "σ"; "phi" -> "φ"; "omega" -> "ω"; "int" -> "∫"
+                    "sum" -> "∑"; "infty" -> "∞"; "sqrt" -> "√"; "pm" -> "±"
+                    "times" -> "×"; "cdot" -> "·"; "le" -> "≤"; "ge" -> "≥"; "ne" -> "≠"
+                    "approx" -> "≈"; "to" -> "→"; "rightarrow" -> "→"; "leftarrow" -> "←"
+                    "frac" -> {
+                        val a = group(); val b = group(); "$a/$b"
+                    }
+                    else -> name.toString()
+                })
+            }
+            '{', '}' -> i++
+            else -> {
+                val start = i
+                while (i < tex.length && tex[i] != '^' && tex[i] != '_' && tex[i] != '\\' && tex[i] != '{' && tex[i] != '}') i++
+                val seg = tex.substring(start, i)
+                // KaTeX puts thin spacing around binary operators and sets
+                // them upright; letters stay serif-italic.
+                val parts = seg.split(Regex("(?<=[+=<>−-])|(?=[+=<>−-])"))
+                for (p in parts) {
+                    if (p.matches(Regex("[+=<>−-]+"))) {
+                        withStyle(SpanStyle(fontFamily = FontFamily.Serif)) { append("\u200A\u200A$p\u200A\u200A") }
+                    } else {
+                        withStyle(SpanStyle(fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic)) { append(p) }
+                    }
+                }
+            }
+        }
+    }
 }
 
 private fun inlineText(
@@ -280,13 +403,10 @@ private fun inlineText(
             is CText -> append(ch.literal)
             is SoftLineBreak -> append('\n')
             is HardLineBreak -> append('\n')
-            is StrongEmphasis -> withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+            is StrongEmphasis -> withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) {
                 append(inlineText(ch, c, uriHandler))
             }
             is Emphasis -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
-                append(inlineText(ch, c, uriHandler))
-            }
-            is Strikethrough -> withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) {
                 append(inlineText(ch, c, uriHandler))
             }
             is Code -> withStyle(
@@ -304,7 +424,6 @@ private fun inlineText(
             is Image -> append(ch.title ?: "[image]")
             is HtmlInline -> append(ch.literal ?: "")
             else -> {
-                // MathJax nodes and any unhandled inline render as their text.
                 if (ch is CustomNode || ch.firstChild == null) {
                     append(ch.toString())
                 } else {
