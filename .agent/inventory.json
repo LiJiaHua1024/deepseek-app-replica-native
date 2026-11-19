@@ -229,12 +229,13 @@
     "path": "src/components/session/SessionView.tsx",
     "type": "screen-state",
     "reach": "shot chat.long",
-    "status": "todo",
-    "blurred_ssim": null,
-    "color_mad": null,
-    "attempts": 0,
-    "commit": null,
-    "notes": ""
+    "status": "done",
+    "blurred_ssim": 0.9841,
+    "color_mad": 1.718,
+    "attempts": 1,
+    "commit": "pending",
+    "notes": "",
+    "备注": "wait for stream end via 问候 title before shot"
   },
   {
     "id": "chat.dark",

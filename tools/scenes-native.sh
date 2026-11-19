@@ -124,7 +124,8 @@ case "$SCENE" in
     wait_text "无效|余额|频繁|繁忙|错误|失败" 20; sleep 0.4 ;;
   chat.long|chat_long)
     enter_key; send_msg "long"
-    wait_text "滚动与渲染性能" 60; sleep 0.6 ;;
+    # 问候 appears as the header title once message_delta lands (stream end)
+    wait_text "问候" 60; sleep 1 ;;
   chat.loading)
     enter_key
     # Hold the mock response so the waiting-dots indicator persists for the shot.

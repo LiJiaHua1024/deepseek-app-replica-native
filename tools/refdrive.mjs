@@ -496,8 +496,9 @@ const scenes = {
   async 'chat.long'(evaluate) {
     await enterKey(evaluate)
     await sendMessage(evaluate, 'long')
-    await until('long reply', async () => (await replyText(evaluate)).length > 2500, 40000)
-    await delay(500)
+    // wait for stream end — the mock's message_delta sets the header title 问候
+    await until('stream done (title)', async () => /问候/.test(await evaluate(bodyText)), 60000)
+    await delay(800)
   },
   async 'settings.root'(evaluate) {
     await openDrawer(evaluate)
