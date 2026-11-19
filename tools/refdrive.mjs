@@ -248,6 +248,18 @@ function fetchHoldBytes() {
   })
 }
 
+// Toggle the mock's global response delay; the delay is chosen when the mock
+// receives each request, so a request already pending keeps its delay.
+function setMockDelay(ms) {
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      { host: MOCK.host, port: MOCK.port, path: `/__set_delay?ms=${ms}` },
+      (res) => { res.resume(); res.on('end', resolve) })
+    req.on('error', reject)
+    req.end()
+  })
+}
+
 const injectStreamReplay = (b64) => `(() => {
   const bytes = Uint8Array.from(atob(${JSON.stringify(b64)}), c => c.charCodeAt(0))
   const CHUNK = 7
@@ -444,6 +456,17 @@ const scenes = {
     await sendMessage(evaluate, 'thinking')
     await until('thinking reply done', async () => /结束/.test(await replyText(evaluate)), 40000)
     await delay(400)
+  },
+  async 'chat.loading'(evaluate) {
+    await enterKey(evaluate)
+    // Hold the mock response so the "正在思考" indicator persists for the shot.
+    // Delay binds when the mock receives the request; reset only after the
+    // indicator is up, otherwise the reset can beat the intercepted request.
+    await setMockDelay(120000)
+    await sendMessage(evaluate, '你好')
+    await until('waiting dots', async () =>
+      evaluate(`[...document.querySelectorAll('div')].some(d => d.children.length === 3 && [...d.children].every(c => c.tagName === 'SPAN') && d.getBoundingClientRect().height >= 30)`), 10000)
+    await setMockDelay(0)
   },
   async 'chat.streaming'(evaluate) {
     // 'hold' freezes the mock stream after the table — deterministic mid-stream.

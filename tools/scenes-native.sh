@@ -124,7 +124,14 @@ case "$SCENE" in
     enter_key; send_msg "long"
     wait_text "滚动与渲染性能" 60; sleep 0.6 ;;
   chat.loading)
-    enter_key; send_msg "你好"; shot; exit 0 ;;
+    enter_key
+    # Hold the mock response so the waiting-dots indicator persists for the shot.
+    # Delay binds at request receipt; reset only after the shot so a slow
+    # dispatch can never observe delay=0.
+    curl -s "http://127.0.0.1:8321/__set_delay?ms=120000" >/dev/null
+    send_msg "你好"; sleep 2; shot
+    curl -s "http://127.0.0.1:8321/__set_delay?ms=0" >/dev/null
+    exit 0 ;;
   settings|settings.root)
     enter_key; open_drawer
     tap_node "^设置$|^Settings$"; wait_text "API Key|通用设置|语言|主题" 10; sleep 0.4 ;;

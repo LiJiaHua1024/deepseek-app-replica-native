@@ -1,6 +1,7 @@
 package io.github.lijiahua1024.dsnative.ui.session
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -12,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalContext
@@ -197,6 +199,34 @@ fun UserBubble(msg: Message.User) {
 }
 
 @Composable
+fun WaitingDots() {
+    val c = DsTheme.colors
+    val transition = androidx.compose.animation.core.rememberInfiniteTransition(label = "waiting")
+    Row(
+        Modifier.height(34.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        for (index in 0..2) {
+            val alpha by transition.animateFloat(
+                initialValue = 0.3f, targetValue = 0.3f, label = "dot$index",
+                animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                    androidx.compose.animation.core.keyframes {
+                        durationMillis = 900
+                        0.3f at 0
+                        1.0f at 297   // 33%
+                        1.0f at 594   // 66%
+                        0.3f at 900
+                    },
+                    initialStartOffset = androidx.compose.animation.core.StartOffset(index * 100)
+                )
+            )
+            Box(Modifier.size(6.dp).alpha(alpha).background(c.labelDimmed, androidx.compose.foundation.shape.CircleShape))
+        }
+    }
+}
+
+@Composable
 fun AssistantView(msg: Message.Assistant, sessionId: String, chatStore: ChatStore) {
     val c = DsTheme.colors
     val ctx = LocalContext.current
@@ -209,8 +239,8 @@ fun AssistantView(msg: Message.Assistant, sessionId: String, chatStore: ChatStor
             }
         }
         when (msg.status) {
-            ReplyStatus.STREAMING -> if (msg.blocks.isEmpty())
-                Text(Strings.get("messageThinking"), fontSize = 14.sp, color = c.thinkingText)
+            // ref .waiting: three 6px dots fading in a 34px row
+            ReplyStatus.STREAMING -> if (msg.blocks.isEmpty()) WaitingDots()
             ReplyStatus.ERROR -> {
                 Text(msg.error?.let { errorText(it) } ?: Strings.get("unknownError"),
                     fontSize = 14.sp, color = c.stateErrorPrimary)
