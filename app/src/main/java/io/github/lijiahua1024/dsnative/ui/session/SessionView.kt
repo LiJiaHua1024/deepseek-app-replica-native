@@ -41,16 +41,22 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
     // ref top inset = 128px@2.75dpr: gray status bar + ~17px gray filler
     Column(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0xFF757575)).statusBarsPadding()) {
     Column(Modifier.fillMaxSize().background(c.bgBase)) {
+    // ref anchors the disclaimer to the bottom overlapping the composer's
+    // bottom margin zone; the composer card bottom sits --android-composer-bottom
+    // (27css px) above the screen bottom, so the disclaimer must overlay rather
+    // than consume flow space below ChatInput.
+    Box(Modifier.weight(1f).fillMaxWidth()) {
+    Column(Modifier.fillMaxSize()) {
         // header: h52, padding 0 2 0 4
         Row(Modifier.fillMaxWidth().height(52.dp).padding(start = 4.dp, end = 2.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onOpenDrawer, modifier = Modifier.size(40.dp)) {
-                Icon(painterResource(R.drawable.ic_menu), Strings.get("expandSiderbarButton"), tint = c.labelPrimary, modifier = Modifier.size(20.dp))
+            IconButton(onClick = onOpenDrawer, modifier = Modifier.size(44.dp)) {
+                Icon(painterResource(R.drawable.ic_menu), Strings.get("expandSiderbarButton"), tint = c.labelPrimary, modifier = Modifier.size(24.dp))
             }
             val headerTitle = session?.title?.ifEmpty { Strings.get("untitledChat") } ?: ""
-            Text(headerTitle, fontSize = 14.sp,
+            Text(headerTitle, fontSize = 14.sp, lineHeight = 22.sp,
                 fontWeight = FontWeight.Medium, color = c.labelPrimary,
-                maxLines = 1, modifier = Modifier.weight(1f),
+                maxLines = 1, modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             val autoRead by settings.autoRead.collectAsState()
             val ctx = LocalContext.current
@@ -61,13 +67,14 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
                     Strings.get(if (autoRead) "androidAutoReadDisabled" else "androidAutoReadEnabled"),
                     android.widget.Toast.LENGTH_SHORT,
                 ).show()
-            }, modifier = Modifier.size(40.dp).padding(end = 28.dp)) {
+            }, modifier = Modifier.size(44.dp)) {
                 Icon(
                     painterResource(if (autoRead) R.drawable.ic_sound else R.drawable.ic_sound_muted),
                     null, tint = c.labelPrimary, modifier = Modifier.size(22.dp))
             }
-            IconButton(onClick = { chatStore.newChat() }, modifier = Modifier.size(40.dp)) {
-                Icon(painterResource(R.drawable.ic_new_chat), Strings.get("newChat"), tint = c.labelPrimary, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            IconButton(onClick = { chatStore.newChat() }, modifier = Modifier.size(44.dp)) {
+                Icon(painterResource(R.drawable.ic_new_chat), Strings.get("newChat"), tint = c.labelPrimary, modifier = Modifier.size(22.dp))
             }
         }
 
@@ -140,19 +147,22 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
 
         // content caveat + input
         ChatInput(settings, chatStore)
-        if (session != null) {
-            val keyboardOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
-            if (!keyboardOpen) {
-                Text(
-                    Strings.get("androidContentCaveat"),
-                    fontSize = 11.sp, lineHeight = 16.sp,
-                    color = c.labelTertiary.copy(alpha = 0.26f),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                        .padding(top = 2.dp, bottom = 31.dp),
-                )
-            }
+    }
+    if (session != null) {
+        val keyboardOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+        if (!keyboardOpen) {
+            Text(
+                Strings.get("androidContentCaveat"),
+                fontSize = 11.sp, lineHeight = 16.sp,
+                color = c.labelTertiary.copy(alpha = 0.26f),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 31.dp),
+            )
         }
+    }
+    }
     }
     }
 }
@@ -180,9 +190,9 @@ fun UserBubble(msg: Message.User) {
             .clip(RoundedCornerShape(22.dp, 22.dp, 4.dp, 22.dp))
             .background(c.bubble)
             .padding(horizontal = 16.dp, vertical = 10.dp)) {
-            Text(msg.content, fontSize = 16.sp, lineHeight = 26.sp, color = c.labelPrimary)
+            Text(msg.content, fontSize = 16.sp, lineHeight = 24.sp, color = c.labelPrimary)
         }
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(22.2.dp))
     }
 }
 
@@ -190,7 +200,7 @@ fun UserBubble(msg: Message.User) {
 fun AssistantView(msg: Message.Assistant, sessionId: String, chatStore: ChatStore) {
     val c = DsTheme.colors
     val ctx = LocalContext.current
-    Column(Modifier.fillMaxWidth().padding(start = 24.dp, end = 20.dp)) {
+    Column(Modifier.fillMaxWidth().padding(start = 24.dp, end = 19.dp)) {
         for (block in msg.blocks) {
             when (block) {
                 is ReplyBlock.Thinking -> ThinkingBlock(block, msg)

@@ -32,10 +32,11 @@ import io.github.lijiahua1024.dsnative.data.SettingsStore
 import io.github.lijiahua1024.dsnative.theme.DsTheme
 import io.github.lijiahua1024.dsnative.theme.Strings
 
-// Android composer per ChatInput.module.css: radius 24dp wrapper with 1px
-// border-l2-darkmode-thin; textarea padding 12/12/0/16, font 16/24;
-// functionRow h48 padding 0/7/4/11; toggles h32 r18 px11 font 14/20 w400;
-// add + voice circle buttons right; send button 30dp circle when text present.
+// Android composer per ChatInput.module.css [data-android] .wrapper: radius
+// 30px, font 16.75px, 1px border color-mix(currentColor 7%), shadow
+// 0 10px 22px 7% / 0 1px 4px 4%; textarea padding-top 14.75px padding-inline
+// 17px; functionRow h48 padding 0/7/4/11 gap4 center; toggles h32 r18 px11
+// font 14/20 w400; right gap 0; send/stop 30px circle margin-right 7px.
 @Composable
 fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     val c = DsTheme.colors
@@ -54,20 +55,23 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     Column(
         Modifier.fillMaxWidth()
             .imePadding()
-            .padding(start = 12.dp, end = 12.dp, bottom = if (keyboardOpen) 27.7.dp else 51.dp)
-            // ref .session box-shadow: 0 4px 10px rgba(0,0,0,.02), 0 2px 4px rgba(0,0,0,.04)
-            .shadow(4.dp, RoundedCornerShape(24.dp), clip = false,
-                ambientColor = Color.Black.copy(alpha = 0.02f),
+            .padding(start = 12.dp, end = 12.dp, bottom = if (keyboardOpen) 27.7.dp else 52.dp)
+            // ref [data-android] .wrapper box-shadow: 0 10px 22px rgb(0 0 0/7%),
+            // 0 1px 4px rgb(0 0 0/4%); border color-mix(currentColor 7%)
+            .shadow(10.dp, RoundedCornerShape(30.dp), clip = false,
+                ambientColor = Color.Black.copy(alpha = 0.07f),
                 spotColor = Color.Black.copy(alpha = 0.04f))
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(30.dp))
             .background(c.inputMajor)
-            .border(1.dp, c.borderL2DarkmodeThin, RoundedCornerShape(24.dp))
+            .border(1.dp, c.labelPrimary.copy(alpha = 0.07f), RoundedCornerShape(30.dp))
     ) {
-        Box(Modifier.fillMaxWidth().height(56.dp).padding(start = 16.dp, end = 12.dp, top = 14.5.dp)) {
+        // ref textarea: min-height 56px, padding-top 14.75px, padding-inline 17px
+        Box(Modifier.fillMaxWidth().height(56.dp).padding(start = 17.dp, end = 17.dp, top = 14.75.dp)) {
             BasicTextField(
                 value = text,
                 onValueChange = { text = it; chatStore.setDraft(activeId, it) },
-                textStyle = TextStyle(fontSize = 16.sp, color = c.labelPrimary, lineHeight = 24.sp),
+                textStyle = TextStyle(fontSize = 16.75.sp, color = c.labelPrimary,
+                    lineHeight = 24.sp, fontFamily = DsTheme.fontFamily),
                 cursorBrush = SolidColor(c.brandText),
                 singleLine = false,
                 keyboardOptions = KeyboardOptions(autoCorrect = true, capitalization = KeyboardCapitalization.Sentences),
@@ -79,7 +83,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                         if (text.isEmpty()) {
                             Text(
                                 Strings.get(if (focused) "androidMessageHint" else "androidHoldHint"),
-                                fontSize = 16.sp, color = c.labelCaption,
+                                fontSize = 16.75.sp, color = c.labelCaption,
                             )
                         }
                         inner()
@@ -89,9 +93,12 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                     .onFocusChanged { focused = it.isFocused },
             )
         }
+        // ref .functionRow (android): h48, padding 0 7px 4px 11px, align center
+        // -> chips sit 6dp below row top ((48-4-32)/2);
+        // .right gap 0; IconButton xl = 44px hit target with 25px icon inside
         Row(
-            Modifier.fillMaxWidth().height(48.dp).padding(start = 15.dp, end = 12.dp, top = 5.dp),
-            verticalAlignment = Alignment.Top,
+            Modifier.fillMaxWidth().height(48.dp).padding(start = 11.dp, end = 7.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             TogglePill(Strings.get("thinkingSwitch"), thinking, { settings.setThinking(!thinking) }, R.drawable.ic_think)
             Spacer(Modifier.width(8.dp))
@@ -99,17 +106,16 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
             Spacer(Modifier.weight(1f))
             Icon(painterResource(R.drawable.ic_add_circle), null,
                 tint = c.labelPrimary,
-                modifier = Modifier.align(Alignment.CenterVertically).size(34.dp).padding(4.5.dp).offset(y = (-5).dp))
-            Spacer(Modifier.width(10.3.dp))
+                modifier = Modifier.align(Alignment.CenterVertically).size(44.dp).padding(9.5.dp))
             Icon(painterResource(R.drawable.ic_voice_circle), null,
                 tint = c.labelPrimary,
-                modifier = Modifier.align(Alignment.CenterVertically).size(34.dp).padding(4.5.dp).offset(y = (-5).dp))
+                modifier = Modifier.align(Alignment.CenterVertically).size(44.dp).padding(9.5.dp))
             if (canSend || isStreaming) {
                 Box(
                     Modifier.align(Alignment.CenterVertically)
                         .padding(start = 6.dp, end = 7.dp)
                         .size(30.dp).clip(CircleShape)
-                        .background(if (isStreaming) c.labelPrimary else c.buttonPrimaryFill)
+                        .background(c.buttonPrimaryFill)
                         .clickable {
                             if (isStreaming) chatStore.stopReply(activeId!!)
                             else { chatStore.setDraft(activeId, text); chatStore.sendMessage(activeId); text = "" }

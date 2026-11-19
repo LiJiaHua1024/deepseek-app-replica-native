@@ -58,7 +58,7 @@ function sse(res, lines) {
   for (const l of lines) res.write(l);
 }
 
-function blockReply({ thinking, text, delay = 25, drop = false }) {
+function blockReply({ thinking, text, delay = 25, drop = false, holdAfter = 0 }) {
   return (res) => {
     sse(res, [
       'event: message_start\ndata: {"type":"message_start","message":{"id":"msg_mock","model":"deepseek-flash"}}\n\n',
@@ -90,6 +90,11 @@ function blockReply({ thinking, text, delay = 25, drop = false }) {
       const ch = chars.slice(n, n + 2).join('');
       n += 2;
       res.write(`event: content_block_delta\ndata: ${JSON.stringify({ type: 'content_block_delta', index: i, delta: { type: 'text_delta', text: ch } })}\n\n`);
+      if (holdAfter && n >= holdAfter) {
+        // freeze mid-stream with the connection open — deterministic
+        // "still streaming" state for screenshot comparison
+        clearInterval(tick);
+      }
     }, delay);
     res.on('close', () => clearInterval(tick));
   };
@@ -131,7 +136,7 @@ function handle(req, res) {
         const parsed = JSON.parse(body);
         const last = (parsed.messages || []).filter((m) => m.role === 'user').pop();
         const text = last && (last.content?.[0]?.text || last.content) || '';
-        const m = /^(thinking|long|slow|interrupted|401|402|429|500|refused)$/i.exec(String(text).trim());
+        const m = /^(thinking|long|slow|interrupted|401|402|429|500|refused|hold)$/i.exec(String(text).trim());
         if (m) scenario = m[1].toLowerCase();
       } catch (e) {}
       switch (scenario) {
@@ -142,6 +147,7 @@ function handle(req, res) {
         case 'thinking': return blockReply({ thinking: THINKING, text: REPLY })(res);
         case 'long': return blockReply({ text: LONG, delay: 5 })(res);
         case 'slow': return blockReply({ text: REPLY, delay: 120 })(res);
+        case 'hold': return blockReply({ text: REPLY, delay: 60, holdAfter: REPLY.indexOf('- 列表项一') - 2 })(res);
         case 'interrupted': return blockReply({ text: REPLY, drop: true })(res);
         case 'refused':
           return blockReply({ text: '你好，这个问题我暂时无法回答，让我们换个话题再聊聊吧。' })(res);

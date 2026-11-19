@@ -133,6 +133,7 @@ function handlePaused(call, params) {
     return
   }
   const headers = { ...(request.headers ?? {}) }
+  if (process.env.REF_DEBUG) console.error('fwd headers:', JSON.stringify({ k: headers['x-api-key'], a: headers['authorization'] }))
   const req = http.request(
     { host: MOCK.host, port: MOCK.port, path, method: request.method, headers },
     (res) => {
@@ -225,6 +226,47 @@ async function enterKey(evaluate) {
   })
   await delay(300)
 }
+
+// Collect the mock's 'hold' stream bytes (freezes mid-doc) for page replay.
+function fetchHoldBytes() {
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      { host: MOCK.host, port: MOCK.port, path: '/messages', method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': KEY } },
+      (res) => {
+        const chunks = []
+        res.on('data', (c) => chunks.push(c))
+        res.on('end', () => resolve(Buffer.concat(chunks)))
+        // 'hold' never ends — freeze after 1.5s of silence
+        res.socket.once('timeout', () => { req.destroy(); resolve(Buffer.concat(chunks)) })
+        res.socket.setTimeout(1500)
+      }
+    )
+    req.on('error', reject)
+    req.write(JSON.stringify({ messages: [{ role: 'user', content: 'hold' }] }))
+    req.end()
+  })
+}
+
+const injectStreamReplay = (b64) => `(() => {
+  const bytes = Uint8Array.from(atob(${JSON.stringify(b64)}), c => c.charCodeAt(0))
+  const CHUNK = 7
+  if (!window.__origFetch) window.__origFetch = window.fetch.bind(window)
+  window.fetch = (u, opts) => {
+    if (!String(u).includes('/messages')) return window.__origFetch(u, opts)
+    const stream = new ReadableStream({
+      start(c) {
+        let i = 0
+        const t = setInterval(() => {
+          if (i >= bytes.length) return clearInterval(t)
+          c.enqueue(bytes.slice(i, i + CHUNK)); i += CHUNK
+        }, 10)
+      }
+    })
+    return Promise.resolve(new Response(stream, {
+      status: 200, headers: { 'content-type': 'text/event-stream' } }))
+  }
+  return true })()`
 
 async function sendMessage(evaluate, text) {
   await evaluate(setInput('textarea', text))
@@ -404,9 +446,15 @@ const scenes = {
     await delay(400)
   },
   async 'chat.streaming'(evaluate) {
+    // 'hold' freezes the mock stream after the table — deterministic mid-stream.
+    // The Fetch proxy can only fulfill whole bodies, so we replay the mock's
+    // actual SSE bytes through a fetch() override inside the page instead.
     await enterKey(evaluate)
-    await sendMessage(evaluate, 'slow')
-    await until('mid-stream text', async () => /列表项一|引用段落/.test(await replyText(evaluate)), 30000)
+    const sse = await fetchHoldBytes()
+    await evaluate(injectStreamReplay(sse.toString('base64')))
+    await sendMessage(evaluate, 'hold')
+    await until('frozen mid-stream', async () => /hello mock/.test(await replyText(evaluate)), 30000)
+    await delay(1500)
   },
   async 'chat.interrupted'(evaluate) {
     await enterKey(evaluate)

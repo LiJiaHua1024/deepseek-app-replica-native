@@ -182,13 +182,37 @@ val DarkColors = DsColors(
 )
 
 val LocalDsColors = androidx.compose.runtime.staticCompositionLocalOf { LightColors }
+val LocalDsFontFamily = androidx.compose.runtime.staticCompositionLocalOf<
+        androidx.compose.ui.text.font.FontFamily> {
+    androidx.compose.ui.text.font.FontFamily.Default
+}
 
 object DsTheme {
     val colors: DsColors
         @androidx.compose.runtime.Composable get() = LocalDsColors.current
+    val fontFamily: androidx.compose.ui.text.font.FontFamily
+        @androidx.compose.runtime.Composable get() = LocalDsFontFamily.current
 }
 
+// The ref WebView resolves `Roboto, 'Noto Sans CJK SC', sans-serif` to the
+// Noto Sans CJK SC face for latin AND CJK (measured: latin advances ~5% wider
+// than Android's Roboto fallback). The SC face is bundled in assets because
+// faces inside the system .ttc are not selectable via createFromFile.
 @androidx.compose.runtime.Composable
 fun DsTheme(colors: DsColors, content: @androidx.compose.runtime.Composable () -> Unit) {
-    androidx.compose.runtime.CompositionLocalProvider(LocalDsColors provides colors) { content() }
+    val assets = androidx.compose.ui.platform.LocalContext.current.assets
+    val fontFamily = androidx.compose.runtime.remember {
+        androidx.compose.ui.text.font.FontFamily(
+            androidx.compose.ui.text.font.Font(
+                path = "fonts/NotoSansSC-Regular.otf",
+                assetManager = assets,
+            )
+        )
+    }
+    androidx.compose.runtime.CompositionLocalProvider(
+        LocalDsColors provides colors,
+        LocalDsFontFamily provides fontFamily,
+        androidx.compose.material3.LocalTextStyle provides
+            androidx.compose.ui.text.TextStyle(fontFamily = fontFamily),
+    ) { content() }
 }

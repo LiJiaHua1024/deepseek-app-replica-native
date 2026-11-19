@@ -110,8 +110,10 @@ case "$SCENE" in
     enter_key; send_msg "thinking"
     wait_text "结束" 60; sleep 0.5 ;;
   chat.streaming|chat_streaming)
-    enter_key; send_msg "slow"
-    wait_text "列表项一|引用段落" 30 ;;
+    # 'hold' freezes the mock stream after the code block — doc fits viewport, no scroll
+    enter_key; send_msg "hold"
+    wait_text "hello mock" 30
+    sleep 1.5 ;;
   chat.interrupted|chat_interrupted)
     enter_key; send_msg "interrupted"
     wait_text "中断|重新生成|停止" 30; sleep 0.4 ;;

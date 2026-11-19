@@ -8,21 +8,35 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.BaselineShift
+import androidx.compose.ui.text.style.TextGeometricTransform
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -76,6 +90,24 @@ private val parser: Parser by lazy {
 
 private val mathBlock = Regex("\\$\\$([\\s\\S]+?)\\$\\$")
 private val mathInline = Regex("\\$([^$\\n]+?)\\$")
+
+// Body text uses DsTheme.fontFamily: the ref WebView resolves its
+// `Roboto, 'Noto Sans CJK SC'` stack to the bundled SC face for latin AND CJK
+// (latin advances ~5% wider than Android's Roboto fallback).
+
+// In the ref, inline <code> is a real box: its 5px padding occupies layout
+// space, so following text starts after the chip edge. A drawn-only chip
+// would overlap the next glyph; zero-height placeholders reproduce the gap.
+private const val CHIP_PAD = "ds-inline-chip-pad"
+private val chipPadContent = mapOf(
+    CHIP_PAD to InlineTextContent(
+        Placeholder(
+            width = 5.sp,
+            height = 1.sp,
+            placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
+        ),
+    ) {},
+)
 
 // CSS margins collapse between siblings: the visible gap is the max of the
 // bottom margin of the previous block and the top margin of the next.
@@ -144,6 +176,7 @@ private fun RenderBlock(
                 Modifier.fillMaxWidth()
                     .background(c.markdownCodeBlock, androidx.compose.foundation.shape.RoundedCornerShape(12.dp)),
             ) {
+                // ref CodeInfoRow .container: padding 6px; copy .button h28 r8 px10 gap3
                 Row(
                     Modifier.fillMaxWidth().padding(6.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -152,9 +185,19 @@ private fun RenderBlock(
                         fontSize = 12.sp, lineHeight = 18.sp, color = c.labelPrimary,
                         modifier = Modifier.padding(start = 8.dp))
                     Spacer(Modifier.weight(1f))
-                    Text(io.github.lijiahua1024.dsnative.theme.Strings.get("copy"),
-                        fontSize = 13.sp, lineHeight = 20.sp, color = c.labelSecondary,
-                        modifier = Modifier.padding(horizontal = 10.dp))
+                    Row(
+                        Modifier.height(28.dp)
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        androidx.compose.material3.Icon(
+                            androidx.compose.ui.res.painterResource(io.github.lijiahua1024.dsnative.R.drawable.ic_copy),
+                            null, tint = c.labelSecondary, modifier = Modifier.size(14.dp))
+                        Text(io.github.lijiahua1024.dsnative.theme.Strings.get("copy"),
+                            fontSize = 13.sp, lineHeight = 20.sp, color = c.labelSecondary,
+                            modifier = Modifier.padding(start = 3.dp))
+                    }
                 }
                 Text(
                     highlightCode(literal.trimEnd('\n'), c),
@@ -233,7 +276,7 @@ private fun RenderBlock(
 private fun RenderParagraph(text: AnnotatedString, c: io.github.lijiahua1024.dsnative.theme.DsColors) {
     val segs = splitMath(text)
     if (segs.size == 1 && segs[0].second == null) {
-        Text(withInlineMath(segs[0].first, c), fontSize = 16.sp, lineHeight = 28.sp, color = c.labelPrimary)
+        ParagraphText(segs[0].first, c)
         return
     }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -243,10 +286,59 @@ private fun RenderParagraph(text: AnnotatedString, c: io.github.lijiahua1024.dsn
                 // unavailable; render it as plain paragraph text.
                 Text(math, fontSize = 16.sp, lineHeight = 28.sp, color = c.labelPrimary)
             } else {
-                Text(withInlineMath(str, c), fontSize = 16.sp, lineHeight = 28.sp, color = c.labelPrimary)
+                ParagraphText(str, c)
             }
         }
     }
+}
+
+// ref .ds-markdown code: rounded inline chip — bg bluish-100, radius 6px,
+// padding 0 5px. SpanStyle.background is a bare rect, so the chip is drawn
+// behind the text from layout-measured line boxes instead.
+@Composable
+private fun ParagraphText(str: AnnotatedString, c: io.github.lijiahua1024.dsnative.theme.DsColors) {
+    val styled = withInlineMath(str, c)
+    var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    Text(
+        styled, fontSize = 16.sp, lineHeight = 28.sp, color = c.labelPrimary,
+        fontFamily = DsTheme.fontFamily,
+        // CSS never trims and splits leading evenly; Compose's default trims
+        // the last line's descent (~13px) which shrinks every paragraph box
+        // and shifts all following content up. Center+None reproduces CSS
+        // half-leading exactly for this font.
+        style = androidx.compose.ui.text.TextStyle(
+            lineHeightStyle = LineHeightStyle(
+                alignment = LineHeightStyle.Alignment.Center,
+                trim = LineHeightStyle.Trim.None,
+            ),
+        ),
+        onTextLayout = { layout = it },
+        inlineContent = chipPadContent,
+        modifier = Modifier.drawBehind {
+            val l = layout ?: return@drawBehind
+            val padX = 5.dp.toPx()
+            val radius = 6.dp.toPx()
+            for (s in styled.spanStyles) {
+                if (s.item.fontFamily != FontFamily.Monospace || s.end <= s.start) continue
+                val firstLine = l.getLineForOffset(s.start)
+                val lastLine = l.getLineForOffset(s.end - 1)
+                for (line in firstLine..lastLine) {
+                    val from = maxOf(s.start, l.getLineStart(line))
+                    val to = minOf(s.end, l.getLineEnd(line, true))
+                    if (from >= to) continue
+                    val left = l.getBoundingBox(from).left
+                    val right = l.getBoundingBox(to - 1).right
+                    drawRoundRect(
+                        c.markdownInlineCode,
+                        topLeft = Offset(left - padX, l.getLineTop(line) + 2.dp.toPx()),
+                        size = Size(right - left + 2 * padX,
+                            l.getLineBottom(line) - l.getLineTop(line) - 4.dp.toPx()),
+                        cornerRadius = CornerRadius(radius),
+                    )
+                }
+            }
+        },
+    )
 }
 
 @Composable
@@ -406,12 +498,21 @@ private fun inlineText(
             is StrongEmphasis -> withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) {
                 append(inlineText(ch, c, uriHandler))
             }
-            is Emphasis -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
+            // WebView synthesizes ~14deg oblique for fonts without italic
+            // (all CJK); skewX -0.25 matches that. Real italic latin would
+            // double-slant, so FontStyle stays Normal here.
+            is Emphasis -> withStyle(SpanStyle(
+                textGeometricTransform = TextGeometricTransform(skewX = -0.25f),
+            )) {
                 append(inlineText(ch, c, uriHandler))
             }
-            is Code -> withStyle(
-                SpanStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp, background = c.markdownInlineCode),
-            ) { append(ch.literal) }
+            is Code -> {
+                appendInlineContent(CHIP_PAD, " ")
+                withStyle(
+                    SpanStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp),
+                ) { append(ch.literal) }
+                appendInlineContent(CHIP_PAD, " ")
+            }
             is Link -> {
                 val url = ch.destination
                 withLink(
@@ -437,33 +538,44 @@ private fun inlineText(
 
 private val KEYWORDS = setOf(
     "fun", "val", "var", "class", "interface", "object", "return", "if", "else",
-    "for", "while", "when", "import", "package", "null", "true", "false", "is",
+    "for", "while", "when", "import", "package", "null", "is",
     "in", "as", "data", "sealed", "public", "private", "internal", "override",
-    "suspend", "const", "def", "print", "println", "None", "True", "False",
-    "function", "const", "let", "new", "void", "int", "long", "double", "float",
-    "String", "Int", "static", "final", "extends", "implements", "async", "await",
+    "suspend", "const", "def",
+    "function", "let", "new", "void", "int", "long", "double", "float",
+    "static", "final", "extends", "implements", "async", "await",
     "from", "with", "lambda", "this", "super", "try", "catch", "throw", "throws",
 )
 
+private val BOOLEANS = setOf("true", "false", "True", "False")
+
+// Prism palette lifted from ref src/components/markdown/highlight.css (light + dark)
 private fun highlightCode(
     code: String,
     c: io.github.lijiahua1024.dsnative.theme.DsColors,
 ): AnnotatedString = buildAnnotatedString {
-    val kw = KEYWORDS
+    val comment = if (c.dark) Color(0xFF8DA1B9) else Color(0xFF9EA1AB)
+    val keyword = if (c.dark) Color(0xFFE9AE7E) else Color(0xFFA425AA)
+    val function = if (c.dark) Color(0xFFC699E3) else Color(0xFF397CFB)
+    val string = if (c.dark) Color(0xFF91D076) else Color(0xFF579E5A)
+    val number = if (c.dark) Color(0xFFE6D37A) else Color(0xFFB75500)
+    val className = if (c.dark) Color(0xFF6CB8E6) else Color(0xFFB75500)
+    val plain = if (c.dark) Color(0xFFE3EAF2) else c.labelPrimary
     val token = Regex("(\"([^\"\\\\]|\\\\.)*\"|'([^'\\\\]|\\\\.)*'|//[^\n]*|#[^\n]*|/\\*[\\s\\S]*?\\*/|\\b\\d+(\\.\\d+)?\\b|\\b[A-Za-z_][A-Za-z0-9_]*\\b)")
     var i = 0
     for (m in token.findAll(code)) {
-        if (m.range.first > i) withStyle(SpanStyle(color = c.labelPrimary)) { append(code.substring(i, m.range.first)) }
+        if (m.range.first > i) withStyle(SpanStyle(color = plain)) { append(code.substring(i, m.range.first)) }
         val t = m.value
         val color = when {
-            t.startsWith("//") || t.startsWith("/*") || (t.startsWith("#") && !t.startsWith("#!")) -> c.labelTertiary
-            t.startsWith("\"") || t.startsWith("'") -> androidx.compose.ui.graphics.Color(0xFF22863A)
-            t.first().isDigit() -> androidx.compose.ui.graphics.Color(0xFF0550AE)
-            kw.contains(t) -> c.brandText
-            else -> c.labelPrimary
+            t.startsWith("//") || t.startsWith("/*") || (t.startsWith("#") && !t.startsWith("#!")) -> comment
+            t.startsWith("\"") || t.startsWith("'") -> string
+            t.first().isDigit() || BOOLEANS.contains(t) -> number
+            KEYWORDS.contains(t) -> keyword
+            t.first().isUpperCase() -> className
+            code.getOrNull(m.range.last + 1) == '(' -> function
+            else -> plain
         }
         withStyle(SpanStyle(color = color)) { append(t) }
         i = m.range.last + 1
     }
-    if (i < code.length) withStyle(SpanStyle(color = c.labelPrimary)) { append(code.substring(i)) }
+    if (i < code.length) withStyle(SpanStyle(color = plain)) { append(code.substring(i)) }
 }
