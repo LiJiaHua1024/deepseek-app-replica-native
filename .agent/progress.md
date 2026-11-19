@@ -49,3 +49,4 @@
 - settings.data DONE 0.9885/0.442; personalization 0.9862; agreements 0.9995; export 0.9948. All rebuilt to ref structure (Groups, captions, export flow via CreateDocument).
 - settings.font RESIDUAL best 0.9634/2.204 (worst: bottom panel strip ~0.81). Tried: dp sweeps on all paddings/margins, canvas slider geometry, switch styling; residual is sub-pixel glyph + native-vs-WebView slider rendering.
 - settings.root.dark DONE 0.9804/0.955; settings.root.light DONE 0.9827/0.891. Fixed version string to match ref (0.4.0).
+- comp.useAndroidDrawerGesture RESIDUAL: grid majority match 85-89% (needs 95). Gesture loop fully ported (slop/velocity-window/fling-pause/gain/takeover/boundary/free-pan/cancel). Chromium intermittently holds pointermove ~290ms (measured via CDP) making ~10/75 cells coin-flips on both apps. 6 methods tried — see decisions.md.
