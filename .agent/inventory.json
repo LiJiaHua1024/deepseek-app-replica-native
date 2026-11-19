@@ -340,12 +340,12 @@
   "path": "src/components/settings/AndroidSettings.tsx",
   "type": "screen-state",
   "reach": "shot settings.root.default",
-  "status": "todo",
-  "blurred_ssim": null,
-  "color_mad": null,
-  "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "status": "done",
+  "blurred_ssim": 0.9822,
+  "color_mad": 0.913,
+  "attempts": 4,
+  "commit": "pending",
+  "notes": "rewrote to ref grouped-card layout; label zones fixed at 18dp+8dp via fixed-height Box"
  },
  {
   "id": "settings.root.dark",

@@ -45,7 +45,7 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
         Row(Modifier.fillMaxWidth().height(52.dp).padding(start = 4.dp, end = 2.dp),
             verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onOpenDrawer, modifier = Modifier.size(40.dp)) {
-                Icon(painterResource(R.drawable.ic_menu), null, tint = c.labelPrimary, modifier = Modifier.size(20.dp))
+                Icon(painterResource(R.drawable.ic_menu), Strings.get("expandSiderbarButton"), tint = c.labelPrimary, modifier = Modifier.size(20.dp))
             }
             val headerTitle = session?.title?.ifEmpty { Strings.get("untitledChat") } ?: ""
             Text(headerTitle, fontSize = 14.sp,
@@ -67,7 +67,7 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
                     null, tint = c.labelPrimary, modifier = Modifier.size(22.dp))
             }
             IconButton(onClick = { chatStore.newChat() }, modifier = Modifier.size(40.dp)) {
-                Icon(painterResource(R.drawable.ic_new_chat), null, tint = c.labelPrimary, modifier = Modifier.size(20.dp))
+                Icon(painterResource(R.drawable.ic_new_chat), Strings.get("newChat"), tint = c.labelPrimary, modifier = Modifier.size(20.dp))
             }
         }
 

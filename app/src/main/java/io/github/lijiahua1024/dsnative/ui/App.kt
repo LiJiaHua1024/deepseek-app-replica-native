@@ -65,12 +65,9 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
             nav = nav,
             onNavigate = { nav = it },
             siderContent = { close ->
-                when (nav) {
-                    is NavState.Settings -> AndroidSettings(settings, chatStore) { nav = NavState.Chat }
-                    else -> Sider(settings, chatStore,
-                        onNavigateSettings = { nav = NavState.Settings },
-                        onClose = close)
-                }
+                Sider(settings, chatStore,
+                    onNavigateSettings = { nav = NavState.Settings; close() },
+                    onClose = close)
             },
         ) { open ->
             when (nav) {

@@ -379,7 +379,7 @@ const scenes = {
   },
   async 'settings.root'(evaluate) {
     await openDrawer(evaluate)
-    await evaluate(`(() => { const b=[...document.querySelectorAll('button,a,li')].find(e=>e.textContent.trim()==='设置'); if(b){b.click();return true} return false })()`)
+    await evaluate(`(() => { const b=document.querySelector('[aria-label="设置"],[aria-label="Settings"]') || [...document.querySelectorAll('button,a,li')].find(e=>/设置|API Key/.test(e.textContent.trim())); if(b){b.click();return true} return false })()`)
     await delay(600)
   },
 }
