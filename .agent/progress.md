@@ -46,3 +46,5 @@
 - sider.dark DONE 0.9853/0.667. Drawer container used bgLayer2 (2C2C2E); ref [data-android].mobile uses bg-base (151517). Fixed in DrawerFrame.
 - sider.light DONE 0.9892/1.116 (same fix; identical light bg). Both use `sider` scene alias -> sider.sessions.
 - settings.account DONE 0.9857/0.764. Rebuilt page to ref layout: 账户 group, icon+key row (fixed "••••••••" mask), inline password editor on tap, 开放平台 + 开放平台帮助 link rows. Driver: strip ".default" in shot.sh; ref settingsPage/settingsRow click rows by label.
+- settings.data DONE 0.9885/0.442; personalization 0.9862; agreements 0.9995; export 0.9948. All rebuilt to ref structure (Groups, captions, export flow via CreateDocument).
+- settings.font RESIDUAL best 0.9634/2.204 (worst: bottom panel strip ~0.81). Tried: dp sweeps on all paddings/margins, canvas slider geometry, switch styling; residual is sub-pixel glyph + native-vs-WebView slider rendering.

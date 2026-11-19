@@ -3,6 +3,10 @@ package io.github.lijiahua1024.dsnative.ui.settings
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -140,7 +144,7 @@ fun AndroidSettings(settings: SettingsStore, chatStore: ChatStore, onBack: () ->
                 fontWeight = FontWeight.Medium, color = c.labelPrimary,
                 modifier = Modifier.align(Alignment.Center))
         }
-        Column(Modifier.verticalScroll(rememberScrollState())
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
             .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 36.dp)) {
             when (page) {
                 "root" -> SettingsRootPage(c, card, muted,
@@ -149,13 +153,14 @@ fun AndroidSettings(settings: SettingsStore, chatStore: ChatStore, onBack: () ->
                     onLogout = { confirmLogout = true },
                     themePref = themePref, localePref = localePref)
                 "account" -> AccountPage(c, card, muted, settings)
-                "data" -> DataPage(c, card, muted, settings, chatStore)
+                "data" -> DataPage(c, card, muted, settings, chatStore, onPage = { page = it })
                 "font" -> FontPage(c, card, muted, settings)
                 "personalization" -> PersonalizationPage(c, card, muted, settings)
                 "agreements" -> AgreementsPage(c, card, muted)
                 "export" -> ExportPage(c, card, muted, chatStore)
             }
         }
+        if (page == "font") FontPanel(c, card, muted, settings)
     }
 
     if (confirmLogout) {
@@ -325,30 +330,43 @@ private fun AccountPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card:
 }
 
 @Composable
-private fun DataPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Color, muted: Color, settings: SettingsStore, chatStore: ChatStore) {
-    val foldThinking by settings.foldThinking.collectAsState()
+private fun DataPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Color, muted: Color, settings: SettingsStore, chatStore: ChatStore, onPage: (String) -> Unit) {
     var confirmDeleteAll by remember { mutableStateOf(false) }
     var confirmImport by remember { mutableStateOf(false) }
     var importResult by remember { mutableStateOf<Int?>(null) }
     val ctx = LocalContext.current
-    val exportLauncher = rememberLauncherForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/zip"),
-    ) { uri -> if (uri != null) chatStore.exportArchive(ctx, uri) }
+    val privacyUrl = "https://cdn.deepseek.com/policies/zh-CN/deepseek-open-platform-privacy-policy.html"
     val importLauncher = rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
     ) { uri -> importResult = uri?.let { chatStore.importArchive(ctx, it) } }
+    // ref .caption above the groups: muted 13/21, underlined privacy-policy link
+    androidx.compose.material3.Text(
+        androidx.compose.ui.text.buildAnnotatedString {
+            append(Strings.get("dataCaptionA"))
+            val linkStart = length
+            append(Strings.get("dataCaptionLink"))
+            addStyle(androidx.compose.ui.text.SpanStyle(
+                textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline),
+                linkStart, length)
+            append(if (java.util.Locale.getDefault().language == "zh") "。" else ".")
+        },
+        fontSize = 13.sp, lineHeight = 21.sp, color = muted,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 29.3.dp)
+            .clickable { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(privacyUrl))) })
+    // caption text metrics land the first card ~7px higher than the reference; extra ~2.3dp compensates
     SettingsGroup(null, card, muted) {
-        Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
-            .padding(start = 16.dp, end = 15.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            Text(Strings.get("settingsAutoFold"), fontSize = 16.sp, color = c.labelPrimary, modifier = Modifier.weight(1f))
-            Switch(checked = foldThinking, onCheckedChange = { settings.setFoldThinking(it) })
-        }
-        SettingsRow(c, muted, Strings.get("historyImport"), value = Strings.get("historyImportConfirm")) { confirmImport = true }
-        SettingsRow(c, muted, Strings.get("exportAllLabel"), value = Strings.get("exportAllDownload")) {
-            exportLauncher.launch("deepseek-chats-${System.currentTimeMillis()}.zip")
-        }
+        SettingsRow(c, muted, Strings.get("exportAllLabel")) { onPage("export") }
+    }
+    SettingsGroup(null, card, muted) {
         SettingsRow(c, muted, Strings.get("settingsDeleteAll"), danger = true, arrow = false) { confirmDeleteAll = true }
+    }
+    SettingsGroup(null, card, muted) {
+        SettingsRow(c, muted, Strings.get("historyImport"), arrow = false) { confirmImport = true }
+    }
+    importResult?.let { count ->
+        Text(if (count >= 0) Strings.get("historyImported", "count" to count) else Strings.get("historyImportFailed"),
+            fontSize = 13.sp, lineHeight = 21.sp,
+            color = muted, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 27.dp))
     }
     if (confirmDeleteAll) {
         AlertDialog(onDismissRequest = { confirmDeleteAll = false },
@@ -373,70 +391,149 @@ private fun DataPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Co
             },
             dismissButton = { TextButton({ confirmImport = false }) { Text(Strings.get("cancel")) } })
     }
-    importResult?.let { count ->
-        AlertDialog(onDismissRequest = { importResult = null },
-            title = { Text(Strings.get("historyImport")) },
-            text = { Text(if (count >= 0) "Imported $count session(s)" else "Invalid archive") },
-            confirmButton = { TextButton({ importResult = null }) { Text(Strings.get("confirm")) } })
-    }
-}
-
-@Composable
-private fun FontPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Color, muted: Color, settings: SettingsStore) {
-    val fontSize by settings.fontSize.collectAsState()
-    SettingsGroup(null, card, muted) {
-        Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
-            .padding(start = 16.dp, end = 15.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            Text(Strings.get("settingsFontPage"), fontSize = 16.sp, color = c.labelPrimary, modifier = Modifier.weight(1f))
-            Slider(value = (fontSize ?: 16).toFloat(), onValueChange = { settings.setFontSize(it.toInt()) },
-                valueRange = 12f..20f, modifier = Modifier.width(160.dp))
-        }
-    }
-}
-
-@Composable
-private fun PersonalizationPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Color, muted: Color, settings: SettingsStore) {
-    val autoRead by settings.autoRead.collectAsState()
-    SettingsGroup(null, card, muted) {
-        Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
-            .padding(start = 16.dp, end = 15.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            Text(Strings.get("androidAutoRead"), fontSize = 16.sp, color = c.labelPrimary, modifier = Modifier.weight(1f))
-            Switch(checked = autoRead, onCheckedChange = { settings.setAutoRead(it) })
-        }
-    }
 }
 
 @Composable
 private fun AgreementsPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Color, muted: Color) {
     val ctx = LocalContext.current
     val policies = "https://cdn.deepseek.com/policies/zh-CN"
+    val open = { url: String -> ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
     SettingsGroup(null, card, muted) {
-        SettingsRow(c, muted, Strings.get("agreementTerms")) {
-            ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("$policies/deepseek-terms-of-use.html")))
-        }
-        SettingsRow(c, muted, Strings.get("agreementPrivacy")) {
-            ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("$policies/deepseek-privacy-policy.html")))
+        SettingsRow(c, muted, Strings.get("agreementTerms")) { open("$policies/deepseek-terms-of-use.html") }
+        SettingsRow(c, muted, Strings.get("agreementPrivacy")) { open("$policies/deepseek-privacy-policy.html") }
+        SettingsRow(c, muted, Strings.get("agreementThirdParty")) { open("$policies/third-party-info-sharing-list.html") }
+        SettingsRow(c, muted, Strings.get("agreementPersonal")) { open("$policies/collected-personal-information.html") }
+        SettingsRow(c, muted, Strings.get("agreementPermissions")) {
+            ctx.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:${ctx.packageName}")))
         }
     }
 }
 
 @Composable
+private fun PersonalizationPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Color, muted: Color, settings: SettingsStore) {
+    val foldThinking by settings.foldThinking.collectAsState()
+    // ref: single card with 思考内容自动折叠 switch + caption below
+    SettingsGroup(null, card, muted) {
+        Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
+            .padding(start = 16.dp, end = 15.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Text(Strings.get("settingsAutoFold"), fontSize = 16.sp, color = c.labelPrimary, modifier = Modifier.weight(1f))
+            RefSwitch(foldThinking) { settings.setFoldThinking(it) }
+        }
+    }
+    Text(Strings.get("settingsAutoFoldCaption"), fontSize = 13.sp, lineHeight = 21.sp, color = muted,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 27.dp))
+}
+
+@Composable
 private fun ExportPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Color, muted: Color, chatStore: ChatStore) {
     val ctx = LocalContext.current
-    val exportLauncher = rememberLauncherForActivityResult(
+    val sessions by chatStore.sessions.collectAsState()
+    var archive by remember { mutableStateOf<String?>(null) }
+    val saveLauncher = rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/zip"),
     ) { uri -> if (uri != null) chatStore.exportArchive(ctx, uri) }
+    // ref: 导出 row first; 保存到设备 group appears once an archive exists; caption below
     SettingsGroup(null, card, muted) {
-        Column(Modifier.padding(16.dp)) {
-            Text(Strings.get("historyExportDescription"), fontSize = 14.sp, color = muted)
-            Spacer(Modifier.height(12.dp))
-            Text(Strings.get("exportAllDownload"), fontSize = 16.sp, color = c.brandPrimary,
-                modifier = Modifier.clickable {
-                    exportLauncher.launch("deepseek-chats-${System.currentTimeMillis()}.zip")
-                })
+        SettingsRow(c, muted,
+            if (archive == null) Strings.get("exportLabel") else Strings.get("exportAgain"),
+            arrow = false) {
+            val f = java.io.File(ctx.cacheDir, "deepseek-chats-${System.currentTimeMillis()}.zip")
+            if (chatStore.exportArchive(ctx, android.net.Uri.fromFile(f))) archive = f.name
         }
+    }
+    if (archive != null) {
+        SettingsGroup(null, card, muted) {
+            SettingsRow(c, muted, Strings.get("exportSaveDevice"), arrow = false) { saveLauncher.launch(archive!!) }
+        }
+    }
+    Text(archive ?: Strings.get(if (sessions.isEmpty()) "androidNoChats" else "historyExportDescription"),
+        fontSize = 13.sp, lineHeight = 21.sp, color = muted,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 27.dp))
+}
+
+@Composable
+private fun FontPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Color, muted: Color, settings: SettingsStore) {
+    val fontSize by settings.fontSize.collectAsState()
+    val scale = fontSize?.let { 1 + (it - 3) * 0.09f } ?: 1f
+    val fs = (16 * scale).sp
+    // ref .preview: right bubble + two paragraphs, lineHeight 1.6, scaled by slider value
+    Column(Modifier.padding(top = 34.dp, start = 8.dp, end = 8.dp)) {
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+            Text(Strings.get("fontPreview"), fontSize = fs, color = c.labelPrimary,
+                modifier = Modifier.clip(RoundedCornerShape(22.dp))
+                    .background(c.buttonGhostActiveFill)
+                    .padding(horizontal = 16.dp, vertical = 10.dp))
+        }
+        Text(Strings.get("fontDesc1"), fontSize = fs, lineHeight = fs * 1.6f, color = c.labelPrimary,
+            modifier = Modifier.padding(top = 27.7.dp))
+        Text(Strings.get("fontDesc2"), fontSize = fs, lineHeight = fs * 1.6f, color = c.labelPrimary,
+            modifier = Modifier.padding(top = 26.dp))
+    }
+}
+
+@Composable
+private fun FontPanel(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Color, muted: Color, settings: SettingsStore) {
+    val fontSize by settings.fontSize.collectAsState()
+    // ref .fontPanel: bottom sheet card, r18 top, padding 12 24 36; follow-system switch + labels + slider
+    Column(Modifier.fillMaxWidth().navigationBarsPadding()
+        .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)).background(card)
+        .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 29.dp)) {
+        Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 44.dp)
+            .padding(start = 3.dp, end = 3.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Text(Strings.get("settingsFollowSystem"), fontSize = 16.sp, color = c.labelPrimary, modifier = Modifier.weight(1f))
+            RefSwitch(fontSize == null) { settings.setFontSize(if (it) null else 3) }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 13.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom) {
+            Text("A", fontSize = 13.sp, color = c.labelPrimary, lineHeight = 19.sp)
+            Text(Strings.get("fontStandard"), fontSize = 12.sp, color = c.labelPrimary, lineHeight = 19.sp)
+            Text("A", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = c.labelPrimary, lineHeight = 19.sp)
+        }
+        // ref range input: thin track, left light gray / right dark, round gray thumb
+        val enabled = fontSize != null
+        androidx.compose.foundation.Canvas(
+            Modifier.fillMaxWidth().padding(top = 12.dp).height(17.dp)
+                .alpha(if (enabled) 1f else 0.5f)
+                .pointerInput(enabled) {
+                    if (!enabled) return@pointerInput
+                    detectTapGestures { p ->
+                        settings.setFontSize((p.x / size.width * 6f + 0.5f).toInt().coerceIn(0, 6))
+                    }
+                }
+                .pointerInput(enabled) {
+                    if (!enabled) return@pointerInput
+                    detectHorizontalDragGestures { ch, _ ->
+                        settings.setFontSize((ch.position.x / size.width * 6f + 0.5f).toInt().coerceIn(0, 6))
+                    }
+                }) {
+            val th = 7.dp.toPx(); val cy = size.height / 2; val tr = th / 2
+            val tx = (size.width * ((fontSize ?: 3) / 6f)).coerceIn(7.dp.toPx(), size.width - 7.dp.toPx())
+            drawRoundRect(Color(0xFF3B3B3B), topLeft = androidx.compose.ui.geometry.Offset(0f, cy - th / 2),
+                size = androidx.compose.ui.geometry.Size(size.width, th),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(tr))
+            drawRoundRect(Color(0xFFAAAAAA), topLeft = androidx.compose.ui.geometry.Offset(0f, cy - th / 2),
+                size = androidx.compose.ui.geometry.Size(tx, th),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(tr))
+            drawCircle(Color(0xFF9E9E9E), radius = 10.dp.toPx(),
+                center = androidx.compose.ui.geometry.Offset(tx, cy))
+        }
+    }
+}
+
+// ref .switch: 52x32 track, #e4e4e4 off / #24c466 on, 24px white thumb 4px inset
+@Composable
+private fun RefSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    val frac by androidx.compose.animation.core.animateFloatAsState(if (checked) 1f else 0f, label = "switch")
+    Box(Modifier.size(52.dp, 32.dp).clip(RoundedCornerShape(20.dp))
+        .background(if (frac >= 0.5f) Color(0xFF24C466) else Color(0xFFE4E4E4))
+        .clickable { onCheckedChange(!checked) }) {
+        Box(Modifier.padding(start = 4.dp, top = 4.dp)
+            .offset(x = (20f * frac).dp)
+            .size(24.dp).clip(RoundedCornerShape(50)).background(Color.White))
     }
 }
 

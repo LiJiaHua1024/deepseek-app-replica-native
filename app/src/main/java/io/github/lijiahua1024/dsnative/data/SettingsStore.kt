@@ -50,7 +50,7 @@ class SettingsStore(context: Context) {
 
     /** null = 跟随系统 */
     private val _fontSize = MutableStateFlow(
-        if (prefs.getString("font-size", null) == "system" || !prefs.contains("font-size")) null
+        if (prefs.getString("font-size", null) == "system") null
         else prefs.getInt("font-size", 3)
     )
     val fontSize: StateFlow<Int?> = _fontSize
