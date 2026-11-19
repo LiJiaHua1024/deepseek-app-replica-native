@@ -168,7 +168,7 @@
   "blurred_ssim": 0.9712,
   "color_mad": 1.605,
   "attempts": 1,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "备注": "residual: worst rects y586/1465 text bands ~0.89 — same glyph-rasterization root cause as chat.default residual. Fixed: INTERRUPTED+partial-content now settles STOPPED (was protocol error 未知错误), action row shows."
  },
@@ -233,7 +233,7 @@
   "blurred_ssim": 0.9841,
   "color_mad": 1.718,
   "attempts": 1,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "备注": "wait for stream end via 问候 title before shot"
  },
@@ -519,7 +519,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.edit (pass)"
  },
@@ -532,7 +532,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via apikey.default (pass)"
  },
@@ -545,7 +545,7 @@
   "blurred_ssim": 0.9768,
   "color_mad": 1.603,
   "attempts": 5,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "worst_rects": [
    {
@@ -588,7 +588,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via apikey.default (pass)"
  },
@@ -601,7 +601,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.edit (pass)"
  },
@@ -614,7 +614,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.edit (pass)"
  },
@@ -651,7 +651,7 @@
   "blurred_ssim": 0.9768,
   "color_mad": 1.603,
   "attempts": 5,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "worst_rects": [
    {
@@ -694,7 +694,7 @@
   "blurred_ssim": 0.9768,
   "color_mad": 1.603,
   "attempts": 5,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "worst_rects": [
    {
@@ -838,7 +838,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.edit (pass)"
  },
@@ -923,7 +923,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.edit (pass)"
  },
@@ -936,7 +936,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.edit (pass)"
  },
@@ -949,7 +949,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.edit (pass)"
  },
@@ -1070,7 +1070,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via imageviewer.default (pass)"
  },
@@ -1083,7 +1083,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via imageviewer.default (pass)"
  },
@@ -1144,7 +1144,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via imageviewer.default (pass)"
  },
@@ -1157,7 +1157,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via imageviewer.default (pass)"
  },
@@ -1170,7 +1170,7 @@
   "blurred_ssim": 0.9849,
   "color_mad": 0.82,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "pass via chat.code"
  },
@@ -1183,7 +1183,7 @@
   "blurred_ssim": 0.9849,
   "color_mad": 0.82,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "pass via chat.code"
  },
@@ -1196,7 +1196,7 @@
   "blurred_ssim": 0.9829,
   "color_mad": 1.038,
   "attempts": 1,
-  "commit": null,
+  "commit": "da384f0",
   "notes": "",
   "note": "chat.md scene: mock md reply now includes [DeepSeek 官网](https://www.deepseek.com); link styled identically"
  },
@@ -1209,7 +1209,7 @@
   "blurred_ssim": 0.9838,
   "color_mad": 0.996,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "pass via chat.md"
  },
@@ -1222,7 +1222,7 @@
   "blurred_ssim": 0.9838,
   "color_mad": 0.996,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "pass via chat.md"
  },
@@ -1260,7 +1260,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.code (pass)"
  },
@@ -1273,7 +1273,7 @@
   "blurred_ssim": 0.9838,
   "color_mad": 0.996,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "pass via chat.md"
  },
@@ -1286,7 +1286,7 @@
   "blurred_ssim": 0.9838,
   "color_mad": 0.996,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "pass via chat.md"
  },
@@ -1299,7 +1299,7 @@
   "blurred_ssim": 0.9812,
   "color_mad": 1.143,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "pass via chat.edit/menu/branch"
  },
@@ -1312,7 +1312,7 @@
   "blurred_ssim": 0.9812,
   "color_mad": 1.143,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "pass via chat.edit/menu/branch"
  },
@@ -1325,7 +1325,7 @@
   "blurred_ssim": 0.9812,
   "color_mad": 1.143,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "pass via chat.edit/menu/branch"
  },
@@ -1374,7 +1374,7 @@
   "blurred_ssim": 0.9812,
   "color_mad": 1.232,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "pass via chat.menu"
  },
@@ -1423,7 +1423,7 @@
   "blurred_ssim": 0.9812,
   "color_mad": 1.143,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "pass via chat.edit/menu/branch"
  },
@@ -1436,7 +1436,7 @@
   "blurred_ssim": 0.9812,
   "color_mad": 1.143,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "pass via chat.edit/menu/branch"
  },
@@ -1449,7 +1449,7 @@
   "blurred_ssim": 0.9812,
   "color_mad": 1.143,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "pass via chat.edit/menu/branch"
  },
@@ -1498,7 +1498,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.edit (pass)"
  },
@@ -1511,7 +1511,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.edit (pass)"
  },
@@ -1524,7 +1524,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.edit (pass)"
  },
@@ -1573,7 +1573,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.edit (pass)"
  },
@@ -1586,7 +1586,7 @@
   "blurred_ssim": 0.9838,
   "color_mad": 0.996,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "pass via chat.md"
  },
@@ -1599,7 +1599,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.edit (pass)"
  },
@@ -1780,7 +1780,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.edit (pass)"
  },
@@ -1793,7 +1793,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.edit (pass)"
  },
@@ -1806,7 +1806,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.edit (pass)"
  },
@@ -1819,7 +1819,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.edit (pass)"
  },
@@ -1832,7 +1832,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via welcome.default (pass)"
  },
@@ -1845,7 +1845,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via welcome.default (pass)"
  },
@@ -1858,7 +1858,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via welcome.default (pass)"
  },
@@ -1871,7 +1871,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via settings.root (pass)"
  },
@@ -1884,7 +1884,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via settings.root (pass)"
  },
@@ -1897,7 +1897,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via apikey.default (pass)"
  },
@@ -1910,7 +1910,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via apikey.default (pass)"
  },
@@ -1923,7 +1923,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via apikey.default (pass)"
  },
@@ -1936,7 +1936,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via settings.root (pass)"
  },
@@ -1949,7 +1949,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via settings.root (pass)"
  },
@@ -1975,7 +1975,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via settings.root (pass)"
  },
@@ -1988,7 +1988,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via apikey.default (pass)"
  },
@@ -2014,7 +2014,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via sider.sessions (pass)"
  },
@@ -2027,7 +2027,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via sider.sessions (pass)"
  },
@@ -2040,7 +2040,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via sider.sessions (pass)"
  },
@@ -2053,7 +2053,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via sider.sessions (pass)"
  },
@@ -2066,7 +2066,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via sider.sessions (pass)"
  },
@@ -2079,7 +2079,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via sider.sessions (pass)"
  },
@@ -2105,7 +2105,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via sider.search (pass)"
  },
@@ -4794,7 +4794,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.default (pass)"
  },
@@ -4807,7 +4807,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.default (pass)"
  },
@@ -4820,7 +4820,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.default (pass)"
  },
@@ -4833,7 +4833,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.default (pass)"
  },
@@ -4858,7 +4858,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via sider.empty (pass)"
  },
@@ -4871,7 +4871,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via sider.sessions#2 (pass)"
  },
@@ -4884,7 +4884,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via sider.longpress (pass)"
  },
@@ -4897,7 +4897,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via sider.multiselect (pass)"
  },
@@ -4910,7 +4910,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.interrupted (pass)"
  },
@@ -4923,7 +4923,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.default (pass)"
  },
@@ -4936,7 +4936,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.branch (pass)"
  },
@@ -4949,7 +4949,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.edit (pass)"
  },
@@ -4962,7 +4962,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via chat.branch (pass)"
  },
@@ -4999,7 +4999,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via apikey.default (pass)"
  },
@@ -5024,7 +5024,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via settings.export.default (pass)"
  },
@@ -5049,7 +5049,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via settings.root (pass)"
  },
@@ -5110,7 +5110,7 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "pending",
+  "commit": "ceac381",
   "notes": "",
   "note": "verified via settings.root (pass)"
  },
