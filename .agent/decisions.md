@@ -5,3 +5,9 @@
 - applicationId io.github.lijiahua1024.dsnative (differs from webview's io.github.lijiahua1024.dsreplica) so both APKs coexist in one emulator for comparison.
 - Attachment/image upload, voice input, TTS/auto-read, branches switching UI, citations/search panels, camera: deferred; not in M1-M6 acceptance beyond listed items. Remaining gaps to be itemized as residual later.
 - SDK install: emulator booted headless (no-window); verification via adb screencap + uiautomator.
+
+- M3 residual: 回复操作栏只实现 copy + regenerate；参照物还有 ReadAloud（TTS 依赖未实现）与 continue-generation。头像区语音相关设置保留占位。
+- M4 residual: KaTeX 数学块渲染为等宽 TeX 文本（灰底块），非 KaTeX 排版——原生 KaTeX 无可用实现，WebView 只读正文会丢失原生手感，权衡后保留差异。
+- M4 residual: 代码高亮为通用 token 着色（keywords/strings/comments/numbers），非 highlight.js 逐语言语法。
+- M5 residual: 导出不含 TOOL_* 片段与 FILE 附件；导入跳过 TOOL_* 片段，分支树折叠为 current_message_id 链；id 冲突时追加 -imported- 后缀而非覆盖。
+- Import 文件类型过滤放宽为 */*（DocumentsUI 对 zip MIME 识别不一致）。

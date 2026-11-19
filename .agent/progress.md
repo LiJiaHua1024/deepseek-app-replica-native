@@ -46,3 +46,8 @@
 - ThinkingBlock: expanded only while STREAMING && no text yet; remember(status,hasResponse) auto-collapses.
 - Sider search: h48 r24 bgSkeleton font16 (was invisible bgLayer3=white).
 - Verified in emulator: send->streaming reply renders, thinking block collapse/expand, bubbles+actions.
+
+## M4/M5 state (checkpoint)
+- MarkdownBody: commonmark AST renderer — headings, bold/italic/strike, inline code bg, code block + regex keyword highlight, bullet/ordered lists, blockquote bar, GFM tables, HR, $$..$$ math as mono block (residual). Verified in emulator incl. table+math+strikethrough.
+- Mock reply extended: table, strikethrough, ordered list, inline+display math.
+- M5: settings page (locale/theme/fold-thinking/font-size/pin/import/export/delete-all/change-key); thinking+search toggles already wired (thinking:{enabled|disabled}, tools read_url+web_search). SAF export produces official zip v3 (manifest→sessions→index) — verified pulled file. SAF import parses official zip, walks current_message_id parent chain, imports REQUEST/RESPONSE/TEMPLATE_RESPONSE/THINK; verified "Imported 4 session(s)" reimporting own export.
