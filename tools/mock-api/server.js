@@ -68,7 +68,7 @@ function blockReply({ thinking, text, delay = 25, drop = false }) {
         clearInterval(tick);
         if (!drop) {
           res.write(`event: content_block_stop\ndata: {"type":"content_block_stop","index":${i}}\n\n`);
-          res.write('event: message_delta\ndata: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":42}}\n\n');
+          res.write('event: message_delta\ndata: {"type":"message_delta","delta":{"stop_reason":"end_turn","title":"问候"},"usage":{"output_tokens":42}}\n\n');
           res.write('event: message_stop\ndata: {"type":"message_stop"}\n\n');
         }
         res.end();
@@ -83,7 +83,9 @@ function blockReply({ thinking, text, delay = 25, drop = false }) {
 }
 
 const server = http.createServer((req, res) => {
-  const key = req.headers['x-api-key'] || '';
+  let key = req.headers['x-api-key'] || '';
+  const auth = req.headers['authorization'] || '';
+  if (!key && /^Bearer\s+/i.test(auth)) key = auth.replace(/^Bearer\s+/i, '');
   if (req.method === 'GET' && req.url.endsWith('/models')) {
     return key === TEST_KEY
       ? send(res, 200, { data: [{ id: 'deepseek-flash' }] })

@@ -183,7 +183,7 @@ private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean,
             Checkbox(checked, onCheckedChange = { onClick() }, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(10.dp))
         }
-        Text(s.title, fontSize = 14.sp, color = c.labelPrimary, fontWeight = if (active) FontWeight.Medium else FontWeight.Normal,
+        Text(s.title.ifEmpty { Strings.get("untitledChat") }, fontSize = 14.sp, color = c.labelPrimary, fontWeight = if (active) FontWeight.Medium else FontWeight.Normal,
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
     }
 }

@@ -1,8 +1,8 @@
 # Progress
 
-## Current milestone: M1 (chat core)
-## Current item: scaffold + API key screen + streaming chat
-## Next step: finish UI layer (App/sider/session/input/settings), build, mock-api verify
+## Current milestone: M2 (drawer)
+## Current item: drawer gesture verification + long-press menu + groups
+## Next step: emulator-verify drawer edge-drag open/close, fling, long-press menu, pin/rename/delete, multi-select
 
 ## Environment notes
 - Android SDK at ~/android-sdk; `export PATH=~/android-sdk/platform-tools:~/android-sdk/emulator:$PATH`
