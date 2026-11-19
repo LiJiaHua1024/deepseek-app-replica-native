@@ -67,8 +67,41 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
                     }
                 }
             }
-            LaunchedEffect(visible.size, streaming) {
-                if (visible.isNotEmpty()) listState.animateScrollToItem(visible.size - 1)
+            // Sticky-follow per MessageList.tsx: within STICKY_THRESHOLD(40px)
+            // of the bottom stays following; scrolling up stops; re-approach
+            // resumes. Content growth (streaming, keyboard resize) follows.
+            val stickyPx = with(androidx.compose.ui.platform.LocalDensity.current) { 40.dp.toPx() }
+            var sticky by remember(session?.id) { mutableStateOf(true) }
+            val nearBottom by remember {
+                derivedStateOf {
+                    val info = listState.layoutInfo
+                    if (info.totalItemsCount == 0) return@derivedStateOf true
+                    val last = info.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf false
+                    last.index == info.totalItemsCount - 1 &&
+                        last.offset + last.size - info.viewportEndOffset < stickyPx
+                }
+            }
+            LaunchedEffect(session?.id) {
+                var lastPos = 0
+                snapshotFlow { listState.firstVisibleItemIndex * 100000 + listState.firstVisibleItemScrollOffset }
+                    .collect { pos ->
+                        sticky = if (nearBottom) true else if (pos < lastPos) false else sticky
+                        lastPos = pos
+                    }
+            }
+            LaunchedEffect(session?.id) {
+                snapshotFlow {
+                    val msgs = session?.let { visibleMessages(it) } ?: emptyList()
+                    val last = msgs.lastOrNull() as? Message.Assistant
+                    Triple(msgs.size,
+                        last?.let { replyText(it).length + it.blocks.size } ?: 0,
+                        listState.layoutInfo.viewportEndOffset)
+                }.collect {
+                    val msgs = session?.let { visibleMessages(it) } ?: return@collect
+                    if (sticky && msgs.isNotEmpty()) {
+                        listState.scrollToItem(msgs.size - 1, Int.MAX_VALUE)
+                    }
+                }
             }
         }
 
