@@ -54,7 +54,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     Column(
         Modifier.fillMaxWidth()
             .imePadding()
-            .padding(start = 8.7.dp, end = 8.7.dp, bottom = if (keyboardOpen) 27.7.dp else 51.dp)
+            .padding(start = 12.dp, end = 12.dp, bottom = if (keyboardOpen) 27.7.dp else 51.dp)
             // ref .session box-shadow: 0 4px 10px rgba(0,0,0,.02), 0 2px 4px rgba(0,0,0,.04)
             .shadow(4.dp, RoundedCornerShape(24.dp), clip = false,
                 ambientColor = Color.Black.copy(alpha = 0.02f),
@@ -90,7 +90,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
             )
         }
         Row(
-            Modifier.fillMaxWidth().height(48.dp).padding(start = 15.dp, end = 15.3.dp, top = 6.dp),
+            Modifier.fillMaxWidth().height(48.dp).padding(start = 15.dp, end = 12.dp, top = 5.dp),
             verticalAlignment = Alignment.Top,
         ) {
             TogglePill(Strings.get("thinkingSwitch"), thinking, { settings.setThinking(!thinking) }, R.drawable.ic_think)

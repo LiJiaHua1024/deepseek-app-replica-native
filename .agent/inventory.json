@@ -88,9 +88,9 @@
     "path": "src/components/session/Welcome.tsx",
     "type": "screen-state",
     "reach": "shot welcome.dark",
-    "status": "todo",
-    "blurred_ssim": null,
-    "color_mad": null,
+    "status": "done",
+    "blurred_ssim": 0.9819,
+    "color_mad": 0.701,
     "attempts": 0,
     "commit": null,
     "notes": ""
