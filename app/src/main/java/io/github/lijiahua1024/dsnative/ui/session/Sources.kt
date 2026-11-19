@@ -254,6 +254,23 @@ fun SearchStepRow(stepSources: List<Source>, done: Boolean, onOpen: (List<Source
 @Composable
 fun SearchSourcesPanel(sources: List<Source>, numbered: Boolean, onClose: () -> Unit) {
     val c = DsTheme.colors
+    // Popup in its own window: above caveat text, a11y-visible, back/outside dismiss
+    val popupPositionProvider = androidx.compose.runtime.remember {
+        object : androidx.compose.ui.window.PopupPositionProvider {
+            override fun calculatePosition(
+                anchorBounds: androidx.compose.ui.unit.IntRect,
+                windowSize: androidx.compose.ui.unit.IntSize,
+                layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+                popupContentSize: androidx.compose.ui.unit.IntSize,
+            ) = androidx.compose.ui.unit.IntOffset(-anchorBounds.left, -anchorBounds.top)
+        }
+    }
+    androidx.compose.ui.window.Popup(
+        popupPositionProvider = popupPositionProvider,
+        properties = androidx.compose.ui.window.PopupProperties(
+            focusable = true, dismissOnBackPress = true, dismissOnClickOutside = true),
+        onDismissRequest = onClose,
+    ) {
     // ref 面板底部对齐到 safe.bottom（nav inset + button-nav 余量≈75px@440dpi）
     BoxWithConstraints(Modifier.fillMaxSize().navigationBarsPadding().padding(bottom = 6.5.dp)) {
         Box(
@@ -299,16 +316,19 @@ fun SearchSourcesPanel(sources: List<Source>, numbered: Boolean, onClose: () -> 
                 }
             }
             LazyColumn(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp)) {
-                item { Spacer(Modifier.height(16.dp)) }
+                // measured: first card ink ~6px early vs ref at spec 16px pad
+                item { Spacer(Modifier.height(15.3.dp)) }
                 itemsIndexed(sources) { i, source ->
-                    // ref 每项内部行距略高，逐条累计差以 34.6 间距补偿
-                    if (i > 0) Spacer(Modifier.height(34.6.dp))
+                    // ref spec 31px; measured pitch is ~7.5px (2.7dp) short per card
+                    if (i > 0) Spacer(Modifier.height(33.7.dp))
                     SourceItem(source, numbered = numbered,
                         single = sources.size == 1)
                 }
-                item { Spacer(Modifier.height(25.dp)) }
+                // ref spec is 32px; trimmed 5dp to match measured sheet height
+                item { Spacer(Modifier.height(27.dp)) }
             }
         }
+    }
     }
 }
 
@@ -327,19 +347,22 @@ private fun SourceItem(source: Source, numbered: Boolean, single: Boolean) {
                 android.content.Intent.ACTION_VIEW, android.net.Uri.parse(source.url)))
         } catch (_: Exception) {}
     }) {
-        Row(Modifier.height(20.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().height(20.dp), verticalAlignment = Alignment.CenterVertically) {
             SiteLogo(20.dp)
             Spacer(Modifier.width(10.36.dp))
-            Text(source.siteName, fontSize = 14.sp, lineHeight = 20.sp,
-                color = c.labelPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false))
-            val date = formatSourceDate(source.publishedAt)
-            if (date.isNotEmpty()) {
-                Spacer(Modifier.width(10.36.dp))
-                Text(date, fontSize = 14.sp, lineHeight = 20.sp, color = c.labelTertiary,
-                    maxLines = 1)
+            // ref .meta: siteName/date flex-shrink, .number { margin-left: auto }
+            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                Text(source.siteName, fontSize = 14.sp, lineHeight = 20.sp,
+                    color = c.labelPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false))
+                val date = formatSourceDate(source.publishedAt)
+                if (date.isNotEmpty()) {
+                    Spacer(Modifier.width(10.36.dp))
+                    Text(date, fontSize = 14.sp, lineHeight = 20.sp, color = c.labelTertiary,
+                        maxLines = 1)
+                }
             }
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.width(10.36.dp))
             if (numbered) {
                 Box(
                     Modifier

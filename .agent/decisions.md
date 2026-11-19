@@ -115,3 +115,25 @@ Residual cause: nondeterministic delivery timing in the measurement channel, not
   backdrop-filter blur that has no cheap Compose equivalent.
 - Strings: fixed en/zh wording to match ref i18n verbatim for the pin/delete/
   select keys.
+
+## SearchPanel residual (searchpanel.default 0.8599 / mad 5.011)
+
+Bugs found and fixed:
+- Caveat text "回答由 AI 生成" bled through the sheet bottom: panel was an in-composition
+  overlay drawn before the caveat node → wrapped `SearchSourcesPanel` in a focusable
+  `Popup` (own window, back/outside dismiss, a11y-visible — also matches ref).
+- Number badge not pinned right: `weight(1f, fill=false)` on siteName does NOT reserve
+  its slot, so the trailing `Spacer(weight(1f))` only received half the remaining space.
+  Wrapped siteName+date in an inner `Row(Modifier.weight(1f))` so the badge sits at the
+  row's right edge like ref `.number { margin-left: auto }`.
+- Sheet geometry: ref `.content` padding is 16px top / 32px bottom, `.result + .result`
+  margin-top 31px. Final measured fit: top 15.3dp, card gap 33.7dp, bottom 27dp;
+  every text line then lands within ~5px of ref.
+
+Residual: with positions within ±5px, ink colors equal, same Roboto/Noto Sans CJK stack
+and no subpixel-AA fringing on either side, remaining diff is per-glyph rasterization
+and line-metric jitter across dense CJK text (same class as comp.Modal residual).
+Methods tried: spec-metric rebuild, Popup window, flex/weight restructuring,
+ink-position measurement loop (5 rounds), color/AA analysis.
+Worst rects: (293,1465,293,293)=0.6923, (586,1465,293,293)=0.6944,
+(586,2051,293,289)=0.7259.
