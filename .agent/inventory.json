@@ -1930,12 +1930,13 @@
   "path": "src/components/sider/useAndroidDrawerGesture.ts",
   "type": "interaction",
   "reach": "drawer scenes",
-  "status": "todo",
+  "status": "residual",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 6,
   "commit": null,
-  "notes": ""
+  "notes": "",
+  "备注": "grid majority match 85-89% (<95%); boundary cells coin-flip on both apps — Chromium intermittently holds pointermove delivery ~290ms; deterministic logic verified identical (see decisions.md). tried: velocity-unit, upTime, coalesced samples, hold emulation, up-tail eval, cancel parity."
  },
  {
   "id": "comp.useSessionSearch",

@@ -23,3 +23,14 @@
 - chat.dark residual at first shot: identical layout code path to chat.default, worst rects identical (table ink, KaTeX-fallback region). Dark mad 1.693 <4: theme colors already within tolerance. No theme-specific fix can close a structural gap.
 - chat.thinking: math fallback Text gets DsTheme.fontFamily (NotoSC latin ~5% wider than Roboto) -> math rect 0.87->0.91, score 0.9647->0.97. Action-row top padding 18->15.5dp moved ALL bands +7px (message list is bottom-anchored to composer, so any content-height change shifts the whole view); reverted to 18dp.
 - settings 版本信息 displays "0.4.0" (the reference build's version shown in its own UI) instead of BuildConfig VERSION_NAME: the row must match the reference visually; versionName itself unchanged.
+
+## Drawer gesture (comp.useAndroidDrawerGesture) — RESIDUAL, mechanism measured
+Gesture loop in App.kt is a literal port of useAndroidDrawerGesture.ts (slop=8css, 60ms sample window, 56ms fling pause, 0.33css/ms flick, 1.031 distance gain, take-over-live start, boundary skip, vertical-cancel unless free-pan, startedOpen on cancel).
+Measured facts (devtools CDP on ref WebView, window listeners + MutationObserver):
+- edge = 324.7 css px; native edgePx = min(w-68.4dp, 380dp) = 324.3 css px.
+- `input swipe` event-times run ~150-270ms longer than the requested duration (injection pacing tail).
+- Chromium intermittently withholds pointermove delivery ~290ms starting ~50ms after pointerdown (scroll-classification/jank), then flushes one queued move + the up. When it happens, ref settles on a stale `current` (<0.5) → stays closed. Frequency is load-dependent: rare warm, common cold.
+- Because of that, ~10 of 75 grid cells near decision boundaries are coin-flips on BOTH apps (ref itself flips cells between identical runs; e.g. (450,400,*) current=0.494 vs 0.5 threshold).
+Grid (3x majority per cell): match 85-89% across runs; stable mismatches cluster at dx=100 dur=80 and dx=450 dur=400 — boundary cells where Chromium's hold/lucky-flush decides ref's side.
+Methods tried: (1) velocity unit css→device fix; (2) upTime from event not wall clock; (3) coalesced-samples via change.historical; (4) Chromium hold-window emulation (drop moves 60-350ms after down) — matched hold-mode but lost the warm mode, netted negative; (5) UP-event tail evaluation (historical + final position as flushed moves) — fixed systematic dur=200 closures; (6) pointerInput exception → settle(startedOpen) for pointercancel/lostcapture parity.
+Residual cause: nondeterministic delivery timing in the measurement channel, not gesture logic — all deterministic logic verified identical.

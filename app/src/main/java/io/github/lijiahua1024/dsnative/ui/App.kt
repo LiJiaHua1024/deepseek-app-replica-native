@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+
 package io.github.lijiahua1024.dsnative.ui
 
 import androidx.compose.foundation.background
@@ -61,8 +63,13 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
             }
             return@DsTheme
         }
+        val activeId by chatStore.activeId.collectAsState()
+        val sessionCache by chatStore.sessionCache.collectAsState()
+        val freePan = nav == NavState.Chat &&
+            (sessionCache[activeId]?.let { io.github.lijiahua1024.dsnative.data.visibleMessages(it).isNotEmpty() } != true)
         DrawerFrame(
             nav = nav,
+            freePan = freePan,
             onNavigate = { nav = it },
             siderContent = { close ->
                 Sider(settings, chatStore,
@@ -83,6 +90,7 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
 @Composable
 fun DrawerFrame(
     nav: NavState,
+    freePan: Boolean,
     onNavigate: (NavState) -> Unit,
     siderContent: @Composable (close: () -> Unit) -> Unit,
     mainContent: @Composable (open: () -> Unit) -> Unit,
@@ -104,40 +112,94 @@ fun DrawerFrame(
             Modifier
                 .fillMaxSize()
                 .pointerInput(edgePx) {
-                    // Port of useAndroidDrawerGesture.ts: drag anywhere,
-                    // horizontal wins via slop; distance = |dx| - 8px,
-                    // gain 1.031; velocity from last-60ms samples,
-                    // pause > 56ms => 0; settle: fling sign else p >= 0.5.
+                    // Literal port of useAndroidDrawerGesture.ts:
+                    // drag anywhere; per-event cumulative dx/dy decide start
+                    // and vertical-cancel (skipped when freePan); samples from
+                    // every raw move over the last 60ms; flick sign or p>=0.5.
+                    val slopPx = 8f * density.density
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
                         val startedOpen = progress >= 0.999f
-                        val startProgress = progress
                         val downX = down.position.x
+                        val downY = down.position.y
                         val samples = java.util.ArrayDeque<Pair<Float, Long>>()
                         samples.add(down.position.x to down.uptimeMillis)
-                        val slopPx = 8f * density.density // 8px CSS ≈ 3dp at x2.63
-                        val drag = awaitHorizontalTouchSlopOrCancellation(down.id) { change, _ ->
-                            change.consume()
-                        } ?: return@awaitEachGesture
-                        horizontalDrag(drag.id) { change: PointerInputChange ->
-                            val now = change.uptimeMillis
-                            if (now > samples.last().second) {
-                                samples.add(change.position.x to now)
-                                while (samples.size > 1 && now - samples.first().second > 60) samples.removeFirst()
+                        fun record(x: Float, t: Long) {
+                            if (t <= samples.last().second) return
+                            samples.add(x to t)
+                            while (samples.size > 1 && t - samples.first().second > 60) samples.removeFirst()
+                        }
+                        record(downX, down.uptimeMillis)
+                        var start: Float? = null
+                        var current = 0f
+                        var cancelled = false
+                        var up = false
+                        var upTime = 0L
+                        fun evalMove(x: Float, y: Float, t: Long) {
+                            record(x, t)
+                            val dx = x - downX
+                            val horizontal = abs(dx)
+                            if (start == null) {
+                                val dy = abs(y - downY)
+                                if (!freePan && dy >= slopPx && dy > horizontal) {
+                                    // ref: gesture.current = null — up does nothing.
+                                    cancelled = true
+                                    return
+                                }
+                                if (horizontal <= slopPx || (!freePan && horizontal < dy)) return
+                                start = progress // take over live position
+                                if ((start!! <= 0.001f && dx < 0) || (start!! >= 0.999f && dx > 0)) {
+                                    start = null
+                                    return
+                                }
                             }
-                            val dx = change.position.x - downX
-                            val distance = kotlin.math.sign(dx) * max(0f, abs(dx) - slopPx)
-                            settleTo(startProgress + (1.031f * distance) / edgePx)
+                            val distance = kotlin.math.sign(dx) * max(0f, horizontal - slopPx)
+                            current = (start!! + (1.031f * distance) / edgePx).coerceIn(0f, 1f)
+                            progress = current
+                        }
+                        try {
+                        while (!up) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            if (!change.pressed) {
+                                upTime = change.uptimeMillis
+                                // The gesture tail coalesced into the UP event:
+                                // Chrome flushes those queued points as real
+                                // pointermoves (with original timestamps)
+                                // before pointerup, so evaluate them as moves.
+                                for (h in change.historical) {
+                                    evalMove(h.position.x, h.position.y, h.uptimeMillis)
+                                    if (cancelled) break
+                                }
+                                if (!cancelled) {
+                                    evalMove(change.position.x, change.position.y, change.uptimeMillis)
+                                }
+                                up = true
+                                break
+                            }
+                            for (h in change.historical) record(h.position.x, h.uptimeMillis)
+                            evalMove(change.position.x, change.position.y, change.uptimeMillis)
+                            if (cancelled) break
                             change.consume()
                         }
-                        val now = android.os.SystemClock.uptimeMillis()
-                        val first = samples.first()
-                        val last = samples.last()
-                        val velocity = if (first != last && now - last.second < 56)
-                            (last.first - first.first) / (last.second - first.second) else 0f
-                        val flick = abs(velocity) >= 0.33f
-                        val open = if (flick) velocity > 0 else progress >= 0.5f
-                        settleTo(if (open) 1f else 0f)
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            // ref pointercancel/lostpointercapture → settle(cancelled)
+                            cancelled = true
+                        }
+                        if (start != null) {
+                            // ref: releaseVelocity uses the UP event's own timeStamp
+                            val now = upTime
+                            val first = samples.first()
+                            val last = samples.last()
+                            val velocity = if (first != last && now - last.second < 56)
+                                (last.first - first.first) / (last.second - first.second) else 0f
+                            // ref 0.33 css px/ms → device px = 0.33 * density
+                            val flick = abs(velocity) >= 0.33f * density.density
+                            val open = if (cancelled) startedOpen else if (flick) velocity > 0 else current >= 0.5f
+                            settleTo(if (open) 1f else 0f)
+                        }
                     }
                 }
         ) {
