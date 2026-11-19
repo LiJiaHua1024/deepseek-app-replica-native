@@ -40,3 +40,4 @@
 - chat.interrupted RESIDUAL 0.9712/1.605. Behavior fix: dropped stream with partial content now settles STOPPED silently (matches ref: partial reply + copy/speaker/refresh row, no error notice). Score short only on same glyph-rasterization text bands as chat.default.
 - chat.long DONE 0.9841/1.718. Scene fix: wait for stream END (header title 问候 from message_delta) instead of mid-stream capture — both settle scrolled to bottom.
 - chat.light RESIDUAL 0.9717/1.58 — same content as chat.default residual.
+- sider.search DONE 0.9858/1.114. Fixes: ref search input is input[type=search] (selector fix); removed native 暂无历史对话 hint (ref drawer shows nothing — key only used in settings export); added imePadding to drawer Column (edge-to-edge, window does not resize); KeyboardCapitalization.Sentences + ImeAction.Search matches ref uppercase keyboard + magnifier.

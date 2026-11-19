@@ -49,7 +49,7 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
     var deleteFor by remember { mutableStateOf<SessionSummary?>(null) }
 
     // ref [data-android] .mobile: padding 12px 24px 16px 16px (CSS px == dp here)
-    Column(Modifier.fillMaxSize().statusBarsPadding().padding(start = 16.dp, end = 24.dp, top = 12.dp, bottom = 16.dp)) {
+    Column(Modifier.fillMaxSize().statusBarsPadding().imePadding().padding(start = 16.dp, end = 24.dp, top = 12.dp, bottom = 16.dp)) {
         if (selectionMode) {
             // .selectionHeader h48: label left + close IconButton right
             Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -70,6 +70,10 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
                 androidx.compose.foundation.text.BasicTextField(
                     value = query, onValueChange = { query = it },
                     singleLine = true,
+                    // ref input[type=search] -> search action on the IME
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences,
+                        imeAction = androidx.compose.ui.text.input.ImeAction.Search),
                     textStyle = androidx.compose.ui.text.TextStyle(fontSize = 16.sp, color = c.labelPrimary),
                     modifier = Modifier.weight(1f),
                     decorationBox = { inner ->
@@ -112,10 +116,6 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
                         },
                         onLongClick = { if (!selectionMode) menuFor = s })
                 }
-            }
-            if (sessions.isEmpty()) {
-                item { Text(Strings.get("androidNoChats"), fontSize = 13.sp, color = c.labelTertiary,
-                    modifier = Modifier.padding(16.dp)) }
             }
             }
         }

@@ -384,8 +384,9 @@ const scenes = {
   },
   async 'sider.search'(evaluate) {
     await openDrawer(evaluate)
-    await evaluate(`(() => { const s = document.querySelector('[data-drawer-open] input, aside input'); if (s) { s.focus(); return true } return false })()`)
-    await delay(600)
+    // real tap on the search input so the IME rises — matches native focus
+    await tapElement(evaluate, `input[type=search]`)
+    await delay(900)
   },
   async 'sider.longpress'(evaluate) {
     await chatDone(evaluate, '你好')
