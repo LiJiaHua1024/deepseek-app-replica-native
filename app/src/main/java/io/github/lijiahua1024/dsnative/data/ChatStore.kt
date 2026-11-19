@@ -20,6 +20,9 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.encodeToString
 import org.json.JSONArray
 import org.json.JSONObject
@@ -450,10 +453,12 @@ class ChatStore(
                 is ReplyBlock.Tool -> {
                     text = null
                     val payload = block.payload
-                    if (payload.optString("type") == "server_tool_use" && payload.optString("kind") == "read_link") {
-                        content.put(payload)
-                    } else if (payload.optString("type") == "web_fetch_tool_result" && payload.optString("kind") == "read_link") {
-                        content.put(payload)
+                    val pType = (payload["type"] as? JsonPrimitive)?.content
+                    val pKind = (payload["kind"] as? JsonPrimitive)?.content
+                    if (pType == "server_tool_use" && pKind == "read_link") {
+                        content.put(JSONObject(payload.toString()))
+                    } else if (pType == "web_fetch_tool_result" && pKind == "read_link") {
+                        content.put(JSONObject(payload.toString()))
                     }
                 }
             }
@@ -698,7 +703,8 @@ class ChatStore(
             signature = block.optString("signature").takeIf { block.has("signature") },
             startedAt = now,
         )
-        "server_tool_use", "web_search_tool_result", "web_fetch_tool_result" -> ReplyBlock.Tool(block)
+        "server_tool_use", "web_search_tool_result", "web_fetch_tool_result" ->
+                ReplyBlock.Tool(json.parseToJsonElement(block.toString()).jsonObject)
         else -> null
     }
 
@@ -719,5 +725,27 @@ class ChatStore(
                 } else listOf(block)
             },
         )
+    }
+
+    /** Export all sessions + messages as JSON (no API key). M5 wires SAF download. */
+    fun exportAll(context: Context) {
+        val out = JSONObject()
+        out.put("version", 1)
+        val arr = JSONArray()
+        for (session in _sessionCache.value.values) {
+            arr.put(JSONObject(json.encodeToString(session)))
+        }
+        out.put("sessions", arr)
+        try {
+            val dir = context.getExternalFilesDir("exports") ?: context.filesDir
+            val file = java.io.File(dir, "deepseek-chats-${System.currentTimeMillis()}.json")
+            file.writeText(out.toString())
+        } catch (_: Exception) {
+        }
+    }
+
+    /** Import sessions from exported JSON. M5 wires the SAF picker. */
+    fun importHistory(context: Context) {
+        _importingHistory.value = false
     }
 }

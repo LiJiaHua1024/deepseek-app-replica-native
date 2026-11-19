@@ -171,3 +171,15 @@ val DarkColors = DsColors(
     thinkingLine = Color(0xFF43454A),
     searchSummaryText = Color(0xFFE5E5E5),
 )
+
+val LocalDsColors = androidx.compose.runtime.staticCompositionLocalOf { LightColors }
+
+object DsTheme {
+    val colors: DsColors
+        @androidx.compose.runtime.Composable get() = LocalDsColors.current
+}
+
+@androidx.compose.runtime.Composable
+fun DsTheme(colors: DsColors, content: @androidx.compose.runtime.Composable () -> Unit) {
+    androidx.compose.runtime.CompositionLocalProvider(LocalDsColors provides colors) { content() }
+}

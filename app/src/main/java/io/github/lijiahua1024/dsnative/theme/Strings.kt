@@ -1,0 +1,147 @@
+package io.github.lijiahua1024.dsnative.theme
+
+import io.github.lijiahua1024.dsnative.data.LocalePreference
+
+/**
+ * zh-CN copy, keyed the same as src/i18n/zh.ts of the WebView reference.
+ * en-US fallback for the subset the app renders.
+ */
+object Strings {
+    var locale: LocalePreference = LocalePreference.SYSTEM
+
+    private fun isZh(): Boolean = when (locale) {
+        LocalePreference.ZH_CN -> true
+        LocalePreference.EN_US -> false
+        LocalePreference.SYSTEM ->
+            java.util.Locale.getDefault().language == "zh"
+    }
+
+    private fun pick(zh: String, en: String) = if (isZh()) zh else en
+
+    val androidWelcomeMessages = listOf(
+        "你好，有什么我能帮你的吗？",
+        "你好，让我们开始聊天吧",
+        "欢迎回来，想从哪里开始？",
+    )
+
+    fun get(key: String, vararg params: Pair<String, Any>): String {
+        var s = when (key) {
+            "androidMessageHint" -> pick("发消息", "Message")
+            "androidHoldHint" -> pick("发消息或按住说话", "Message or hold to talk")
+            "androidHoldToTalk" -> pick("按住说话", "Hold to talk")
+            "androidAutoRead" -> pick("自动朗读", "Auto read")
+            "androidAutoReadEnabled" -> pick("已开启自动朗读", "Auto read enabled")
+            "androidAutoReadDisabled" -> pick("已关闭自动朗读", "Auto read disabled")
+            "androidSearchChats" -> pick("搜索对话内容...", "Search chats...")
+            "androidNoChats" -> pick("暂无历史对话", "No chat history")
+            "androidSelectChats" -> pick("选择对话", "Select chats")
+            "androidSelectedChats" -> pick("已选择 {count} 个对话", "{count} selected")
+            "androidPinned" -> pick("置顶", "Pin")
+            "androidUnpin" -> pick("取消置顶", "Unpin")
+            "androidPinConfirm" -> pick("将选择的 {count} 个对话置顶？", "Pin {count} chats?")
+            "androidUnpinConfirm" -> pick("将选择的 {count} 个对话取消置顶？", "Unpin {count} chats?")
+            "androidKeepPinned" -> pick("保留", "Keep")
+            "androidPinnedChats" -> pick("已置顶 {count} 个对话", "Pinned {count} chats")
+            "androidUnpinnedChats" -> pick("已取消置顶 {count} 个对话", "Unpinned {count} chats")
+            "androidContentCaveat" -> pick("回答由 AI 生成，仅供参考", "AI generated, for reference only")
+            "expandSiderbarButton" -> pick("打开边栏", "Open sidebar")
+            "collapseSiderbarButton" -> pick("收起边栏", "Close sidebar")
+            "newChat" -> pick("开启新对话", "New chat")
+            "untitledChat" -> pick("新对话", "New chat")
+            "sessionLoading" -> pick("正在加载对话...", "Loading...")
+            "settings" -> pick("设置", "Settings")
+            "appName" -> pick("DeepSeek Replica", "DeepSeek Replica")
+            "deleteSessionModalContentTitle" -> pick("永久删除对话", "Delete chat permanently")
+            "deleteSessionWithFilesDescription" -> pick("删除后，该对话及其中上传的文件将不可恢复。确认删除吗？", "This chat and its files will be permanently deleted. Continue?")
+            "cancel" -> pick("取消", "Cancel")
+            "delete" -> pick("删除", "Delete")
+            "sessionItemMenuRenameOption" -> pick("重命名", "Rename")
+            "more" -> pick("更多", "More")
+            "close" -> pick("关闭", "Close")
+            "sessionHistoryTimelineLabelToday" -> pick("今天", "Today")
+            "sessionHistoryTimelineLabelYesterday" -> pick("昨天", "Yesterday")
+            "sessionHistoryTimelineLabel7days" -> pick("7 天内", "Within 7 days")
+            "sessionHistoryTimelineLabel30days" -> pick("30 天内", "Within 30 days")
+            "copy" -> pick("复制", "Copy")
+            "copied" -> pick("已复制", "Copied")
+            "copyFailed" -> pick("复制失败，请长按或选中文本后复制", "Copy failed")
+            "send" -> pick("发送", "Send")
+            "editMessage" -> pick("编辑消息", "Edit message")
+            "androidEditMessage" -> pick("修改", "Edit")
+            "regenerate" -> pick("重新生成", "Regenerate")
+            "continueGenerating" -> pick("继续生成", "Continue")
+            "changeApiKey" -> pick("更换 API Key", "Change API Key")
+            "topUp" -> pick("前往充值", "Top up")
+            "messageSearchSummary" -> pick("1 个网页", "1 page")
+            "messageSearchSummaries" -> pick("{count} 个网页", "{count} pages")
+            "previousVersion" -> pick("上一个版本", "Previous")
+            "nextVersion" -> pick("下一个版本", "Next")
+            "messageThinkDuration" -> pick("已思考（用时 {count} 秒）", "Thought for {count}s")
+            "messageThinkStopped" -> pick("已停止", "Stopped")
+            "messageThinking" -> pick("正在思考", "Thinking")
+            "deepSearchSearching" -> pick("正在搜索", "Searching")
+            "messageSearching" -> pick("搜索中...", "Searching...")
+            "toolSearchResults" -> pick("搜索到 {count} 个网页", "Found {count} pages")
+            "messageSearchResults" -> pick("已阅读 {count} 个网页", "Read {count} pages")
+            "messageSearchResult" -> pick("已阅读 1 个网页", "Read 1 page")
+            "commonNetworkErrorToast" -> pick("网络异常，请检查你的网络状况", "Network error")
+            "replyInvalidApiKey" -> pick("API Key 无效或已被删除，请更换后重试", "Invalid API Key")
+            "replyInsufficientBalance" -> pick("账户余额不足，请充值后重试", "Insufficient balance")
+            "replyRateLimited" -> pick("请求过于频繁，请稍后再试", "Rate limited")
+            "completionServerBusyToast" -> pick("服务器繁忙，请稍后再试", "Server busy")
+            "unknownError" -> pick("未知错误", "Unknown error")
+            "replyRefused" -> pick("你好，这个问题我暂时无法回答，让我们换个话题再聊聊吧。", "Sorry, I can't answer that.")
+            "settingsLocalePreference" -> pick("语言", "Language")
+            "settingDialogAsideGeneralOptionLabel" -> pick("通用设置", "General")
+            "settingDialogAsideDataOptionLabel" -> pick("数据管理", "Data")
+            "avatarMenuSettingsDialogThemeItemLabel" -> pick("主题", "Theme")
+            "avatarMenuSettingsDialogThemeSelectLightOption" -> pick("浅色", "Light")
+            "avatarMenuSettingsDialogThemeSelectDarkOption" -> pick("深色", "Dark")
+            "avatarMenuSettingsDialogThemeSelectSystemOption" -> pick("跟随系统", "System")
+            "apiKeyStart" -> pick("输入 API Key 开始使用", "Enter API Key to start")
+            "apiKeyGet" -> pick("获取 API Key", "Get API Key")
+            "apiKeyEdit" -> pick("修改 API Key", "Edit API Key")
+            "apiKeyPlaceholder" -> pick("请输入 API Key", "Enter API Key")
+            "apiKeyVerifying" -> pick("正在验证...", "Verifying...")
+            "confirm" -> pick("确定", "Confirm")
+            "apiKeyInvalid" -> pick("API Key 无效，请检查后重试", "Invalid API Key")
+            "apiKeyStorageFailed" -> pick("无法在此设备上保存 API Key", "Cannot save API Key")
+            "apiKeyVerificationFailed" -> pick("校验失败：{message}", "Verification failed: {message}")
+            "historyImport" -> pick("导入历史对话", "Import chat history")
+            "historyImportConfirm" -> pick("确认导入", "Confirm import")
+            "historyImportConfirmTitle" -> pick("确认导入历史对话？", "Import chat history?")
+            "historyImportConfirmDescription" -> pick("上传的历史对话会覆盖当前所有对话记录，是否确认导入？", "Imported history will replace all local chats. Continue?")
+            "historyImportDescription" -> pick("导入历史对话会覆盖全部本地对话和附件，支持 DeepSeek 导出的 ZIP 文件。", "Import replaces all local chats. DeepSeek ZIP archives supported.")
+            "historyImporting" -> pick("正在导入历史对话…", "Importing...")
+            "historyImportedOne" -> pick("已导入 1 个对话", "Imported 1 chat")
+            "historyImported" -> pick("已导入 {count} 个对话", "Imported {count} chats")
+            "historyImportFailed" -> pick("文件导入失败，可能是文件格式错误或使用了旧版的对话导出 ZIP 文件，请前往 DeepSeek 重新导出历史对话文件后再次导入。", "Import failed: unrecognized file. Re-export from DeepSeek and retry.")
+            "exportAllLabel" -> pick("导出所有历史对话", "Export all chats")
+            "historyExportDescription" -> pick("包含所有历史对话及本地图片原件；其他附件仅保留文件信息，不包含 API Key。", "Exports chats and local images; no API Key included.")
+            "exportAllDownload" -> pick("下载", "Download")
+            "deleteAllSessions" -> pick("删除所有对话", "Delete all chats")
+            "deleteAllSessionsModalTitle" -> pick("删除后，所有对话都将被清空且无法找回", "All chats will be permanently deleted")
+            "deleteAllSessionsModalDescription" -> pick("本地保存的附件及未发送的草稿也将被删除。", "Local attachments and drafts will also be deleted.")
+            "historyDeleting" -> pick("删除中...", "Deleting...")
+            "historyDeleted" -> pick("删除成功", "Deleted")
+            "historyDeleteFailed" -> pick("删除失败，请重试", "Delete failed")
+            "chatInputStopButtonTooltip" -> pick("停止生成", "Stop generating")
+            "thinkingSwitch" -> pick("深度思考", "Deep Think")
+            "deactivatedThinkTooltip" -> pick("先思考后回答，解决推理问题", "Think before answering")
+            "search" -> pick("智能搜索", "Search")
+            "deactivatedSearchTooltip" -> pick("按需搜索网页", "Search the web")
+            "uploadFile" -> pick("上传文件", "Upload")
+            "chatInputPlaceholderChat" -> pick("请输入消息", "Type a message")
+            "ttsPlay" -> pick("朗读", "Read aloud")
+            "retry" -> pick("重试", "Retry")
+            "settingsLocaleZhCN" -> pick("简体中文", "简体中文")
+            "settingsLocaleEnUS" -> pick("English", "English")
+            "settingsTtsVoice" -> pick("朗读音色", "Voice")
+            "settingsTtsVoiceStella" -> pick("海星（女声）", "Stella")
+            "settingsTtsVoiceTide" -> pick("暗潮（男声）", "Tide")
+            else -> key
+        }
+        for ((k, v) in params) s = s.replace("{$k}", v.toString())
+        return s
+    }
+}
