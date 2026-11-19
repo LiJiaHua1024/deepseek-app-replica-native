@@ -234,12 +234,13 @@
   "path": "src/components/session/SessionView.tsx",
   "type": "screen-state",
   "reach": "shot chat.dark",
-  "status": "todo",
-  "blurred_ssim": null,
-  "color_mad": null,
-  "attempts": 0,
+  "status": "residual",
+  "blurred_ssim": 0.9657,
+  "color_mad": 1.693,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "",
+  "备注": "residual 0.9657/1.693 first shot; same worst rects as chat.default ([293,1172]=0.853 table ink, [293,1465]=0.867 math fallback, [0,1465]=0.884). Inherits all chat.default fixes (cssLeading, table min-width, fnRow). Residual gap is KaTeX display-math fallback vs raw tex + table cell ink — structural, not theme."
  },
  {
   "id": "chat.light",
