@@ -29,6 +29,8 @@ import io.github.lijiahua1024.dsnative.data.visibleMessages
 import io.github.lijiahua1024.dsnative.theme.DsTheme
 import io.github.lijiahua1024.dsnative.theme.Strings
 import io.github.lijiahua1024.dsnative.ui.input.ChatInput
+import io.github.lijiahua1024.dsnative.ui.input.VoiceInput
+import io.github.lijiahua1024.dsnative.ui.input.VoiceOverlay
 
 @Composable
 fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () -> Unit, onOpenSettings: () -> Unit = {}) {
@@ -155,6 +157,11 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
     }
     }
     sourcesPanel?.let { SearchSourcesPanel(it, numbered = true) { sourcesPanel = null } }
+    val voiceStatus by VoiceInput.status.collectAsState()
+    val voiceCanceling by VoiceInput.canceling.collectAsState()
+    if (voiceStatus != VoiceInput.Status.IDLE) {
+        VoiceOverlay(canceling = voiceCanceling) { VoiceInput.level() }
+    }
     if (session != null) {
         val keyboardOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
         if (!keyboardOpen) {

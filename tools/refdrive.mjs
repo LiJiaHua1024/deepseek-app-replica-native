@@ -99,7 +99,7 @@ async function launch() {
     socket.close()
     try { adb('forward', '--remove', `tcp:${port}`) } catch {}
   }
-  return { evaluate, close }
+  return { evaluate, call, close }
 }
 
 async function until(label, check, timeout = 15000) {
@@ -508,6 +508,73 @@ const scenes = {
       evaluate(`(() => { const d = document.querySelector('section[role=dialog][aria-modal="true"]'); return !!(d && d.getBoundingClientRect().height > 0) })()`), 10000)
     await delay(800)
   },
+  async 'voice.default'(evaluate, call) {
+    await enterKey(evaluate)
+    // The bridge object is a native proxy: its methods can't be stubbed and
+    // module code captures it at load. Inject a Proxy that replaces
+    // window.DeepSeekAndroid before every document loads, then reload so the
+    // app recaptures the proxy. Also stubs pointer capture (synthetic events
+    // have no active pointer) — guest audio capture hard-kills QEMU here, so
+    // requestRecording resolves 'ready' without touching the audio HAL.
+    await call('Page.enable')
+    await call('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
+      // window.DeepSeekAndroid is injected by Chromium possibly AFTER this
+      // script runs, so trap both orders: accessor for future assignment and
+      // a poll for a late own-property definition.
+      const handler = {
+        get(t, k) {
+          if (k === 'requestRecording') return () =>
+            setTimeout(() => window.dispatchEvent(new CustomEvent('android-recording', { detail: 'ready' })), 30)
+          if (k === 'recordingLevel') return () => 0
+          if (k === 'finishRecording') return () => true
+          if (k === '__voiceStub') return true
+          const v = t[k]
+          return typeof v === 'function' ? v.bind(t) : v
+        },
+      }
+      const wrap = (o) => (o && o.__voiceStub) ? o : new Proxy(o, handler)
+      Element.prototype.setPointerCapture = function(){}
+      Element.prototype.releasePointerCapture = function(){}
+      Element.prototype.hasPointerCapture = () => false
+      let cur = window.DeepSeekAndroid
+      try {
+        Object.defineProperty(window, 'DeepSeekAndroid', {
+          configurable: true, enumerable: true,
+          get() { return cur ? wrap(cur) : cur },
+          set(v) { cur = v },
+        })
+      } catch (e) {}
+      const iv = setInterval(() => {
+        const o = window.DeepSeekAndroid
+        if (o && !o.__voiceStub) window.DeepSeekAndroid = wrap(o)
+      }, 5)
+      setTimeout(() => clearInterval(iv), 60000)
+    })()` })
+    await call('Page.reload', { ignoreCache: true })
+    await delay(2500)
+    // re-attach state: page reloaded, wait until interactive again
+    await until('page ready', () => evaluate(`document.readyState === 'complete'`), 20000)
+    // freeze animation+transition for a deterministic frame; also the live
+    // CSS animation on this overlay crashes QEMU's GL path (host SIGSEGV)
+    await evaluate(`document.head.insertAdjacentHTML('beforeend','<style>*{animation-play-state:paused !important;transition:none !important}</style>')`)
+    const ok = await evaluate(`(() => {
+      const b = document.querySelector('[aria-label="语音输入"],[aria-label="Voice input"]');
+      if (!b) return false; b.click(); return true })()`)
+    if (!ok) throw new Error('voice toggle not found')
+    await until('hold button', () => evaluate(`(() => {
+      const b = [...document.querySelectorAll('button')].find(e => /按住说话|Hold to talk/.test(e.textContent));
+      if (!b) return false; window.__hold = b; return true })()`), 10000)
+    const down = await evaluate(`(() => {
+      const el = window.__hold; const r = el.getBoundingClientRect();
+      el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, isPrimary: true,
+        button: 0, buttons: 1, pointerId: 7, pointerType: 'touch',
+        clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }));
+      return true })()`)
+    await until('recording overlay', () => evaluate(`(() => {
+      const o = [...document.querySelectorAll('div')].find(d => d.getAttribute('data-recording') === 'true');
+      return !!o })()`), 15000)
+    await delay(600)
+  },
   async 'settings.root'(evaluate) {
     await openDrawer(evaluate)
     await evaluate(`(() => { const b=document.querySelector('[aria-label="设置"],[aria-label="Settings"]') || [...document.querySelectorAll('button,a,li')].find(e=>/设置|API Key/.test(e.textContent.trim())); if(b){b.click();return true} return false })()`)
@@ -576,7 +643,7 @@ const main = async () => {
   try {
     const fn = scenes[scene] ?? scenes[`${scene}.default`]
     if (!fn) throw new Error(`unknown scene ${scene}`)
-    await fn(evaluate)
+    await fn(evaluate, (...a) => session.call(...a))
     await delay(600)
     screencap(out)
     console.log(`ref scene ${scene} -> ${out}`)

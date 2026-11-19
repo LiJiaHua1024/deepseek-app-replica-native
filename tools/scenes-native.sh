@@ -34,14 +34,19 @@ EOF
 }
 launch() { $ADB shell am start -n "$PKG/.MainActivity" >/dev/null; }
 wait_text() { wait_node "$1" "${2:-15}"; }
-shot() { $ADB exec-out screencap -p > "$OUT"; }
+shot() {
+  # exec-out screencap streaming dies mid-transfer on this QEMU build; write in-guest then pull
+  if ! $ADB exec-out screencap -p > "$OUT" 2>/dev/null || [ ! -s "$OUT" ]; then
+    $ADB shell screencap -p /sdcard/_shot.png >/dev/null 2>&1 && $ADB pull /sdcard/_shot.png "$OUT" >/dev/null 2>&1
+  fi
+}
 
 enter_key() {
-  launch; wait_text "输入 API Key" 20
+  launch; wait_text "输入 API Key|Enter API Key" 20
   tap_edittext 0; sleep 0.5
   $ADB shell input text "$KEY"; sleep 0.3
   tap_node "^确定$|^Confirm$"
-  wait_text "发消息|按住说话|开启新对话" 25
+  wait_text "发消息|按住说话|开启新对话|Message|Hold to talk|New chat" 25
 }
 
 send_msg() { # text — injected via the app's debug broadcast receiver;
@@ -134,6 +139,19 @@ case "$SCENE" in
     send_msg "你好"; sleep 2; shot
     curl -s "http://127.0.0.1:8321/__set_delay?ms=0" >/dev/null
     exit 0 ;;
+  voice|voice.default)
+    enter_key
+    $ADB shell pm grant $PKG android.permission.RECORD_AUDIO >/dev/null 2>&1 || true
+    tap_node "语音输入|Voice input"; sleep 0.5
+    wait_text "按住说话|Hold to talk" 10
+    # 冻结动画 + 广播进录音态：input swipe 的持续事件流会崩本模拟器 QEMU
+    $ADB shell settings put global animator_duration_scale 0 >/dev/null 2>&1 || true
+    $ADB shell am broadcast -a "$PKG.DEBUG_VOICE" >/dev/null 2>&1
+    sleep 1.2 ;;
+  voice.toggle)
+    enter_key
+    tap_node "语音输入|Voice input"; sleep 0.5
+    wait_text "按住说话|Hold to talk" 10 ;;
   searchpanel|searchpanel.default)
     enter_key; send_msg "search"
     wait_text "个网页|pages" 45; sleep 0.6

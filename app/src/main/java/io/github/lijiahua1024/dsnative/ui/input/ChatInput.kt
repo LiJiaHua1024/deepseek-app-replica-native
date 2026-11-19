@@ -16,9 +16,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -49,6 +56,34 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     val search by settings.search.collectAsState()
     val isStreaming = activeId != null && streaming.contains(activeId)
     val canSend = text.isNotBlank() && !isStreaming
+    val voiceMode by VoiceInput.enabled.collectAsState()
+    val voiceStatus by VoiceInput.status.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // ref: hold-to-talk 转写完成直接发送（sendSpoken）；点击语音键切模式时取消录音
+    VoiceInput.apiKey = { settings.apiKey.value }
+    VoiceInput.onText = { t ->
+        text = t
+        chatStore.setDraft(activeId, t)
+        chatStore.sendMessage(activeId)
+        text = ""
+    }
+    val micPermission = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) VoiceInput.start(context)
+        else android.widget.Toast.makeText(
+            context, Strings.get("androidMicPermissionDenied"), android.widget.Toast.LENGTH_SHORT
+        ).show()
+    }
+    val tryStartVoice = {
+        if (androidx.core.content.ContextCompat.checkSelfPermission(context,
+                android.Manifest.permission.RECORD_AUDIO) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            VoiceInput.start(context)
+        } else {
+            micPermission.launch(android.Manifest.permission.RECORD_AUDIO)
+        }
+    }
 
     // ref --android-composer-bottom: 27px gesture nav, 11px with keyboard
     val keyboardOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
@@ -56,6 +91,9 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
         Modifier.fillMaxWidth()
             .imePadding()
             .padding(start = 12.dp, end = 12.dp, bottom = if (keyboardOpen) 27.7.dp else 52.dp)
+            // ref .recordingCard：录音中整个输入卡片隐藏（layout 保留）——alpha 必须在
+            // shadow/border 之前，否则卡片外框仍被绘制
+            .alpha(if (voiceStatus != VoiceInput.Status.IDLE) 0f else 1f)
             // ref [data-android] .wrapper box-shadow: 0 10px 22px rgb(0 0 0/7%),
             // 0 1px 4px rgb(0 0 0/4%); border color-mix(currentColor 7%)
             .shadow(10.dp, RoundedCornerShape(30.dp), clip = false,
@@ -65,6 +103,41 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
             .background(c.inputMajor)
             .border(1.dp, c.labelPrimary.copy(alpha = 0.07f), RoundedCornerShape(30.dp))
     ) {
+        if (voiceMode) {
+            // ref .holdButton：w100% h56px, font 16px, border-bottom color-mix(currentColor 6%);
+            // pointerdown 立即录音，上滑 >=72px 进入取消态，松手 finish/cancel
+            Box(
+                Modifier.fillMaxWidth().height(56.dp)
+                    .drawWithContent {
+                        drawContent()
+                        drawLine(c.labelPrimary.copy(alpha = 0.06f),
+                            Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
+                    }
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            val down = awaitFirstDown()
+                            val startY = down.position.y
+                            tryStartVoice()
+                            while (true) {
+                                val ev = awaitPointerEvent()
+                                val ch = ev.changes.firstOrNull() ?: break
+                                if (VoiceInput.status.value == VoiceInput.Status.RECORDING) {
+                                    VoiceInput.canceling.value = startY - ch.position.y >= 72.dp.toPx()
+                                }
+                                if (!ch.pressed) break
+                            }
+                            if (VoiceInput.canceling.value) VoiceInput.cancel() else VoiceInput.finish()
+                        }
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    Strings.get(if (voiceStatus == VoiceInput.Status.TRANSCRIBING)
+                        "voiceInputCancel" else "androidHoldToTalk"),
+                    fontSize = 16.sp, color = c.labelPrimary,
+                )
+            }
+        } else {
         // ref textarea: min-height 56px, padding-top 14.75px, padding-inline 17px
         Box(Modifier.fillMaxWidth().height(56.dp).padding(start = 17.dp, end = 17.dp, top = 14.75.dp)) {
             BasicTextField(
@@ -93,6 +166,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                     .onFocusChanged { focused = it.isFocused },
             )
         }
+        }
         // ref .functionRow (android): h48, padding 0 7px 4px 11px, align center
         // -> chips sit 6dp below row top ((48-4-32)/2);
         // .right gap 0; IconButton xl = 44px hit target with 25px icon inside
@@ -104,12 +178,16 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
             Spacer(Modifier.width(10.dp))
             TogglePill(Strings.get("search"), search, { settings.setSearch(!search) }, R.drawable.ic_globe)
             Spacer(Modifier.weight(1f))
-            Icon(painterResource(R.drawable.ic_add_circle), null,
+            Icon(painterResource(R.drawable.ic_add_circle), Strings.get("uploadFile"),
                 tint = c.labelPrimary,
                 modifier = Modifier.align(Alignment.CenterVertically).size(44.dp).padding(9.5.dp))
-            Icon(painterResource(R.drawable.ic_voice_circle), null,
+            Icon(painterResource(R.drawable.ic_voice_circle), Strings.get("voiceInput"),
                 tint = c.labelPrimary,
-                modifier = Modifier.align(Alignment.CenterVertically).size(44.dp).padding(9.5.dp))
+                modifier = Modifier.align(Alignment.CenterVertically).size(44.dp).padding(9.5.dp)
+                    .clickable {
+                        VoiceInput.cancel()
+                        VoiceInput.enabled.value = !VoiceInput.enabled.value
+                    })
             if (canSend || isStreaming) {
                 Box(
                     Modifier.align(Alignment.CenterVertically)

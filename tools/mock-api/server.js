@@ -172,6 +172,13 @@ function handle(req, res) {
       ? send(res, 200, { data: [{ id: 'deepseek-flash' }] })
       : send(res, 401, { error: { message: 'Invalid API key' } });
   }
+  if (req.method === 'POST' && /\/tools\/asr$/.test(req.url)) {
+    // ASR stub: multipart body ignored, fixed transcript returned.
+    req.resume();
+    return key === TEST_KEY
+      ? send(res, 200, { text: '语音输入测试' })
+      : send(res, 401, { error: { message: 'Invalid API key' } });
+  }
   if (req.method === 'POST' && req.url.endsWith('/messages')) {
     let body = '';
     req.on('data', (d) => (body += d));

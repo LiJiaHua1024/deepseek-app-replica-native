@@ -32,6 +32,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // 测试场景用：input swipe 的按压事件流会让本模拟器 QEMU 崩溃，
+    // 直接用广播进入录音状态。
+    private val debugVoice = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val vi = io.github.lijiahua1024.dsnative.ui.input.VoiceInput
+            val mode = intent.getIntExtra("mode", 0)
+            if (mode < 0) vi.cancel() else {
+                vi.debugOverlayMode = mode
+                vi.start(this@MainActivity)
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -47,8 +60,14 @@ class MainActivity : ComponentActivity() {
         chatStore = ChatStore(applicationContext, settings, appScope)
         if (BuildConfig.DEBUG) {
             val filter = IntentFilter("$packageName.DEBUG_INPUT")
-            if (Build.VERSION.SDK_INT >= 33) registerReceiver(debugInput, filter, RECEIVER_EXPORTED)
-            else registerReceiver(debugInput, filter)
+            val vfilter = IntentFilter("$packageName.DEBUG_VOICE")
+            if (Build.VERSION.SDK_INT >= 33) {
+                registerReceiver(debugInput, filter, RECEIVER_EXPORTED)
+                registerReceiver(debugVoice, vfilter, RECEIVER_EXPORTED)
+            } else {
+                registerReceiver(debugInput, filter)
+                registerReceiver(debugVoice, vfilter)
+            }
         }
         setContent {
             App(settings, chatStore)

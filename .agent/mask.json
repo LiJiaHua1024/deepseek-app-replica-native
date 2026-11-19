@@ -3,22 +3,57 @@
   "scenes": {
     "welcome.default": {
       "regions": [
-        {"x": 140, "y": 1100, "w": 800, "h": 130, "reason": "random greeting text (Math.random pick) — declared dynamic content"}
+        {
+          "x": 140,
+          "y": 1100,
+          "w": 800,
+          "h": 130,
+          "reason": "random greeting text (Math.random pick) — declared dynamic content"
+        }
       ]
     },
     "welcome.keyboard": {
       "regions": [
-        {"x": 140, "y": 700, "w": 800, "h": 140, "reason": "random greeting text — declared dynamic content"}
+        {
+          "x": 140,
+          "y": 700,
+          "w": 800,
+          "h": 140,
+          "reason": "random greeting text — declared dynamic content"
+        }
       ]
     },
     "welcome.dark": {
       "regions": [
-        {"x": 140, "y": 1100, "w": 800, "h": 130, "reason": "random greeting text — declared dynamic content"}
+        {
+          "x": 140,
+          "y": 1100,
+          "w": 800,
+          "h": 130,
+          "reason": "random greeting text — declared dynamic content"
+        }
       ]
     },
     "welcome.light": {
       "regions": [
-        {"x": 140, "y": 1100, "w": 800, "h": 130, "reason": "random greeting text — declared dynamic content"}
+        {
+          "x": 140,
+          "y": 1100,
+          "w": 800,
+          "h": 130,
+          "reason": "random greeting text — declared dynamic content"
+        }
+      ]
+    },
+    "voice.default": {
+      "regions": [
+        {
+          "x": 140,
+          "y": 1100,
+          "w": 800,
+          "h": 130,
+          "reason": "random greeting text (Math.random pick in ref) — declared dynamic content"
+        }
       ]
     }
   }
