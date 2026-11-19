@@ -155,7 +155,7 @@
     "blurred_ssim": 0.9927,
     "color_mad": 0.562,
     "attempts": 1,
-    "commit": "pending",
+    "commit": "7c6de4c",
     "notes": "",
     "备注": "3-dot waiting indicator (ref .waiting) replacing 正在思考 text"
   },
