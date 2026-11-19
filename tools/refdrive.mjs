@@ -482,8 +482,12 @@ const scenes = {
   async 'chat.interrupted'(evaluate) {
     await enterKey(evaluate)
     await sendMessage(evaluate, 'interrupted')
-    await until('interrupted notice', async () => (await replyText(evaluate)).match(/中断|interrupted|重新生成|停止/))
-    await delay(400)
+    // mock drops the stream mid-way; wait for it to settle: the reply text
+    // has arrived AND the waiting-dots row is gone (streaming ended).
+    await until('reply text', async () => /假后端|kotlin/.test(await replyText(evaluate)), 30000)
+    await until('stream settled', async () =>
+      !(await evaluate(`[...document.querySelectorAll('div')].some(d => d.children.length === 3 && [...d.children].every(c => c.tagName === 'SPAN') && d.getBoundingClientRect().height >= 30)`)), 30000)
+    await delay(600)
   },
   async 'chat.err_401'(evaluate) { await errorScene(evaluate, '401') },
   async 'chat.err_402'(evaluate) { await errorScene(evaluate, '402') },

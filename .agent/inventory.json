@@ -164,12 +164,13 @@
     "path": "src/components/session/SessionView.tsx",
     "type": "screen-state",
     "reach": "shot chat.interrupted",
-    "status": "todo",
-    "blurred_ssim": null,
-    "color_mad": null,
-    "attempts": 0,
-    "commit": null,
-    "notes": ""
+    "status": "residual",
+    "blurred_ssim": 0.9712,
+    "color_mad": 1.605,
+    "attempts": 1,
+    "commit": "pending",
+    "notes": "",
+    "备注": "residual: worst rects y586/1465 text bands ~0.89 — same glyph-rasterization root cause as chat.default residual. Fixed: INTERRUPTED+partial-content now settles STOPPED (was protocol error 未知错误), action row shows."
   },
   {
     "id": "chat.err_401",

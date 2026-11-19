@@ -617,10 +617,15 @@ class ChatStore(
             reply = settleReply(reply, ReplyStatus.STOPPED)
             throw e
         } catch (e: ApiError) {
-            reply = if (e.kind == ApiErrorKind.INTERRUPTED && reply.stopReason != null) {
-                settleReply(reply, ReplyStatus.DONE)
-            } else {
-                settleReply(reply, ReplyStatus.ERROR, ReplyError(e.kind.name.lowercase(), e.message ?: "", e.status))
+            reply = when {
+                e.kind == ApiErrorKind.INTERRUPTED && reply.stopReason != null ->
+                    settleReply(reply, ReplyStatus.DONE)
+                // ref: a dropped stream with partial content settles 'stopped'
+                // silently (no error notice), keeping the action row.
+                e.kind == ApiErrorKind.INTERRUPTED && reply.blocks.isNotEmpty() ->
+                    settleReply(reply, ReplyStatus.STOPPED)
+                else ->
+                    settleReply(reply, ReplyStatus.ERROR, ReplyError(e.kind.name.lowercase(), e.message ?: "", e.status))
             }
         } catch (e: Exception) {
             reply = settleReply(reply, ReplyStatus.ERROR, ReplyError("protocol", e.message ?: e.toString()))

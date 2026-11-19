@@ -116,7 +116,9 @@ case "$SCENE" in
     sleep 1.5 ;;
   chat.interrupted|chat_interrupted)
     enter_key; send_msg "interrupted"
-    wait_text "中断|重新生成|停止" 30; sleep 0.4 ;;
+    # mock drops mid-stream; ref settles 'stopped' silently — wait for the
+    # streamed text then give EOF+settle time before the shot.
+    wait_text "kotlin" 40; sleep 2 ;;
   chat.err_401|chat.err_402|chat.err_429|chat.err_500|err_401|err_402|err_429|err_500)
     enter_key; send_msg "${SCENE##*_}"
     wait_text "无效|余额|频繁|繁忙|错误|失败" 20; sleep 0.4 ;;
