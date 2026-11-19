@@ -45,3 +45,11 @@ Residual cause: nondeterministic delivery timing in the measurement channel, not
 - overlay 底部 ref = --android-button-nav-inset（66px），native navigationBarsPadding 等价；去掉额外 6.5dp。波形 bottom=103dp 与 ref 103px 同 dp 换算。
 - ChatInput 卡片隐藏：alpha(0) 必须放在 shadow/clip/background/border 之前，否则外框仍绘制。
 - mask: greeting band (x140-940,y1100-1230) declared dynamic（同 welcome.* 的 Math.random 问候语）。
+
+## attachments.default (residual, 0.9533/2.7)
+- Feature built from ref spec (AndroidAttachments): recent-photos LazyRow (DATE_ADDED DESC, _ID tie-break), 3-col action row, draft chips + image quick suggestions, preview dialog. Mock gained POST/DELETE /files so ref upload succeeds.
+- Greeting masked (declared random dynamic text; rasterization differs even for same text).
+- Aligned within ±3-7px via uiautomator bounds + ref CDP getBoundingClientRect (DOM y + ~128px status offset).
+- Tried and kept: per-item edge padding for 5th-thumb sliver (LazyRow padding clips viewport — clipToPadding absent in compose-bom 2024.12.01), badge check strokeWidth 0.8 (vector scales stroke), badge drop shadow.
+- Tried and reverted: 10dp spacer chips→suggestions (ref has none — regressed to 0.9341), composer bottom pad 52→49.5dp (uniform shift theory wrong — regressed to 0.950).
+- Residual: blurred ssim floor ~0.95 from icon/badge AA and ~3px drift in bottom-anchored stack; mad passes.

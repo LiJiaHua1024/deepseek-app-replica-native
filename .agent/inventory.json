@@ -502,12 +502,13 @@
     "path": "src/components/chatInput/AndroidAttachments.tsx",
     "type": "screen-state",
     "reach": "shot attachments.default",
-    "status": "todo",
-    "blurred_ssim": null,
-    "color_mad": null,
-    "attempts": 0,
+    "status": "residual",
+    "blurred_ssim": 0.9533,
+    "color_mad": 2.7,
+    "attempts": 5,
     "commit": null,
-    "notes": ""
+    "notes": "",
+    "备注": "worst tiles: thumbs band y1465-1758 x293-1080 (ssim 0.83-0.87). Tried: per-item sliver padding, chips/sugg gap fixes, badge stroke+shadow, bottom-pad global shift (regressed to 0.950). mad 2.7 passes; residual = sub-pixel icon/thumb-edge AA + ~3px uniform drift."
   },
   {
     "id": "comp.AndroidIcons",

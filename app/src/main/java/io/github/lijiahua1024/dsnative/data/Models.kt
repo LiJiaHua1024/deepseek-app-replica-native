@@ -3,6 +3,19 @@ package io.github.lijiahua1024.dsnative.data
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 
+/** 草稿附件（尚未发送），localPath 指向缓存目录里的拷贝。 */
+data class DraftAttachment(
+    val id: String,
+    val name: String,
+    val mimeType: String,
+    val isImage: Boolean,
+    val localPath: String,
+    val recentPhotoId: String? = null,
+) {
+    fun toFileAttachment(size: Long) =
+        FileAttachment(id = id, name = name, size = size, isImage = isImage, mimeType = mimeType)
+}
+
 @Serializable
 data class FileAttachment(
     val id: String,

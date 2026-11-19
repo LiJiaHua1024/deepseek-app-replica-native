@@ -190,6 +190,11 @@ class ChatStore(
     private val _drafts = MutableStateFlow<Map<String?, String>>(emptyMap())
     val drafts: StateFlow<Map<String?, String>> = _drafts
 
+    /** 草稿附件：null key = 新对话 */
+    private val _draftAttachments =
+        MutableStateFlow<Map<String?, List<DraftAttachment>>>(emptyMap())
+    val draftAttachments: StateFlow<Map<String?, List<DraftAttachment>>> = _draftAttachments
+
     private val streamJobs = mutableMapOf<String, Job>()
     private val activeStreams = mutableMapOf<String, StreamSession>()
     private val titleSessions = mutableSetOf<String>()
@@ -259,6 +264,19 @@ class ChatStore(
 
     fun draft(sessionId: String?): String = _drafts.value[sessionId] ?: ""
 
+    fun draftAttachments(sessionId: String?): List<DraftAttachment> =
+        _draftAttachments.value[sessionId] ?: emptyList()
+
+    fun addDraftAttachments(sessionId: String?, items: List<DraftAttachment>) {
+        _draftAttachments.value =
+            _draftAttachments.value + (sessionId to (draftAttachments(sessionId) + items))
+    }
+
+    fun removeDraftAttachment(sessionId: String?, attachmentId: String) {
+        _draftAttachments.value = _draftAttachments.value +
+            (sessionId to draftAttachments(sessionId).filterNot { it.id == attachmentId })
+    }
+
     fun renameSession(id: String, title: String) {
         titleSessions.remove(id)
         scope.launch {
@@ -310,7 +328,8 @@ class ChatStore(
     fun sendMessage(targetSessionId: String?): Boolean {
         if (_importingHistory.value || !_ready.value) return false
         val text = draft(targetSessionId).trim()
-        if (text.isEmpty()) return false
+        val atts = draftAttachments(targetSessionId)
+        if (text.isEmpty() && atts.isEmpty()) return false
         val now = System.currentTimeMillis()
         var sessionId = targetSessionId
         if (sessionId != null && (_streaming.value.contains(sessionId) || _sessionCache.value[sessionId] == null)) {
@@ -325,7 +344,10 @@ class ChatStore(
         }
         val current = _sessionCache.value[sessionId] ?: return false
         val history = visibleMessages(current)
-        val question = Message.User(createId(), text, emptyList(), now)
+        val question = Message.User(
+            createId(), text,
+            atts.map { a -> a.toFileAttachment(File(a.localPath).length()) },
+            now)
         val reply = createReply()
         val finalId = sessionId
         scope.launch {
@@ -333,6 +355,7 @@ class ChatStore(
             persist(finalId)
         }
         _drafts.value = _drafts.value - targetSessionId
+        _draftAttachments.value = _draftAttachments.value - targetSessionId
         val capturedHistory = history
         streamJobs[finalId] = scope.launch(Dispatchers.IO) {
             streamReply(finalId, reply, capturedHistory, question)

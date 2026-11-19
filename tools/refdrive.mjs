@@ -508,6 +508,83 @@ const scenes = {
       evaluate(`(() => { const d = document.querySelector('section[role=dialog][aria-modal="true"]'); return !!(d && d.getBoundingClientRect().height > 0) })()`), 10000)
     await delay(800)
   },
+  async 'attachments.default'(evaluate) {
+    await enterKey(evaluate)
+    // pm clear revoked it — re-grant so RecentPhotos.list() returns images
+    adb('shell', 'pm', 'grant', appId, 'android.permission.READ_MEDIA_IMAGES')
+    // freeze CSS animation — live rAF kills QEMU's GL path
+    await evaluate(`document.head.insertAdjacentHTML('beforeend','<style>*{animation-play-state:paused !important;transition:none !important}</style>')`)
+    const ok = await evaluate(`(() => {
+      const b = document.querySelector('[aria-label="uploadFile"],[aria-label="上传文件"]');
+      if (!b) return false; b.click(); return true })()`)
+    if (!ok) throw new Error('uploadFile toggle not found')
+    await until('recent photos row', () => evaluate(
+      `!!document.querySelector('.recent button img, [class*=recent] img')`), 15000)
+    await delay(600)
+    // select the two most recent photos
+    await evaluate(`(() => {
+      const bts = [...document.querySelectorAll('[class*=recent] button')];
+      bts[0] && bts[0].click(); })()`)
+    await delay(500)
+    await evaluate(`(() => {
+      const bts = [...document.querySelectorAll('[class*=recent] button')];
+      bts[1] && bts[1].click(); })()`)
+    await until('draft chips', () => evaluate(
+      `document.querySelectorAll('[class*=attachment]').length > 0`), 10000)
+    await delay(700)
+  },
+  async 'attachments.measure'(evaluate) {
+    await scenes['attachments.default'](evaluate)
+    const m = await evaluate(`(() => {
+      const dpr = devicePixelRatio;
+      const rr = (e) => { if(!e) return null; const r = e.getBoundingClientRect();
+        return {t:+((r.top*dpr).toFixed(1)), b:+((r.bottom*dpr).toFixed(1)),
+                l:+((r.left*dpr).toFixed(1)), r:+((r.right*dpr).toFixed(1))} };
+      const q = (s) => document.querySelector(s);
+      return JSON.stringify({
+        dpr,
+        wrapper: rr(q('[class*=wrapper]')),
+        attachments: rr(q('[class*=attachments]')),
+        chip0: rr(q('[class*=attachments] [class*=attachment]')),
+        chip1: rr([...document.querySelectorAll('[class*=attachments] [class*=attachment]')][1]),
+        sugg: rr(q('[class*=quickSuggestionsList],[class*=suggestion]')),
+        textarea: rr(q('textarea')),
+        functionRow: rr(q('[class*=functionRow]')),
+        recent: rr(q('[class*=recent]')),
+        recentBtn0: rr(q('[class*=recent] button')),
+        actions: rr(q('[class*=actions]')),
+        actionBtn0: rr(q('[class*=actions] button')),
+      }, null, 1)
+    })()`)
+    console.error('MEASURE ' + m)
+  },
+  async 'imageviewer.default'(evaluate) {
+    await enterKey(evaluate)
+    adb('shell', 'pm', 'grant', appId, 'android.permission.READ_MEDIA_IMAGES')
+    await evaluate(`document.head.insertAdjacentHTML('beforeend','<style>*{animation-play-state:paused !important;transition:none !important}</style>')`)
+    const ok = await evaluate(`(() => {
+      const b = document.querySelector('[aria-label="uploadFile"],[aria-label="上传文件"]');
+      if (!b) return false; b.click(); return true })()`)
+    if (!ok) throw new Error('uploadFile toggle not found')
+    await until('recent photos row', () => evaluate(
+      `!!document.querySelector('[class*=recent] button img, [class*=recent] img')`), 15000)
+    await delay(500)
+    await evaluate(`(() => {
+      const bts = [...document.querySelectorAll('[class*=recent] button')];
+      bts[0] && bts[0].click(); })()`)
+    await until('draft chips', () => evaluate(
+      `document.querySelectorAll('[class*=attachment]').length > 0`), 10000)
+    await delay(600)
+    // click the chip image itself (not the remove badge) to open the viewer
+    await evaluate(`(() => {
+      const img = document.querySelector('[class*=attachment] img');
+      if (!img) return false; (img.closest('[role=button],button,div')||img).click(); return true })()`)
+    await until('viewer open', () => evaluate(`(() => {
+      const d = [...document.querySelectorAll('div')].find(e =>
+        /裁剪|Crop/.test(e.textContent||'') && e.querySelector('img'));
+      return !!d })()`), 10000)
+    await delay(700)
+  },
   async 'voice.default'(evaluate, call) {
     await enterKey(evaluate)
     // The bridge object is a native proxy: its methods can't be stubbed and

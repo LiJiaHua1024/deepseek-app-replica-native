@@ -35,9 +35,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.lijiahua1024.dsnative.R
 import io.github.lijiahua1024.dsnative.data.ChatStore
+import io.github.lijiahua1024.dsnative.data.DraftAttachment
 import io.github.lijiahua1024.dsnative.data.SettingsStore
 import io.github.lijiahua1024.dsnative.theme.DsTheme
 import io.github.lijiahua1024.dsnative.theme.Strings
+import kotlinx.coroutines.launch
 
 // Android composer per ChatInput.module.css [data-android] .wrapper: radius
 // 30px, font 16.75px, 1px border color-mix(currentColor 7%), shadow
@@ -55,10 +57,39 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     val thinking by settings.thinking.collectAsState()
     val search by settings.search.collectAsState()
     val isStreaming = activeId != null && streaming.contains(activeId)
-    val canSend = text.isNotBlank() && !isStreaming
+    val draftAtts by chatStore.draftAttachments.collectAsState()
+    val atts = draftAtts[activeId] ?: emptyList()
+    // ref android: send 按钮只在 draftReady（文本非空或附件就绪）时出现；
+    // 本地附件即时就绪
+    val canSend = (text.isNotBlank() || atts.isNotEmpty()) && !isStreaming
+    var showAttachments by remember { mutableStateOf(false) }
+    var previewAtt by remember { mutableStateOf<DraftAttachment?>(null) }
+    val inputScope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val photos by produceState<List<RecentPhoto>>(emptyList(), showAttachments) {
+        if (showAttachments) value = queryRecentPhotos(context)
+    }
+    val addFiles: (List<android.net.Uri>) -> Unit = { uris ->
+        inputScope.launch {
+            val items = uris.mapNotNull { importToDraft(context, it) }
+            if (items.isNotEmpty()) chatStore.addDraftAttachments(activeId, items)
+        }
+    }
+    val pickImages = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.PickMultipleVisualMedia()
+    ) { uris -> if (uris.isNotEmpty()) addFiles(uris) }
+    val openDocs = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris -> if (uris.isNotEmpty()) addFiles(uris) }
+    var cameraUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    val takePicture = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.TakePicture()
+    ) { ok ->
+        val u = cameraUri
+        if (ok && u != null) addFiles(listOf(u))
+    }
     val voiceMode by VoiceInput.enabled.collectAsState()
     val voiceStatus by VoiceInput.status.collectAsState()
-    val context = androidx.compose.ui.platform.LocalContext.current
     // ref: hold-to-talk 转写完成直接发送（sendSpoken）；点击语音键切模式时取消录音
     VoiceInput.apiKey = { settings.apiKey.value }
     VoiceInput.onText = { t ->
@@ -87,10 +118,10 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
 
     // ref --android-composer-bottom: 27px gesture nav, 11px with keyboard
     val keyboardOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+    Column(Modifier.fillMaxWidth().imePadding().padding(bottom = if (keyboardOpen) 27.7.dp else 52.dp)) {
     Column(
         Modifier.fillMaxWidth()
-            .imePadding()
-            .padding(start = 12.dp, end = 12.dp, bottom = if (keyboardOpen) 27.7.dp else 52.dp)
+            .padding(start = 12.dp, end = 12.dp)
             // ref .recordingCard：录音中整个输入卡片隐藏（layout 保留）——alpha 必须在
             // shadow/border 之前，否则卡片外框仍被绘制
             .alpha(if (voiceStatus != VoiceInput.Status.IDLE) 0f else 1f)
@@ -103,6 +134,19 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
             .background(c.inputMajor)
             .border(1.dp, c.labelPrimary.copy(alpha = 0.07f), RoundedCornerShape(30.dp))
     ) {
+        // ref AndroidDraftAttachments：卡片内 textarea 上方的草稿附件与快捷建议
+        DraftAttachmentsRow(
+            items = atts,
+            showSuggestions = text.isBlank() && atts.any { it.isImage },
+            canSend = canSend,
+            onRemove = { chatStore.removeDraftAttachment(activeId, it.id) },
+            onPreview = { previewAtt = it },
+            onSuggestion = { s ->
+                chatStore.setDraft(activeId, s)
+                chatStore.sendMessage(activeId)
+                text = ""
+            },
+        )
         if (voiceMode) {
             // ref .holdButton：w100% h56px, font 16px, border-bottom color-mix(currentColor 6%);
             // pointerdown 立即录音，上滑 >=72px 进入取消态，松手 finish/cancel
@@ -178,9 +222,11 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
             Spacer(Modifier.width(10.dp))
             TogglePill(Strings.get("search"), search, { settings.setSearch(!search) }, R.drawable.ic_globe)
             Spacer(Modifier.weight(1f))
-            Icon(painterResource(R.drawable.ic_add_circle), Strings.get("uploadFile"),
+            Icon(painterResource(if (showAttachments) R.drawable.ic_close_circle else R.drawable.ic_add_circle),
+                Strings.get(if (showAttachments) "close" else "uploadFile"),
                 tint = c.labelPrimary,
-                modifier = Modifier.align(Alignment.CenterVertically).size(44.dp).padding(9.5.dp))
+                modifier = Modifier.align(Alignment.CenterVertically).size(44.dp).padding(9.5.dp)
+                    .clickable { showAttachments = !showAttachments })
             Icon(painterResource(R.drawable.ic_voice_circle), Strings.get("voiceInput"),
                 tint = c.labelPrimary,
                 modifier = Modifier.align(Alignment.CenterVertically).size(44.dp).padding(9.5.dp)
@@ -209,6 +255,46 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                 }
             }
         }
+    }
+    // ref AndroidAttachments：卡片外、composer 列内展开的面板
+    AttachmentsPanel(
+        open = showAttachments,
+        photos = photos,
+        selectedPhotoIds = atts.mapNotNull { it.recentPhotoId }.toSet(),
+        onPhoto = { photo ->
+            val existing = atts.firstOrNull { it.recentPhotoId == photo.id }
+            if (existing != null) {
+                chatStore.removeDraftAttachment(activeId, existing.id)
+            } else {
+                inputScope.launch {
+                    importToDraft(context, photo.uri, photo.id)?.let {
+                        chatStore.addDraftAttachments(activeId, listOf(it))
+                    }
+                }
+            }
+        },
+        onCamera = {
+            val dir = java.io.File(context.cacheDir, "attaches").apply { mkdirs() }
+            val f = java.io.File(dir, "camera-${System.currentTimeMillis()}.jpg")
+            val u = androidx.core.content.FileProvider.getUriForFile(
+                context, "${context.packageName}.fileprovider", f)
+            cameraUri = u
+            takePicture.launch(u)
+        },
+        onGallery = {
+            showAttachments = false
+            pickImages.launch(
+                androidx.activity.result.PickVisualMediaRequest(
+                    androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly))
+        },
+        onFiles = {
+            showAttachments = false
+            openDocs.launch(arrayOf("*/*"))
+        },
+    )
+    }
+    previewAtt?.let { att ->
+        ImagePreviewDialog(att, onClose = { previewAtt = null })
     }
 }
 

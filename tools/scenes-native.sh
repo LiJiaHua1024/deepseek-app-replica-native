@@ -152,6 +152,27 @@ case "$SCENE" in
     enter_key
     tap_node "语音输入|Voice input"; sleep 0.5
     wait_text "按住说话|Hold to talk" 10 ;;
+  attachments|attachments.default)
+    enter_key
+    $ADB shell pm grant $PKG android.permission.READ_MEDIA_IMAGES >/dev/null 2>&1 || true
+    tap_node "uploadFile|上传文件"
+    wait_text "相册|Gallery|相册" 10; sleep 0.8
+    # tap 2 recent-photo thumbs: row sits ~314px above the 相册 label center
+    a=$(find_node "相册|Gallery"); ay=$(echo "$a" | awk '{print $2}')
+    py=$((ay - 314))
+    $ADB shell input tap 165 $py; sleep 0.6
+    $ADB shell input tap 407 $py; sleep 0.8 ;;
+  imageviewer|imageviewer.default)
+    enter_key
+    $ADB shell pm grant $PKG android.permission.READ_MEDIA_IMAGES >/dev/null 2>&1 || true
+    tap_node "uploadFile|上传文件"
+    wait_text "相册|Gallery" 10; sleep 0.8
+    a=$(find_node "相册|Gallery"); ay=$(echo "$a" | awk '{print $2}')
+    py=$((ay - 314))
+    $ADB shell input tap 165 $py; sleep 0.8
+    # chip sits ~150px above the composer hint text
+    h=$(find_node "发消息|Message"); hy=$(echo "$h" | awk '{print $2}')
+    $ADB shell input tap 170 $((hy - 150)); sleep 0.8 ;;
   searchpanel|searchpanel.default)
     enter_key; send_msg "search"
     wait_text "个网页|pages" 45; sleep 0.6

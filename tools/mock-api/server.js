@@ -172,6 +172,28 @@ function handle(req, res) {
       ? send(res, 200, { data: [{ id: 'deepseek-flash' }] })
       : send(res, 401, { error: { message: 'Invalid API key' } });
   }
+  // Anthropic-compatible file API used by the ref app's attachment upload
+  if (req.method === 'POST' && /\/files$/.test(req.url)) {
+    let body = Buffer.alloc(0);
+    req.on('data', (d) => (body = Buffer.concat([body, d])));
+    req.on('end', () => {
+      if (key !== TEST_KEY) return send(res, 401, { error: { message: 'Invalid API key' } });
+      const nm = /filename="([^"]+)"/.exec(body.toString('latin1'));
+      send(res, 200, {
+        id: 'file-' + Math.random().toString(36).slice(2, 12),
+        type: 'file',
+        size_bytes: body.length,
+        created_at: new Date().toISOString(),
+        filename: nm ? nm[1] : 'file',
+        mime_type: 'application/octet-stream',
+      });
+    });
+    return;
+  }
+  if (req.method === 'DELETE' && /\/files\/[^/]+$/.test(req.url)) {
+    res.writeHead(204).end();
+    return;
+  }
   if (req.method === 'POST' && /\/tools\/asr$/.test(req.url)) {
     // ASR stub: multipart body ignored, fixed transcript returned.
     req.resume();

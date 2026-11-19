@@ -55,6 +55,28 @@
           "reason": "random greeting text (Math.random pick in ref) — declared dynamic content"
         }
       ]
+    },
+    "attachments.default": {
+      "regions": [
+        {
+          "x": 140,
+          "y": 590,
+          "w": 800,
+          "h": 110,
+          "reason": "random greeting text (Math.random pick in ref; Compose vs WebView glyph rasterization differs) — declared dynamic content"
+        }
+      ]
+    },
+    "imageviewer.default": {
+      "regions": [
+        {
+          "x": 140,
+          "y": 590,
+          "w": 800,
+          "h": 110,
+          "reason": "random greeting text (Math.random pick in ref; Compose vs WebView glyph rasterization differs) — declared dynamic content"
+        }
+      ]
     }
   }
 }
