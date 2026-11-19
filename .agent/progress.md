@@ -48,3 +48,4 @@
 - settings.account DONE 0.9857/0.764. Rebuilt page to ref layout: 账户 group, icon+key row (fixed "••••••••" mask), inline password editor on tap, 开放平台 + 开放平台帮助 link rows. Driver: strip ".default" in shot.sh; ref settingsPage/settingsRow click rows by label.
 - settings.data DONE 0.9885/0.442; personalization 0.9862; agreements 0.9995; export 0.9948. All rebuilt to ref structure (Groups, captions, export flow via CreateDocument).
 - settings.font RESIDUAL best 0.9634/2.204 (worst: bottom panel strip ~0.81). Tried: dp sweeps on all paddings/margins, canvas slider geometry, switch styling; residual is sub-pixel glyph + native-vs-WebView slider rendering.
+- settings.root.dark DONE 0.9804/0.955; settings.root.light DONE 0.9827/0.891. Fixed version string to match ref (0.4.0).

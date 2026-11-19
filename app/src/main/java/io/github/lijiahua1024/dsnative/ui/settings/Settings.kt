@@ -207,7 +207,7 @@ private fun SettingsRootPage(
     }
     SettingsGroup(Strings.get("settingsGroupAbout"), card, muted) {
         SettingsRow(c, muted, Strings.get("settingsVersion"),
-            { InfoGlyph("i", c.labelPrimary) }, value = io.github.lijiahua1024.dsnative.BuildConfig.VERSION_NAME, arrow = false) { }
+            { InfoGlyph("i", c.labelPrimary) }, value = "0.4.0", arrow = false) { }
         SettingsRow(c, muted, Strings.get("settingsAgreementsPage"),
             { Icon(painterResource(R.drawable.ic_link), null, tint = c.labelPrimary, modifier = Modifier.size(18.dp)) }) { onPage("agreements") }
     }
