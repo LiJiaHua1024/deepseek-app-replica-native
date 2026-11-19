@@ -308,26 +308,17 @@ async function chatDone(evaluate, text) {
 }
 
 async function dispatchTouchOnSession(evaluate, holdMs) {
-  // synthesized touchstart/end on the first session row
-  await evaluate(`(() => {
+  // contextmenu is browser-generated on real long-press; dispatch it directly
+  // so React's onContextMenu (long-press menu) fires deterministically.
+  const ok = await evaluate(`(() => {
     const el = [...document.querySelectorAll('a,li,div')].find(e => e.textContent.trim() === '问候');
     if (!el) return false;
     const r = el.getBoundingClientRect();
-    const x = r.left + r.width / 2, y = r.top + r.height / 2;
-    const t = new Touch({ identifier: 1, target: el, clientX: x, clientY: y });
-    el.dispatchEvent(new TouchEvent('touchstart', { touches: [t], targetTouches: [t], bubbles: true }));
+    el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }));
     return true;
   })()`)
+  if (!ok) throw new Error('dispatchTouchOnSession: no 问候 row')
   await delay(holdMs)
-  await evaluate(`(() => {
-    const el = [...document.querySelectorAll('a,li,div')].find(e => e.textContent.trim() === '问候');
-    if (!el) return false;
-    const r = el.getBoundingClientRect();
-    const x = r.left + r.width / 2, y = r.top + r.height / 2;
-    const t = new Touch({ identifier: 1, target: el, clientX: x, clientY: y });
-    el.dispatchEvent(new TouchEvent('touchend', { changedTouches: [t], bubbles: true }));
-    return true;
-  })()`)
 }
 
 const scenes = {

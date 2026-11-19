@@ -114,7 +114,11 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
                                 selected = if (selected.contains(s.id)) selected - s.id else selected + s.id
                             } else { chatStore.selectSession(s.id); onClose() }
                         },
-                        onLongClick = { if (!selectionMode) menuFor = s })
+                        onLongClick = { if (!selectionMode) menuFor = s },
+                        menuOpen = menuFor?.id == s.id,
+                        onMenuDismiss = { menuFor = null },
+                        onRename = { renameFor = s; menuFor = null },
+                        onDelete = { deleteFor = s; menuFor = null })
                 }
             }
             }
@@ -162,19 +166,7 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
     }
 
     // long-press dropdown menu
-    menuFor?.let { s ->
-        AlertDialog(onDismissRequest = { menuFor = null }, confirmButton = {}, dismissButton = {},
-            text = {
-                Column {
-                    MenuItem(Strings.get(if (pinned.contains(s.id)) "androidUnpin" else "androidPinned")) {
-                        settings.setPinnedSessions(if (pinned.contains(s.id)) pinned - s.id else pinned + s.id); menuFor = null
-                    }
-                    MenuItem(Strings.get("sessionItemMenuRenameOption")) { renameFor = s; menuFor = null }
-                    MenuItem(Strings.get("delete")) { deleteFor = s; menuFor = null }
-                    MenuItem(Strings.get("androidSelectChats")) { selectionMode = true; selected = setOf(s.id); menuFor = null }
-                }
-            })
-    }
+
 
     renameFor?.let { s ->
         var text by remember { mutableStateOf(s.title) }
@@ -194,20 +186,17 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
     }
 }
 
-@Composable
-private fun MenuItem(label: String, onClick: () -> Unit) {
-    Text(label, fontSize = 15.sp, color = DsTheme.colors.labelPrimary,
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp, horizontal = 4.dp))
-}
-
 private fun allPinned(selected: Set<String>, pinned: Collection<String>) =
     selected.isNotEmpty() && pinned.containsAll(selected)
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean, checked: Boolean,
-                     onClick: () -> Unit, onLongClick: () -> Unit) {
+                     onClick: () -> Unit, onLongClick: () -> Unit,
+                     menuOpen: Boolean = false, onMenuDismiss: () -> Unit = {},
+                     onRename: () -> Unit = {}, onDelete: () -> Unit = {}) {
     val c = DsTheme.colors
+    Box {
     // [data-android] .item: h48, padding-inline 7/4, r12, font 16;
     // active: bg nav-item-active-accent + color brand-primary-invert
     Row(
@@ -235,5 +224,49 @@ private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean,
         Text(s.title.ifEmpty { Strings.get("untitledChat") }, fontSize = 16.sp,
             color = if (active) c.brandPrimaryInvert else c.labelPrimary,
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+    }
+    if (menuOpen) {
+        // ref base/Menu: anchored at the item's (invisible) ellipsis — align start
+        // -5px, offset +4 below; menu clamps to viewport with 8px padding, so its
+        // right edge lands at vw-8 and it can overflow the drawer into the scrim.
+        val vw = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.toFloat()
+        val edge = kotlin.math.min(vw - 68.4f, 380f)
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val offX = with(density) { (vw - 8f - (edge - 24f)).dp.roundToPx() }
+        val offY = with(density) { 44.dp.roundToPx() } // item h48, icon btn bottom ≈ +40, +4 gap
+        androidx.compose.ui.window.Popup(
+            alignment = Alignment.TopEnd,
+            offset = androidx.compose.ui.unit.IntOffset(offX, offY),
+            onDismissRequest = onMenuDismiss,
+        ) {
+            // .menu: min-width 124, pad 4, r12, bg menu, layered shadow
+            androidx.compose.material3.Surface(
+                color = c.menu, shape = RoundedCornerShape(12.dp),
+                shadowElevation = 8.dp,
+                // fixed 124: fillMaxWidth children otherwise widen the popup
+                // and shift its aligned right edge off-screen-left
+                modifier = Modifier.width(124.dp),
+            ) {
+                Column(Modifier.padding(4.dp)) {
+                    SiderMenuOption(R.drawable.ic_edit, Strings.get("sessionItemMenuRenameOption"), c.labelPrimary, onRename)
+                    SiderMenuOption(R.drawable.ic_trash, Strings.get("delete"), c.stateErrorPrimary, onDelete)
+                }
+            }
+        }
+    }
+    }
+}
+
+// .option: flex, gap 8, padding 8px 10px, r8, 14/24; .danger -> error color
+@Composable
+private fun SiderMenuOption(icon: Int, label: String, color: androidx.compose.ui.graphics.Color, onSelect: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable(onClick = onSelect)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(painterResource(icon), null, tint = color, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(label, fontSize = 14.sp, lineHeight = 24.sp, color = color)
     }
 }

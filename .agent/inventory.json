@@ -305,12 +305,13 @@
     "path": "src/components/sider/Sider.tsx",
     "type": "screen-state",
     "reach": "shot sider.longpress",
-    "status": "todo",
-    "blurred_ssim": null,
-    "color_mad": null,
-    "attempts": 0,
+    "status": "done",
+    "blurred_ssim": 0.9837,
+    "color_mad": 1.341,
+    "attempts": 1,
     "commit": null,
-    "notes": ""
+    "notes": "",
+    "note": "ref contextmenu opens anchored 2-item Menu (rename+delete icons); replaced AlertDialog with Popup TopEnd w124 @ vw-8; synthetic TouchEvent does not raise contextmenu — dispatch MouseEvent directly"
   },
   {
     "id": "sider.multiselect",
