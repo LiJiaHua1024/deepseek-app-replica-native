@@ -83,3 +83,15 @@ Residual cause: nondeterministic delivery timing in the measurement channel, not
   post-message spacer 21.6dp normal / 20.1dp editing (edit-mode gap is ~6px less).
 - ReadAloudButton -> POST {API_ORIGIN}/tts; mock lacks /tts -> ttsFailed toast.
 - BranchSwitcher under user+assistant messages when versions>1; regenerate -> 2/2.
+
+## Display math (chat.math residual 0.9767)
+- The markdown block parser unescapes `\,` before RenderParagraph, so display
+  TeX sees a literal `,` — same as the ref's pipeline; no need to special-case
+  spacing escapes inside glyph text (they never arrive).
+- DisplayMath: TeX segs = Glyph | BigOp(∫/∑/∏ with sub/sup Box-anchored to
+  TopEnd/BottomEnd, offset x4dp, sup y-1.5dp, sub y+4.5dp) | Frac (stacked
+  num/rule/den Column). ∫ 21sp/24lh, glyphs 17sp via texStyled.
+- Measured ref geometry: ∫ sign y648-705, sup 636-660, sub 684-709, frac
+  645-708 (device px); native matched to within ~5px.
+- Residual: remaining gap is KaTeX_Math_Italic vs Noto Serif italic glyph
+  shapes; 5 attempts, last two <0.005 improvement → timebox.

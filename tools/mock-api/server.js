@@ -215,7 +215,7 @@ function handle(req, res) {
         for (let i = users.length - 1; i >= 0; i--) {
           const c = users[i].content;
           const text = (Array.isArray(c) ? c.find((p) => p && p.text)?.text : c) || '';
-          const m = /^(thinking|long|slow|interrupted|401|402|429|500|refused|hold|search)$/i.exec(String(text).trim());
+          const m = /^(thinking|long|slow|interrupted|401|402|429|500|refused|hold|search|md|code|math|table)$/i.exec(String(text).trim());
           if (m) { scenario = m[1].toLowerCase(); break; }
         }
       } catch (e) {}
@@ -232,6 +232,14 @@ function handle(req, res) {
         case 'search': return searchReply(res);
         case 'refused':
           return blockReply({ text: '你好，这个问题我暂时无法回答，让我们换个话题再聊聊吧。' })(res);
+        case 'md':
+          return blockReply({ text: '包含 **加粗**、*斜体* 和 `inline code` 与列表：\n\n- 项一\n- 项二' })(res);
+        case 'code':
+          return blockReply({ text: '```kotlin\nfun main() {\n    println("hi")\n}\n```' })(res);
+        case 'math':
+          return blockReply({ text: '行内公式 $a^2+b^2=c^2$ 与：\n\n$$\\int_0^1 x^2\\,dx = \\frac{1}{3}$$' })(res);
+        case 'table':
+          return blockReply({ text: '| 名称 | 值 |\n| --- | --- |\n| alpha | 1 |\n| beta | 2 |' })(res);
         default: return blockReply({ text: REPLY })(res);
       }
     });

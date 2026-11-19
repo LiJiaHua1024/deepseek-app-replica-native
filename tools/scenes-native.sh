@@ -142,6 +142,10 @@ case "$SCENE" in
   chat.toast)
     enter_key; send_msg "refused"; wait_text "换个话题" 40; sleep 0.5
     tap_node "朗读|Read aloud"; wait_text "朗读失败|Failed to read" 15; sleep 0.2 ;;
+  chat.md)   enter_key; send_msg "md";    wait_text "项一" 40; sleep 0.5 ;;
+  chat.code) enter_key; send_msg "code";  wait_text "println|kotlin" 40; sleep 0.5 ;;
+  chat.math) enter_key; send_msg "math";  wait_text "行内公式" 40; sleep 0.7 ;;
+  chat.table) enter_key; send_msg "table"; wait_text "alpha" 40; sleep 0.5 ;;
   chat.long|chat_long)
     enter_key; send_msg "long"
     # 问候 appears as the header title once message_delta lands (stream end)

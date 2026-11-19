@@ -334,10 +334,7 @@ private fun RenderParagraph(text: AnnotatedString, c: io.github.lijiahua1024.dsn
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         for ((str, math) in segs) {
             if (math != null) {
-                // Reference falls back to the raw tex source when KaTeX is
-                // unavailable; render it as plain paragraph text.
-                Text(math, fontSize = 16.sp, lineHeight = 28.sp, color = c.labelPrimary, style = cssLeading,
-                    fontFamily = DsTheme.fontFamily)
+                DisplayMath(math, c)
             } else {
                 ParagraphText(str, c)
             }
@@ -447,15 +444,106 @@ private fun splitMath(styled: AnnotatedString): List<Pair<AnnotatedString, Strin
     var i = 0
     for (m in matches) {
         if (m.range.first > i) out.add(styled.subSequence(androidx.compose.ui.text.TextRange(i, m.range.first)) to null)
-        out.add(AnnotatedString("") to stripTex(m.groupValues[1].trim()))
+        out.add(AnnotatedString("") to m.groupValues[1].trim())
         i = m.range.last + 1
     }
     if (i < plain.length) out.add(styled.subSequence(androidx.compose.ui.text.TextRange(i, plain.length)) to null)
     return out
 }
 
-/** Reference fallback for math: the tex source with control-word backslashes dropped. */
-private fun stripTex(tex: String): String = tex.replace("\\", "")
+/**
+ * Approximate KaTeX display math: \int_\sum big operators carry their
+ * limits over/under the symbol, \frac{a}{b} stacks numerator over a rule
+ * over denominator, other tokens render serif-italic like inline math.
+ */
+private sealed interface TexSeg {
+    class Glyph(val tex: String) : TexSeg
+    class BigOp(val sym: String, val sub: String?, val sup: String?) : TexSeg
+    class Frac(val num: String, val den: String) : TexSeg
+}
+
+private fun texDisplay(tex: String): List<TexSeg> {
+    val segs = mutableListOf<TexSeg>()
+    var glyph = StringBuilder()
+    fun flush() { if (glyph.isNotEmpty()) { segs.add(TexSeg.Glyph(glyph.toString())); glyph = StringBuilder() } }
+    var i = 0
+    fun group(): String? {
+        while (i < tex.length && tex[i] == ' ') i++
+        if (i >= tex.length) return null
+        return if (tex[i] == '{') {
+            val end = tex.indexOf('}', i)
+            if (end < 0) null else { val g = tex.substring(i + 1, end); i = end + 1; g }
+        } else tex[i++].toString()
+    }
+    while (i < tex.length) {
+        if (tex[i] == '\\') {
+            var j = i + 1
+            val name = StringBuilder()
+            while (j < tex.length && tex[j].isLetter()) name.append(tex[j++])
+            when (name.toString()) {
+                "int", "sum", "prod" -> {
+                    i = j
+                    var sub: String? = null; var sup: String? = null
+                    while (i < tex.length && (tex[i] == '_' || tex[i] == '^')) {
+                        val isSub = tex[i] == '_'; i++
+                        val g = group()
+                        if (isSub) sub = g else sup = g
+                    }
+                    flush()
+                    segs.add(TexSeg.BigOp(
+                        when (name.toString()) { "int" -> "\u222B"; "sum" -> "\u2211"; else -> "\u220F" },
+                        sub, sup))
+                    continue
+                }
+                "frac" -> {
+                    i = j
+                    val a = group(); val b = group()
+                    if (a != null && b != null) { flush(); segs.add(TexSeg.Frac(a, b)); continue }
+                }
+                "" -> {
+                    // \, \; \! etc: spacing escapes, consume both chars
+                    i = j
+                    if (i < tex.length) {
+                        when (tex[i]) {
+                            ',', ';', ':' -> glyph.append(' ')
+                            ' ' -> glyph.append(' ')
+                            else -> {}
+                        }
+                        i++
+                    }
+                    continue
+                }
+            }
+        }
+        glyph.append(tex[i++])
+    }
+    flush()
+    return segs
+}
+
+@androidx.compose.runtime.Composable
+private fun DisplayMath(tex: String, c: io.github.lijiahua1024.dsnative.theme.DsColors) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        for (seg in texDisplay(tex)) when (seg) {
+            is TexSeg.Glyph -> Text(texStyled(seg.tex), fontSize = 17.sp, lineHeight = 28.sp,
+                color = c.labelPrimary, style = cssLeading)
+            is TexSeg.BigOp -> Box(contentAlignment = Alignment.CenterEnd) {
+                Text(seg.sym, fontSize = 21.sp, lineHeight = 24.sp, fontFamily = FontFamily.Serif,
+                    color = c.labelPrimary)
+                if (seg.sup != null) Text(texStyled(seg.sup), fontSize = 9.sp, lineHeight = 9.sp,
+                    color = c.labelPrimary, modifier = Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-1.5).dp))
+                if (seg.sub != null) Text(texStyled(seg.sub), fontSize = 9.sp, lineHeight = 9.sp,
+                    color = c.labelPrimary, modifier = Modifier.align(Alignment.BottomEnd).offset(x = 4.dp, y = 4.5.dp))
+            }
+            is TexSeg.Frac -> Column(horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(horizontal = 3.dp)) {
+                Text(texStyled(seg.num), fontSize = 11.sp, lineHeight = 13.sp, color = c.labelPrimary)
+                Box(Modifier.width(12.dp).height(0.8.dp).background(c.labelPrimary))
+                Text(texStyled(seg.den), fontSize = 11.sp, lineHeight = 13.sp, color = c.labelPrimary)
+            }
+        }
+    }
+}
 
 /**
  * Approximate KaTeX inline math: serif italic base, ^ -> superscript,

@@ -532,6 +532,26 @@ const scenes = {
       `[...document.querySelectorAll('div')].some(e => /朗读失败|Failed to read/.test(e.textContent||''))`), 15000)
     await delay(300)
   },
+  async 'chat.md'(evaluate) {
+    await enterKey(evaluate); await sendMessage(evaluate, 'md')
+    await until('md done', async () => /项二/.test(await replyText(evaluate)), 40000)
+    await delay(400)
+  },
+  async 'chat.code'(evaluate) {
+    await enterKey(evaluate); await sendMessage(evaluate, 'code')
+    await until('code done', async () => /println/.test(await replyText(evaluate)), 40000)
+    await delay(500)
+  },
+  async 'chat.math'(evaluate) {
+    await enterKey(evaluate); await sendMessage(evaluate, 'math')
+    await until('math done', async () => /行内公式/.test(await replyText(evaluate)), 40000)
+    await delay(700)
+  },
+  async 'chat.table'(evaluate) {
+    await enterKey(evaluate); await sendMessage(evaluate, 'table')
+    await until('table done', async () => /alpha/.test(await replyText(evaluate)), 40000)
+    await delay(400)
+  },
   async 'chat.long'(evaluate) {
     await enterKey(evaluate)
     await sendMessage(evaluate, 'long')
