@@ -200,6 +200,8 @@ async function enterKey(evaluate) {
     `(() => { const el = document.querySelector('input[type=password]');
       return !el || el.getBoundingClientRect().width === 0 })()`), 20000)
   await until('welcome composer', () => evaluate(vis('textarea')), 20000)
+  await until('key screen gone', async () =>
+    !/输入 API Key|API Key 开始使用/.test(await evaluate(bodyText)), 20000)
   await delay(300)
 }
 
@@ -405,6 +407,23 @@ const scenes = {
     await openDrawer(evaluate)
     await evaluate(`(() => { const b=document.querySelector('[aria-label="设置"],[aria-label="Settings"]') || [...document.querySelectorAll('button,a,li')].find(e=>/设置|API Key/.test(e.textContent.trim())); if(b){b.click();return true} return false })()`)
     await delay(600)
+  },
+  async 'debug.meas'(evaluate) {
+    await enterKey(evaluate)
+    const meas = await evaluate(`(() => {
+      const pick = (sel) => { const el = document.querySelector(sel); if (!el) return null;
+        const r = el.getBoundingClientRect(); return {x: r.x, y: r.y, w: r.width, h: r.height} }
+      return JSON.stringify({
+        dpr: devicePixelRatio, vw: innerWidth, vh: innerHeight,
+        header: pick('.header') || pick('[class*=header]'),
+        greeting: pick('[class*=greeting]'),
+        composer: pick('[class*=composer]'),
+        wrapper: pick('[class*=wrapper]'),
+        functionRow: pick('[class*=functionRow]'),
+        textarea: pick('textarea'),
+        toggles: [...document.querySelectorAll('[class*=toggle]')].map(e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height}}),
+      }) })()`)
+    console.log('MEAS', meas)
   },
 }
 
