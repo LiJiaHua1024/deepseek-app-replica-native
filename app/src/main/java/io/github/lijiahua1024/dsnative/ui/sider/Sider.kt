@@ -11,8 +11,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -55,8 +57,14 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
             Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(if (selected.isEmpty()) Strings.get("androidSelectChats") else Strings.get("androidSelectedChats").replace("{count}", selected.size.toString()),
                     fontSize = 16.sp, color = c.labelPrimary, modifier = Modifier.weight(1f))
-                Icon(painterResource(R.drawable.ic_close), Strings.get("close"), tint = c.brandPrimary,
-                    modifier = Modifier.size(24.dp).clickable { selectionMode = false; selected = emptySet() })
+                // .selectionHeader button: circle bg-base + soft shadow, tone=primary (dark)
+                Box(Modifier.size(34.dp).shadow(2.dp, androidx.compose.foundation.shape.CircleShape)
+                        .clip(androidx.compose.foundation.shape.CircleShape).background(c.bgBase)
+                        .clickable { selectionMode = false; selected = emptySet() },
+                    contentAlignment = Alignment.Center) {
+                    Icon(painterResource(R.drawable.ic_close), Strings.get("close"), tint = c.labelPrimary,
+                        modifier = Modifier.size(16.dp))
+                }
             }
         } else {
             // .search: h48 r24 bg-skeleton, padding 0 14, gap 8, search icon 16 tertiary
@@ -85,12 +93,6 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
         }
         // .listWrap: margin-top 16, relative container for selectChats icon
         Box(Modifier.weight(1f).padding(top = 16.dp)) {
-            if (!selectionMode) {
-                Icon(painterResource(R.drawable.ic_select_chats), Strings.get("androidSelectChats"), tint = c.labelPrimary,
-                    modifier = Modifier.align(Alignment.TopEnd).offset(y = 6.dp, x = (-1).dp).size(32.dp).clickable {
-                        selectionMode = true; selected = emptySet()
-                    }.padding(7.dp))
-            }
             // session groups
             LazyColumn(Modifier.fillMaxSize()) {
             val filtered = groups.map { g ->
@@ -122,6 +124,13 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
                 }
             }
             }
+            // declared after LazyColumn so its touches win over the list
+            if (!selectionMode) {
+                Icon(painterResource(R.drawable.ic_select_chats), Strings.get("androidSelectChats"), tint = c.labelPrimary,
+                    modifier = Modifier.align(Alignment.TopEnd).offset(y = 6.dp, x = (-1).dp).size(32.dp).clickable {
+                        selectionMode = true; selected = emptySet()
+                    }.padding(7.dp))
+            }
         }
 
         // .bottom: h64 padding-top 8; .settings padding 4px 0
@@ -130,14 +139,16 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
             Row(Modifier.fillMaxWidth().padding(top = 8.dp).height(42.dp)
                 .background(c.bgBase)
                 .drawBehind { drawLine(c.borderL2, androidx.compose.ui.geometry.Offset(0f, 0f), androidx.compose.ui.geometry.Offset(size.width, 0f), 1.dp.toPx()) }) {
+                // &:disabled { opacity: 0.35 } — whole button fades
+                val actionsAlpha = if (selected.isEmpty()) 0.35f else 1f
                 TextButton(onClick = { if (selected.isNotEmpty()) { settings.setPinnedSessions(if (allPinned(selected, pinned)) pinned - selected else pinned + selected); selectionMode = false; selected = emptySet() } },
-                    enabled = selected.isNotEmpty(), modifier = Modifier.weight(1f)) {
-                    Icon(painterResource(R.drawable.ic_check), null, tint = c.labelPrimary, modifier = Modifier.size(18.dp))
+                    enabled = selected.isNotEmpty(), modifier = Modifier.weight(1f).alpha(actionsAlpha)) {
+                    Icon(painterResource(R.drawable.ic_pin), null, tint = c.labelPrimary, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(Strings.get(if (allPinned(selected, pinned)) "androidUnpin" else "androidPinned"), fontSize = 15.sp, color = c.labelPrimary)
                 }
                 TextButton(onClick = { if (selected.isNotEmpty()) { selected.forEach { chatStore.removeSession(it) }; selectionMode = false; selected = emptySet() } },
-                    enabled = selected.isNotEmpty(), modifier = Modifier.weight(1f)) {
+                    enabled = selected.isNotEmpty(), modifier = Modifier.weight(1f).alpha(actionsAlpha)) {
                     Icon(painterResource(R.drawable.ic_trash), null, tint = c.labelPrimary, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(Strings.get("delete"), fontSize = 15.sp, color = c.labelPrimary)
@@ -202,7 +213,8 @@ private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean,
     Row(
         Modifier.fillMaxWidth().height(48.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(if (active) c.sidebarNavItemActiveAccent else androidx.compose.ui.graphics.Color.Transparent)
+            // selection rows render as plain .select buttons — no active accent
+            .background(if (active && !selectionMode) c.sidebarNavItemActiveAccent else androidx.compose.ui.graphics.Color.Transparent)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(start = 7.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -222,7 +234,7 @@ private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean,
             Spacer(Modifier.width(10.dp))
         }
         Text(s.title.ifEmpty { Strings.get("untitledChat") }, fontSize = 16.sp,
-            color = if (active) c.brandPrimaryInvert else c.labelPrimary,
+            color = if (active && !selectionMode) c.brandPrimaryInvert else c.labelPrimary,
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
     }
     if (menuOpen) {

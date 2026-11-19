@@ -96,13 +96,12 @@ case "$SCENE" in
     wait_text "结束" 40; sleep 0.8
     open_drawer; wait_text "问候" 10
     c=$(find_node "问候"); $ADB shell input swipe $(echo "$c" | awk '{print $1, $2, $1, $2}') 1200
-    wait_text "重命名|置顶|删除|多选" 10; sleep 0.4 ;;
+    wait_text "重命名|Rename|置顶|Pin|删除|Delete" 10; sleep 0.4 ;;
   sider.multiselect)
     enter_key; send_msg "你好"
     wait_text "结束" 40; sleep 0.8
     open_drawer; wait_text "问候" 10
-    c=$(find_node "问候"); $ADB shell input swipe $(echo "$c" | awk '{print $1, $2, $1, $2}') 1200
-    wait_text "多选" 10; tap_node "多选"; sleep 0.6 ;;
+    tap_node "选择对话|Select"; sleep 0.6 ;;
   chat.default|chat_done|chat)
     enter_key; send_msg "你好"
     wait_text "结束" 40; sleep 0.5 ;;

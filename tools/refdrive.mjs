@@ -388,10 +388,13 @@ const scenes = {
   async 'sider.multiselect'(evaluate) {
     await chatDone(evaluate, '你好')
     await openDrawer(evaluate)
-    await dispatchTouchOnSession(evaluate, 1500)
-    await delay(500)
-    await evaluate(`(() => { const b=[...document.querySelectorAll('[role=menuitem],button,li')].find(e=>/多选|select/i.test(e.textContent)); if(b){b.click();return true} return false })()`)
-    await delay(500)
+    // selection mode is entered only via the top-right select icon
+    // (aria-label = androidSelectChats); the long-press menu has no such item
+    const ok = await evaluate(`(() => {
+      const b=[...document.querySelectorAll('button[aria-label]')].find(e=>/选择对话|Select/i.test(e.getAttribute('aria-label')));
+      if(b){b.click();return true} return false })()`)
+    if (!ok) throw new Error('select-chats button not found')
+    await delay(600)
   },
   async 'chat.debug'(evaluate) {
     await enterKey(evaluate)
