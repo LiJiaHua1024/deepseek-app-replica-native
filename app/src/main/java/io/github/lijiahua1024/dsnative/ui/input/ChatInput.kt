@@ -48,10 +48,12 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     val isStreaming = activeId != null && streaming.contains(activeId)
     val canSend = text.isNotBlank() && !isStreaming
 
+    // ref --android-composer-bottom: 27px gesture nav, 11px with keyboard
+    val keyboardOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
     Column(
         Modifier.fillMaxWidth()
             .imePadding()
-            .padding(start = 12.dp, end = 12.dp)
+            .padding(start = 8.7.dp, end = 8.7.dp, bottom = if (keyboardOpen) 35.dp else 51.dp)
             // ref .session box-shadow: 0 4px 10px rgba(0,0,0,.02), 0 2px 4px rgba(0,0,0,.04)
             .shadow(4.dp, RoundedCornerShape(24.dp), clip = false,
                 ambientColor = Color.Black.copy(alpha = 0.02f),
@@ -60,7 +62,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
             .background(c.inputMajor)
             .border(1.dp, c.borderL2DarkmodeThin, RoundedCornerShape(24.dp))
     ) {
-        Box(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 21.dp)) {
+        Box(Modifier.fillMaxWidth().height(56.dp).padding(start = 16.dp, end = 12.dp, top = 14.5.dp)) {
             BasicTextField(
                 value = text,
                 onValueChange = { text = it; chatStore.setDraft(activeId, it) },
@@ -82,25 +84,29 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                         inner()
                     }
                 },
-                modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 38.4.dp)
+                modifier = Modifier.fillMaxWidth()
                     .onFocusChanged { focused = it.isFocused },
             )
         }
         Row(
-            Modifier.fillMaxWidth().height(48.dp).padding(start = 11.dp, end = 7.dp, bottom = 6.5.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            Modifier.fillMaxWidth().height(48.dp).padding(start = 15.dp, end = 15.3.dp, top = 6.dp),
+            verticalAlignment = Alignment.Top,
         ) {
             TogglePill(Strings.get("thinkingSwitch"), thinking, { settings.setThinking(!thinking) }, R.drawable.ic_think)
             Spacer(Modifier.width(8.dp))
             TogglePill(Strings.get("search"), search, { settings.setSearch(!search) }, R.drawable.ic_globe)
             Spacer(Modifier.weight(1f))
             Icon(painterResource(R.drawable.ic_add_circle), null,
-                tint = c.labelPrimary, modifier = Modifier.size(44.dp).padding(9.5.dp))
+                tint = c.labelPrimary,
+                modifier = Modifier.align(Alignment.CenterVertically).size(34.dp).padding(4.5.dp).offset(y = (-5).dp))
+            Spacer(Modifier.width(10.3.dp))
             Icon(painterResource(R.drawable.ic_voice_circle), null,
-                tint = c.labelPrimary, modifier = Modifier.size(44.dp).padding(9.5.dp))
+                tint = c.labelPrimary,
+                modifier = Modifier.align(Alignment.CenterVertically).size(34.dp).padding(4.5.dp).offset(y = (-5).dp))
             if (canSend || isStreaming) {
                 Box(
-                    Modifier.padding(start = 6.dp, end = 7.dp)
+                    Modifier.align(Alignment.CenterVertically)
+                        .padding(start = 6.dp, end = 7.dp)
                         .size(30.dp).clip(CircleShape)
                         .background(if (isStreaming) c.labelPrimary else c.buttonPrimaryFill)
                         .clickable {
@@ -136,7 +142,7 @@ private fun TogglePill(label: String, on: Boolean, onClick: () -> Unit, icon: In
             tint = if (on) c.brandText else c.labelPrimary,
             modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(4.dp))
-        Text(label, fontSize = 14.sp, lineHeight = 20.sp,
+        Text(label, fontSize = 13.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium,
             color = if (on) c.brandText else c.labelPrimary)
     }
 }

@@ -40,7 +40,7 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
 
     // ref top inset = 128px@2.75dpr: gray status bar + ~17px gray filler
     Column(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0xFF757575)).statusBarsPadding()) {
-    Column(Modifier.fillMaxSize().background(c.bgBase).padding(top = 6.2.dp)) {
+    Column(Modifier.fillMaxSize().background(c.bgBase)) {
         // header: h52, padding 0 2 0 4
         Row(Modifier.fillMaxWidth().height(52.dp).padding(start = 4.dp, end = 2.dp),
             verticalAlignment = Alignment.CenterVertically) {
@@ -161,7 +161,8 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
 fun Welcome(modifier: Modifier = Modifier) {
     val c = DsTheme.colors
     val greeting = remember { Strings.androidWelcomeMessages.random() }
-    Column(modifier.fillMaxSize(), verticalArrangement = Arrangement.Center,
+    // ref .greeting: margin auto 0 + translateY(-2.7px)
+    Column(modifier.fillMaxSize().offset(y = (-2.7).dp), verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(painterResource(R.drawable.whale), null, tint = c.brandPrimary,
             modifier = Modifier.size(42.dp))

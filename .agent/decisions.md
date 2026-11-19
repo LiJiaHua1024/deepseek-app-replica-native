@@ -14,3 +14,7 @@
 
 - M6 residual: 旧消息窗口加载（INITIAL_MESSAGES=4 / OLDER_MESSAGES=8 批式 prepend+锚定）未实现——消息量少时不可见；列表粘性跟随与参照阈值一致。
 - M6 residual: 思考块预览的指数追赶滚动（1-exp(-t/70)）未实现，用即时跟随代替。
+- welcome.* mask: greeting text band (x140-940,y1100-1230) declared dynamic — greeting is `Math.random` pick in both apps (Welcome.tsx welcomeSample / Strings.androidWelcomeMessages.random), unreproducible; geometry still verified via screenshot measurements.
+- compare.py: mask.json gains scene-scoped regions ("scenes.<scene>.regions") so dynamic bands don't mask other scenes; CLI path now reads .agent/mask.json with scene key too.
+- Native window is fully edge-to-edge (parent bottom = 2340): composer bottom padding = 51dp (ref 27px composer-bottom + 24dp nav inset ref WebView gets). Keyboard-open: 35dp.
+- Composer internals (measured): card margin 8.7dp, textarea zone h56 pad-top 14.5, functionRow h48 pad top6 — chips top-aligned, icons centered -5dp offset, row padding start15/end15.3, icon gap 10.3dp.

@@ -45,11 +45,15 @@ def default_mask(shape):
     return m
 
 
-def load_extra_masks(path, shape):
+def load_extra_masks(path, shape, scene=None):
     m = np.zeros(shape, dtype=bool)
     if path and Path(path).exists():
-        for r in json.loads(Path(path).read_text()).get('regions', []):
+        data = json.loads(Path(path).read_text())
+        for r in data.get('regions', []):
             m[r['y']:r['y'] + r['h'], r['x']:r['x'] + r['w']] = True
+        if scene:
+            for r in data.get('scenes', {}).get(scene, {}).get('regions', []):
+                m[r['y']:r['y'] + r['h'], r['x']:r['x'] + r['w']] = True
     return m
 
 
@@ -129,7 +133,7 @@ def compare(a_path, b_path, mask_extra=None, mask_path=None, noise_path=None, sc
     if mask_extra is not None:
         mask = mask | mask_extra
     if mask_path:
-        mask = mask | load_extra_masks(mask_path, a.shape[:2])
+        mask = mask | load_extra_masks(mask_path, a.shape[:2], scene=scene)
     ssim, mad, smap = metrics(a, b, mask)
     ssim_loss, mad_noise = noise_floor(noise_path, scene)
     adj_ssim = ssim - ssim_loss
@@ -186,7 +190,10 @@ def main():
     if '--noise' in args:
         noise = args[args.index('--noise') + 1]
     scene = Path(a).stem
-    print(json.dumps(compare(a, b, mask_extra=mask_extra, mask_path=str(REPO / '.agent' / 'mask.json') if (REPO / '.agent' / 'mask.json').exists() else None, noise_path=noise, scene=scene), indent=2, ensure_ascii=False))
+    mask_extra = mask_extra if mask_extra is not None else (
+        load_extra_masks(str(REPO / '.agent' / 'mask.json'), load(a).shape[:2], scene=scene)
+        if (REPO / '.agent' / 'mask.json').exists() else None)
+    print(json.dumps(compare(a, b, mask_extra=mask_extra, mask_path=None, noise_path=noise, scene=scene), indent=2, ensure_ascii=False))
 
 
 if __name__ == '__main__':

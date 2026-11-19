@@ -1,0 +1,25 @@
+{
+  "regions": [],
+  "scenes": {
+    "welcome.default": {
+      "regions": [
+        {"x": 140, "y": 1100, "w": 800, "h": 130, "reason": "random greeting text (Math.random pick) — declared dynamic content"}
+      ]
+    },
+    "welcome.keyboard": {
+      "regions": [
+        {"x": 140, "y": 1100, "w": 800, "h": 130, "reason": "random greeting text — declared dynamic content"}
+      ]
+    },
+    "welcome.dark": {
+      "regions": [
+        {"x": 140, "y": 1100, "w": 800, "h": 130, "reason": "random greeting text — declared dynamic content"}
+      ]
+    },
+    "welcome.light": {
+      "regions": [
+        {"x": 140, "y": 1100, "w": 800, "h": 130, "reason": "random greeting text — declared dynamic content"}
+      ]
+    }
+  }
+}
