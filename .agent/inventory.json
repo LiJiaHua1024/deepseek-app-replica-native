@@ -1192,12 +1192,13 @@
   "path": "src/components/markdown/Link.tsx",
   "type": "interaction",
   "reach": "chat scenes",
-  "status": "todo",
-  "blurred_ssim": null,
-  "color_mad": null,
-  "attempts": 0,
+  "status": "done",
+  "blurred_ssim": 0.9829,
+  "color_mad": 1.038,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "",
+  "note": "chat.md scene: mock md reply now includes [DeepSeek 官网](https://www.deepseek.com); link styled identically"
  },
  {
   "id": "comp.Markdown",

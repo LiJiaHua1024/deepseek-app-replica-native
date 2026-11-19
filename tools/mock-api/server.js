@@ -233,7 +233,7 @@ function handle(req, res) {
         case 'refused':
           return blockReply({ text: '你好，这个问题我暂时无法回答，让我们换个话题再聊聊吧。' })(res);
         case 'md':
-          return blockReply({ text: '包含 **加粗**、*斜体* 和 `inline code` 与列表：\n\n- 项一\n- 项二' })(res);
+          return blockReply({ text: '包含 **加粗**、*斜体*、`inline code` 和 [DeepSeek 官网](https://www.deepseek.com) 与列表：\n\n- 项一\n- 项二' })(res);
         case 'code':
           return blockReply({ text: '```kotlin\nfun main() {\n    println("hi")\n}\n```' })(res);
         case 'math':
