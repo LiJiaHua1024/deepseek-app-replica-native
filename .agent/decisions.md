@@ -11,3 +11,6 @@
 - M4 residual: 代码高亮为通用 token 着色（keywords/strings/comments/numbers），非 highlight.js 逐语言语法。
 - M5 residual: 导出不含 TOOL_* 片段与 FILE 附件；导入跳过 TOOL_* 片段，分支树折叠为 current_message_id 链；id 冲突时追加 -imported- 后缀而非覆盖。
 - Import 文件类型过滤放宽为 */*（DocumentsUI 对 zip MIME 识别不一致）。
+
+- M6 residual: 旧消息窗口加载（INITIAL_MESSAGES=4 / OLDER_MESSAGES=8 批式 prepend+锚定）未实现——消息量少时不可见；列表粘性跟随与参照阈值一致。
+- M6 residual: 思考块预览的指数追赶滚动（1-exp(-t/70)）未实现，用即时跟随代替。

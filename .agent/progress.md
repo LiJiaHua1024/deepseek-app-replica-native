@@ -51,3 +51,9 @@
 - MarkdownBody: commonmark AST renderer — headings, bold/italic/strike, inline code bg, code block + regex keyword highlight, bullet/ordered lists, blockquote bar, GFM tables, HR, $$..$$ math as mono block (residual). Verified in emulator incl. table+math+strikethrough.
 - Mock reply extended: table, strikethrough, ordered list, inline+display math.
 - M5: settings page (locale/theme/fold-thinking/font-size/pin/import/export/delete-all/change-key); thinking+search toggles already wired (thinking:{enabled|disabled}, tools read_url+web_search). SAF export produces official zip v3 (manifest→sessions→index) — verified pulled file. SAF import parses official zip, walks current_message_id parent chain, imports REQUEST/RESPONSE/TEMPLATE_RESPONSE/THINK; verified "Imported 4 session(s)" reimporting own export.
+
+## M6 state (checkpoint)
+- Drawer gesture thresholds + settle verified in M2 (verified emulator mid-drag/close).
+- Message list: sticky-follow implemented per MessageList.tsx — near-bottom<40px follows content growth (streaming, viewport/keyboard resize via layoutInfo.viewportEndOffset), scroll-up stops, re-approach resumes. Verified pinned-to-bottom in emulator during slow stream.
+- Keyboard: composer floats via imePadding, adjustResize shrinks list viewport.
+- Residual: windowed older-message loading (INITIAL 4 / +8 per scroll-top<320px) and thinking-preview catch-up scroll not implemented.
