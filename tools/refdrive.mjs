@@ -48,11 +48,14 @@ async function launch() {
   const page = await until('WebView page', async () => {
     try {
       const pages = await (await fetch(endpoint, { signal: AbortSignal.timeout(1500) })).json()
-      return pages.find((p) => /index\.html/.test(p.url)) ?? pages[0]
+      const hit = pages.find((p) => /index\.html/.test(p.url))
+      if (process.env.REF_DEBUG) console.error('pages:', JSON.stringify(pages.map((p) => p.url)))
+      return hit
     } catch {
       return null
     }
   }, 30000)
+  console.error('attached page:', page.url)
   const socket = new WebSocket(page.webSocketDebuggerUrl)
   const pending = new Map()
   let nextId = 0
@@ -161,7 +164,8 @@ function handlePaused(call, params) {
 
 // ---- ui helpers --------------------------------------------------------------
 const setInput = (sel, v) => `(() => {
-  const el = document.querySelector(${JSON.stringify(sel)});
+  const el = [...document.querySelectorAll(${JSON.stringify(sel)})]
+    .find(e => e.getBoundingClientRect().width > 0) || document.querySelector(${JSON.stringify(sel)});
   if (!el) return false;
   Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value').set.call(el, ${JSON.stringify(v)});
   el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -176,6 +180,15 @@ const KEY = 'sk-mock-test-key'
 const passwordInput = 'input[type=password]'
 
 async function enterKey(evaluate) {
+  // idempotent: if the key was already accepted the composer textarea is visible
+  // and there is no password input — return immediately
+  const state = await evaluate(
+    `(() => { const p = document.querySelector('input[type=password]');
+      const t = document.querySelector('textarea');
+      const pv = p && p.getBoundingClientRect().width > 0;
+      const tv = t && t.getBoundingClientRect().width > 0;
+      return pv ? 'key' : (tv ? 'chat' : 'none') })()`)
+  if (state === 'chat') return
   await until('password input', () => evaluate(vis(passwordInput)))
   await evaluate(setInput(passwordInput, KEY))
   await evaluate(`(() => {
@@ -280,6 +293,17 @@ const scenes = {
   async 'sider.sessions'(evaluate) {
     await chatDone(evaluate, '你好')
     await openDrawer(evaluate)
+  },
+  async 'debug.send'(evaluate) {
+    await enterKey(evaluate)
+    await evaluate(setInput('textarea', '你好'))
+    await delay(800)
+    const st = await evaluate(`(() => {
+      const tas = [...document.querySelectorAll('textarea')].map(t => ({v: t.value, vis: t.getBoundingClientRect().width > 0}));
+      const bs = [...document.querySelectorAll('button')].map(b => ({l: b.getAttribute('aria-label'), d: b.getAttribute('aria-disabled'), vis: b.getBoundingClientRect().width > 0}));
+      return JSON.stringify({tas, bs})
+    })()`)
+    console.error('SENDSTATE', st)
   },
   async 'sider.search'(evaluate) {
     await openDrawer(evaluate)

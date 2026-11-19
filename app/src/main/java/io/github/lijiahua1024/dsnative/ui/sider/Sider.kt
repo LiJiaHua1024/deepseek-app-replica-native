@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,58 +48,60 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
     var renameFor by remember { mutableStateOf<SessionSummary?>(null) }
     var deleteFor by remember { mutableStateOf<SessionSummary?>(null) }
 
-    Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 12.dp)) {
-        Spacer(Modifier.height(12.dp))
-        // search row
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(painterResource(R.drawable.ic_menu), null, tint = c.labelSecondary,
-                modifier = Modifier.size(24.dp).clickable(onClick = onClose).padding(2.dp))
-            Spacer(Modifier.width(12.dp))
-            TextField(
-                value = query, onValueChange = { query = it },
-                placeholder = { Text(Strings.get("androidSearchChats"), fontSize = 16.sp, color = c.labelTertiary) },
-                singleLine = true,
-                modifier = Modifier.weight(1f).height(48.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = TextFieldDefaults.colors(
-                    unfocusedContainerColor = c.bgSkeleton, focusedContainerColor = c.bgSkeleton,
-                    unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                    focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                ),
-            )
-            Spacer(Modifier.width(8.dp))
-            if (!selectionMode) {
-                Text(Strings.get("androidSelectChats"), fontSize = 13.sp, color = c.labelSecondary,
-                    modifier = Modifier.clickable { selectionMode = true; selected = emptySet() })
-            } else {
-                Text(Strings.get("cancel"), fontSize = 13.sp, color = c.labelSecondary,
-                    modifier = Modifier.clickable { selectionMode = false; selected = emptySet() })
+    // ref [data-android] .mobile: padding 12px 24px 16px 16px (CSS px == dp here)
+    Column(Modifier.fillMaxSize().statusBarsPadding().padding(start = 16.dp, end = 24.dp, top = 12.dp, bottom = 16.dp)) {
+        if (selectionMode) {
+            // .selectionHeader h48: label left + close IconButton right
+            Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(if (selected.isEmpty()) Strings.get("androidSelectChats") else Strings.get("androidSelectedChats").replace("{count}", selected.size.toString()),
+                    fontSize = 16.sp, color = c.labelPrimary, modifier = Modifier.weight(1f))
+                Icon(painterResource(R.drawable.ic_close), Strings.get("close"), tint = c.brandPrimary,
+                    modifier = Modifier.size(24.dp).clickable { selectionMode = false; selected = emptySet() })
+            }
+        } else {
+            // .search: h48 r24 bg-skeleton, padding 0 14, gap 8, search icon 16 tertiary
+            Row(
+                Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(24.dp))
+                    .background(c.bgSkeleton).padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(painterResource(R.drawable.ic_search), null, tint = c.labelTertiary, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                androidx.compose.foundation.text.BasicTextField(
+                    value = query, onValueChange = { query = it },
+                    singleLine = true,
+                    textStyle = androidx.compose.ui.text.TextStyle(fontSize = 16.sp, color = c.labelPrimary),
+                    modifier = Modifier.weight(1f),
+                    decorationBox = { inner ->
+                        if (query.isEmpty()) Text(Strings.get("androidSearchChats"), fontSize = 16.sp, color = c.labelTertiary)
+                        inner()
+                    },
+                )
             }
         }
-        Spacer(Modifier.height(8.dp))
-
-        // new chat entry
-        Row(
-            Modifier.fillMaxWidth().height(48.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .clickable { chatStore.newChat(); onClose() }
-                .padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(painterResource(R.drawable.ic_new_chat), null, tint = c.brandPrimary, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(10.dp))
-            Text(Strings.get("newChat"), fontSize = 14.sp, color = c.labelPrimary)
-        }
-
-        // session groups
-        LazyColumn(Modifier.weight(1f)) {
+        // .listWrap: margin-top 16, relative container for selectChats icon
+        Box(Modifier.weight(1f).padding(top = 16.dp)) {
+            if (!selectionMode) {
+                Icon(painterResource(R.drawable.ic_select_chats), Strings.get("androidSelectChats"), tint = c.labelPrimary,
+                    modifier = Modifier.align(Alignment.TopEnd).offset(y = 6.dp, x = (-1).dp).size(32.dp).clickable {
+                        selectionMode = true; selected = emptySet()
+                    }.padding(7.dp))
+            }
+            // session groups
+            LazyColumn(Modifier.fillMaxSize()) {
             val filtered = groups.map { g ->
                 g.first to g.second.filter { s -> query.isBlank() || s.title.contains(query, true) }
             }.filter { it.second.isNotEmpty() }
-            for ((label, list) in filtered) {
+            filtered.forEachIndexed { gi, (label, list) ->
                 item(key = "g-$label") {
-                    Text(label, fontSize = 12.sp, color = c.labelTertiary,
-                        modifier = Modifier.padding(start = 8.dp, top = 14.dp, bottom = 4.dp))
+                    // .section margin-top 7 (first 0) + padding-top 4;
+                    // .sectionHeader padding 2px 10px, 12/18 w400 → box 22dp h
+                    Box(Modifier.padding(top = (4 + if (gi == 0) 0 else 7).dp, start = 7.dp, end = 7.dp).height(31.dp),
+                        contentAlignment = Alignment.CenterStart) {
+                        Text(label, fontSize = 12.sp, color = c.labelTertiary, fontWeight = FontWeight.Normal,
+                            style = androidx.compose.ui.text.TextStyle(
+                                platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)))
+                    }
                 }
                 items(list, key = { it.id }) { s ->
                     SiderRow(s, s.id == activeId, selectionMode, selected.contains(s.id),
@@ -114,17 +117,48 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
                 item { Text(Strings.get("androidNoChats"), fontSize = 13.sp, color = c.labelTertiary,
                     modifier = Modifier.padding(16.dp)) }
             }
+            }
         }
 
-        // settings row
-        Row(Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(8.dp))
-                .clickable(onClick = onNavigateSettings).padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            Icon(painterResource(R.drawable.ic_settings), null, tint = c.labelSecondary, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(10.dp))
-            Text(Strings.get("settings"), fontSize = 14.sp, color = c.labelPrimary)
+        // .bottom: h64 padding-top 8; .settings padding 4px 0
+        if (selectionMode) {
+            // .selectionActions: border-top borderL2, two buttons h42
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp).height(42.dp)
+                .background(c.bgBase)
+                .drawBehind { drawLine(c.borderL2, androidx.compose.ui.geometry.Offset(0f, 0f), androidx.compose.ui.geometry.Offset(size.width, 0f), 1.dp.toPx()) }) {
+                TextButton(onClick = { if (selected.isNotEmpty()) { settings.setPinnedSessions(if (allPinned(selected, pinned)) pinned - selected else pinned + selected); selectionMode = false; selected = emptySet() } },
+                    enabled = selected.isNotEmpty(), modifier = Modifier.weight(1f)) {
+                    Icon(painterResource(R.drawable.ic_check), null, tint = c.labelPrimary, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(Strings.get(if (allPinned(selected, pinned)) "androidUnpin" else "androidPinned"), fontSize = 15.sp, color = c.labelPrimary)
+                }
+                TextButton(onClick = { if (selected.isNotEmpty()) { selected.forEach { chatStore.removeSession(it) }; selectionMode = false; selected = emptySet() } },
+                    enabled = selected.isNotEmpty(), modifier = Modifier.weight(1f)) {
+                    Icon(painterResource(R.drawable.ic_trash), null, tint = c.labelPrimary, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(Strings.get("delete"), fontSize = 15.sp, color = c.labelPrimary)
+                }
+            }
+        } else {
+            // .bottom = height 64 + padding-top 8 (content-box) = 72dp; .settings padding 4px 0
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp).height(64.dp).clip(RoundedCornerShape(12.dp))
+                    .clickable(onClick = onNavigateSettings).padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                // .settingsIcon: 32 circle bg-skeleton, profile glyph #a2a5a8
+                Box(Modifier.size(32.dp).clip(androidx.compose.foundation.shape.CircleShape).background(c.bgSkeleton),
+                    contentAlignment = Alignment.Center) {
+                    Icon(painterResource(R.drawable.ic_profile), null, tint = androidx.compose.ui.graphics.Color(0xFFA2A5A8),
+                        modifier = Modifier.size(24.dp))
+                }
+                Spacer(Modifier.width(10.dp))
+                // androidDrawer label is 'API Key' + trailing ellipsis icon
+                Text("API Key", fontSize = 16.sp, color = c.labelPrimary, modifier = Modifier.weight(1f))
+                Icon(painterResource(R.drawable.ic_ellipsis), null, tint = c.labelPrimary, modifier = Modifier.size(16.dp))
+            }
         }
-        Spacer(Modifier.navigationBarsPadding().height(4.dp))
+        // ref --android-button-nav-inset resolves to 0 on this device (gesture nav):
+        // drawer runs to screen bottom; ~11dp matches ref's measured settings-row position
+        Spacer(Modifier.height(11.dp))
     }
 
     // long-press dropdown menu
@@ -166,24 +200,40 @@ private fun MenuItem(label: String, onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp, horizontal = 4.dp))
 }
 
+private fun allPinned(selected: Set<String>, pinned: Collection<String>) =
+    selected.isNotEmpty() && pinned.containsAll(selected)
+
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean, checked: Boolean,
                      onClick: () -> Unit, onLongClick: () -> Unit) {
     val c = DsTheme.colors
+    // [data-android] .item: h48, padding-inline 7/4, r12, font 16;
+    // active: bg nav-item-active-accent + color brand-primary-invert
     Row(
         Modifier.fillMaxWidth().height(48.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (active) c.bgLayer3 else androidx.compose.ui.graphics.Color.Transparent)
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (active) c.sidebarNavItemActiveAccent else androidx.compose.ui.graphics.Color.Transparent)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(horizontal = 8.dp),
+            .padding(start = 7.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (selectionMode) {
-            Checkbox(checked, onCheckedChange = { onClick() }, modifier = Modifier.size(20.dp))
+            // .select > span: 19px circle 1.5px border, checked = filled radial
+            Box(
+                Modifier.size(19.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(if (checked) c.brandText else androidx.compose.ui.graphics.Color.Transparent)
+                    .then(
+                        if (!checked) Modifier.drawBehind {
+                            drawCircle(androidx.compose.ui.graphics.Color(0xFFC9C9C9), radius = size.minDimension / 2 - 0.75.dp.toPx(),
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(1.5.dp.toPx()))
+                        } else Modifier
+                    ),
+            )
             Spacer(Modifier.width(10.dp))
         }
-        Text(s.title.ifEmpty { Strings.get("untitledChat") }, fontSize = 14.sp, color = c.labelPrimary, fontWeight = if (active) FontWeight.Medium else FontWeight.Normal,
+        Text(s.title.ifEmpty { Strings.get("untitledChat") }, fontSize = 16.sp,
+            color = if (active) c.brandPrimaryInvert else c.labelPrimary,
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
     }
 }

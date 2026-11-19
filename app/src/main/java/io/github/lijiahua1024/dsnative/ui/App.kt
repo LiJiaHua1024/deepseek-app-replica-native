@@ -154,7 +154,8 @@ fun DrawerFrame(
                 Box(Modifier.fillMaxSize().graphicsLayer { alpha = 0.207f * (1f - progress) }.background(Color.Black))
             }
             // Main content layer
-            val radiusDp = (min(1f, progress * 6f) * 36f)
+            // ref radius is 36px pre-scale; clip applies post-scale → use 34dp (~93.5px ≈ 36*0.9496*2.75)
+            val radiusDp = (min(1f, progress * 6f) * 34f)
             Box(
                 Modifier
                     .fillMaxSize()
@@ -174,9 +175,10 @@ fun DrawerFrame(
             ) {
                 mainContent { settleTo(1f) }
                 if (progress > 0f) {
+                    // ref: .main::after — bg-base tint at 0.7*progress (washes toward bg, not black)
                     Box(Modifier.fillMaxSize()
                         .graphicsLayer { alpha = 0.7f * progress }
-                        .background(Color.Black)
+                        .background(DsTheme.colors.bgBase)
                         .pointerInput(Unit) {
                             detectTapGestures { settleTo(0f) }
                         })

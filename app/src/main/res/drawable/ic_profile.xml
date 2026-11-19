@@ -1,0 +1,13 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- ref Sider.tsx androidDrawer settingsIcon: circle cx12 cy8 r4.15 + path M3 23a9 7 0 0 1 18 0z -->
+    <path
+        android:pathData="M12,8m-4.15,0a4.15,4.15 0,1 1,8.3 0a4.15,4.15 0,1 1,-8.3 0"
+        android:fillColor="#000000" />
+    <path
+        android:pathData="M3,23a9,7 0,0 1,18 0z"
+        android:fillColor="#000000" />
+</vector>
