@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.lijiahua1024.dsnative.R
@@ -30,7 +31,7 @@ import io.github.lijiahua1024.dsnative.theme.Strings
 import io.github.lijiahua1024.dsnative.ui.input.ChatInput
 
 @Composable
-fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () -> Unit) {
+fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () -> Unit, onOpenSettings: () -> Unit = {}) {
     val c = DsTheme.colors
     val activeId by chatStore.activeId.collectAsState()
     val sessions by chatStore.sessions.collectAsState()
@@ -89,7 +90,7 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
                 items(visible, key = { it.id }) { msg ->
                     when (msg) {
                         is Message.User -> UserBubble(msg)
-                        is Message.Assistant -> AssistantView(msg, activeId ?: "", chatStore)
+                        is Message.Assistant -> AssistantView(msg, activeId ?: "", chatStore, onOpenSettings)
                     }
                 }
             }
@@ -227,7 +228,7 @@ fun WaitingDots() {
 }
 
 @Composable
-fun AssistantView(msg: Message.Assistant, sessionId: String, chatStore: ChatStore) {
+fun AssistantView(msg: Message.Assistant, sessionId: String, chatStore: ChatStore, onOpenSettings: () -> Unit = {}) {
     val c = DsTheme.colors
     val ctx = LocalContext.current
     Column(Modifier.fillMaxWidth().padding(start = 24.dp, end = 19.dp)) {
@@ -242,13 +243,46 @@ fun AssistantView(msg: Message.Assistant, sessionId: String, chatStore: ChatStor
             // ref .waiting: three 6px dots fading in a 34px row
             ReplyStatus.STREAMING -> if (msg.blocks.isEmpty()) WaitingDots()
             ReplyStatus.ERROR -> {
-                Text(msg.error?.let { errorText(it) } ?: Strings.get("unknownError"),
-                    fontSize = 14.sp, color = c.stateErrorPrimary)
-                Row(Modifier.padding(vertical = 6.dp)) {
-                    TextButton({ chatStore.regenerateReply(sessionId, msg.id) }) {
-                        Icon(painterResource(R.drawable.ic_refresh), null, tint = c.brandPrimary, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text(Strings.get("retry"), color = c.brandPrimary, fontSize = 14.sp)
+                // ref .notice: warning icon + 14/22 error text + inline brand action
+                val action = when (msg.error?.status) {
+                    401 -> "changeApiKey"
+                    402 -> "topUp"
+                    else -> null
+                }
+                Row(Modifier.padding(top = 8.dp)) {
+                    Icon(painterResource(R.drawable.ic_warning), null, tint = c.stateErrorPrimary,
+                        modifier = Modifier.padding(top = 4.dp).size(14.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(androidx.compose.ui.text.buildAnnotatedString {
+                        append(msg.error?.let { errorText(it) } ?: Strings.get("unknownError"))
+                        if (action != null) {
+                            append(' ')
+                            withStyle(
+                                androidx.compose.ui.text.SpanStyle(color = c.brandPrimary)) {
+                                append(Strings.get(action))
+                            }
+                        }
+                    }, fontSize = 14.sp, lineHeight = 22.sp, color = c.stateErrorPrimary,
+                        modifier = Modifier.clickable(action != null) {
+                            if (msg.error?.status == 402) {
+                                ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,
+                                    android.net.Uri.parse("https://platform.deepseek.com/top_up")))
+                            } else onOpenSettings()
+                        })
+                }
+                // ref .bottom for an error reply: copy + regenerate icons only
+                Row(Modifier.padding(top = 12.dp, bottom = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    val clipboard = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    IconButton({
+                        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("reply",
+                            msg.error?.let { errorText(it) } ?: ""))
+                    }, modifier = Modifier.size(32.dp)) {
+                        Icon(painterResource(R.drawable.ic_copy), null, tint = c.labelTertiary, modifier = Modifier.size(16.dp))
+                    }
+                    IconButton({ chatStore.regenerateReply(sessionId, msg.id) }, modifier = Modifier.size(32.dp)) {
+                        Icon(painterResource(R.drawable.ic_refresh), null, tint = c.labelTertiary, modifier = Modifier.size(16.dp))
                     }
                 }
             }

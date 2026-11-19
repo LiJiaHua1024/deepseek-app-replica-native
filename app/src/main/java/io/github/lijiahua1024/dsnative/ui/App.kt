@@ -74,7 +74,7 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
                 is NavState.Settings -> Box(Modifier.fillMaxSize().background(DsTheme.colors.bgBase)) {
                     AndroidSettings(settings, chatStore) { nav = NavState.Chat }
                 }
-                else -> SessionView(settings, chatStore, onOpenDrawer = open)
+                else -> SessionView(settings, chatStore, onOpenDrawer = open, onOpenSettings = { nav = NavState.Settings })
             }
         }
     }
