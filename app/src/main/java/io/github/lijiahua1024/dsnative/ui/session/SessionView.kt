@@ -45,7 +45,8 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
             IconButton(onClick = onOpenDrawer, modifier = Modifier.size(40.dp)) {
                 Icon(painterResource(R.drawable.ic_menu), null, tint = c.labelPrimary, modifier = Modifier.size(20.dp))
             }
-            Text(session?.title ?: Strings.get("sessionLoading"), fontSize = 14.sp,
+            val headerTitle = session?.title?.ifEmpty { Strings.get("untitledChat") } ?: ""
+            Text(headerTitle, fontSize = 14.sp,
                 fontWeight = FontWeight.Medium, color = c.labelPrimary,
                 maxLines = 1, modifier = Modifier.weight(1f),
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)

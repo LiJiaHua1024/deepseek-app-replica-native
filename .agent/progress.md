@@ -36,3 +36,13 @@
 - Sider: search + new chat + grouped list + long-press menu (pin/rename/delete/multi-select) + settings row built. Session title fallback "untitledChat".
 - Known gap: sider search TextField bg invisible (bgLayer3 too light?), check vs reference .search bg color in M3.
 - Mock emits title "问候" in message_delta; applied only when titleSessions (untitled) per reference.
+
+## M3 state (checkpoint)
+- Composer: bgBase card + 1px 7%-labelPrimary border + elevation-6 shadow, textarea pad 17dp/14.75top font 16.75 lh24, functionRow pad 11/7/4 gap8, pills h32 r18 icon16 pad11, send 30dp. imePadding added (keyboard floats composer). ImeAction.Send wired.
+- Welcome: whale42 + gap15 + greeting 20/28 w600. Header: title empty when no session (ref renders empty title div).
+- Bubble: radius 22/22/4/22 pad 10v/16h font16 lh26 max-width = start48/end16 (100%-48px -4 margin).
+- Actions: copy+regen icons 16dp in 32dp buttons, gap10, padding top12 bottom10.
+- MarkdownBody: code blocks bg markdownCodeBlock r12 font 13/22 mono; inline code bg markdownInlineCode.
+- ThinkingBlock: expanded only while STREAMING && no text yet; remember(status,hasResponse) auto-collapses.
+- Sider search: h48 r24 bgSkeleton font16 (was invisible bgLayer3=white).
+- Verified in emulator: send->streaming reply renders, thinking block collapse/expand, bubbles+actions.

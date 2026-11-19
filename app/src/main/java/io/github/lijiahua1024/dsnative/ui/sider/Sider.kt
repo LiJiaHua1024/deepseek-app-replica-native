@@ -56,12 +56,12 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
             Spacer(Modifier.width(12.dp))
             TextField(
                 value = query, onValueChange = { query = it },
-                placeholder = { Text(Strings.get("androidSearchChats"), fontSize = 13.sp, color = c.labelTertiary) },
+                placeholder = { Text(Strings.get("androidSearchChats"), fontSize = 16.sp, color = c.labelTertiary) },
                 singleLine = true,
-                modifier = Modifier.weight(1f).height(36.dp),
-                shape = RoundedCornerShape(18.dp),
+                modifier = Modifier.weight(1f).height(48.dp),
+                shape = RoundedCornerShape(24.dp),
                 colors = TextFieldDefaults.colors(
-                    unfocusedContainerColor = c.bgLayer3, focusedContainerColor = c.bgLayer3,
+                    unfocusedContainerColor = c.bgSkeleton, focusedContainerColor = c.bgSkeleton,
                     unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
                     focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
                 ),
