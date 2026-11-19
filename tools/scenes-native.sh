@@ -63,7 +63,16 @@ case "$SCENE" in
   apikey.invalid|apikey_error)
     launch; wait_text "输入 API Key" 20
     tap_edittext 0; sleep 0.4; $ADB shell input text "sk-wrong-key"; sleep 0.3
-    tap_node "^确定$|^Confirm$"; wait_text "无效|invalid|Invalid" 15; sleep 0.3 ;;
+    tap_node "^确定$|^Confirm$"; wait_text "无效|invalid|Invalid" 15
+    $ADB shell input keyevent KEYCODE_BACK; sleep 0.8 ;;
+  apikey.verifying)
+    launch; wait_text "输入 API Key" 20
+    curl -s "http://localhost:8321/__set_delay?ms=1500" >/dev/null
+    tap_edittext 0; sleep 0.4; $ADB shell input text "$KEY"; sleep 0.3
+    tap_node "^确定$|^Confirm$"; sleep 0.5
+    $ADB shell input keyevent KEYCODE_BACK; sleep 0.4
+    curl -s "http://localhost:8321/__set_delay?ms=0" >/dev/null
+    shot; exit 0 ;;
   welcome|welcome.default)
     enter_key; sleep 0.5 ;;
   welcome.keyboard|composer_focus)

@@ -40,6 +40,7 @@ sleep 0.3
 
 # theme variants: <scene>.dark / .light via system night mode
 UIMODE=""
+SCENE_OUT="$SCENE"
 case "$SCENE" in
   *.dark)  UIMODE=yes; SCENE="${SCENE%.dark}" ;;
   *.light) UIMODE=no;  SCENE="${SCENE%.light}" ;;
@@ -52,9 +53,9 @@ trap '[ -n "$UIMODE" ] && $ADB shell cmd uimode night no >/dev/null 2>&1 || true
 if [ "$APP" = ref ]; then
   # node driver connects via webview_devtools CDP, installs the fetch proxy to
   # the mock backend, drives the scene, and captures at the right moment.
-  node "$repo/tools/refdrive.mjs" "$SERIAL" "$PKG_REF" "$SCENE" "$OUT/$SCENE.png"
+  node "$repo/tools/refdrive.mjs" "$SERIAL" "$PKG_REF" "$SCENE" "$OUT/$SCENE_OUT.png"
 else
-  bash "$repo/tools/scenes-native.sh" "$ADB" "$PKG" "$SCENE" "$OUT/$SCENE.png"
+  bash "$repo/tools/scenes-native.sh" "$ADB" "$PKG" "$SCENE" "$OUT/$SCENE_OUT.png"
 fi
 
-[ -s "$OUT/$SCENE.png" ] && echo "shot: $OUT/$SCENE.png"
+[ -s "$OUT/$SCENE_OUT.png" ] && echo "shot: $OUT/$SCENE_OUT.png"

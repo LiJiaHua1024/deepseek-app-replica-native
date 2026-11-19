@@ -66,7 +66,10 @@ fun ApiKeyScreen(settings: SettingsStore) {
                 unfocusedContainerColor = Color.Transparent, focusedContainerColor = Color.Transparent,
             ),
         )
-        error?.let { Text(it, color = c.stateErrorPrimary, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp)) }
+        error?.let {
+            Spacer(Modifier.height(18.dp))
+            Text(it, color = c.stateErrorPrimary, fontSize = 14.sp)
+        }
         Spacer(Modifier.height(18.dp))
         Button(
             enabled = key.isNotBlank() && !verifying,

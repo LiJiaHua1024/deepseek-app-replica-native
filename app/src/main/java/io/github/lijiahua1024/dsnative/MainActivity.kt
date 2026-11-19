@@ -37,7 +37,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         @Suppress("DEPRECATION")
         window.navigationBarColor = android.graphics.Color.BLACK
-        window.statusBarColor = 0xFF757575.toInt() // ref: Theme.Material.Light default
+        val night = resources.configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        window.statusBarColor = if (night) android.graphics.Color.BLACK else 0xFF757575.toInt()
         window.isNavigationBarContrastEnforced = false
         window.isStatusBarContrastEnforced = false
         settings = SettingsStore(applicationContext)

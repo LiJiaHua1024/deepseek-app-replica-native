@@ -418,8 +418,9 @@ async function errorScene(evaluate, code) {
 const main = async () => {
   const { evaluate, close } = await launch()
   try {
-    if (!scenes[scene]) throw new Error(`unknown scene ${scene}`)
-    await scenes[scene](evaluate)
+    const fn = scenes[scene] ?? scenes[`${scene}.default`]
+    if (!fn) throw new Error(`unknown scene ${scene}`)
+    await fn(evaluate)
     screencap(out)
     console.log(`ref scene ${scene} -> ${out}`)
   } catch (e) {

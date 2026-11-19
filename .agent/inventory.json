@@ -16,48 +16,48 @@
   "path": "src/components/settings/ApiKeyScreen.tsx",
   "type": "screen-state",
   "reach": "shot apikey.invalid",
-  "status": "todo",
-  "blurred_ssim": null,
-  "color_mad": null,
-  "attempts": 0,
+  "status": "done",
+  "blurred_ssim": 0.9849,
+  "color_mad": 0.874,
+  "attempts": 2,
   "commit": null,
-  "notes": ""
+  "notes": "error as grid child, single 18dp gap; keyboard dismissed before shot"
  },
  {
   "id": "apikey.verifying",
   "path": "src/components/settings/ApiKeyScreen.tsx",
   "type": "screen-state",
   "reach": "shot apikey.verifying",
-  "status": "todo",
-  "blurred_ssim": null,
-  "color_mad": null,
-  "attempts": 0,
+  "status": "done",
+  "blurred_ssim": 0.988,
+  "color_mad": 0.654,
+  "attempts": 2,
   "commit": null,
-  "notes": ""
+  "notes": "mock __set_delay endpoint; shot mid-verify"
  },
  {
   "id": "apikey.dark",
   "path": "src/components/settings/ApiKeyScreen.tsx",
   "type": "screen-state",
   "reach": "shot apikey.dark",
-  "status": "todo",
-  "blurred_ssim": null,
-  "color_mad": null,
-  "attempts": 0,
+  "status": "done",
+  "blurred_ssim": 0.9898,
+  "color_mad": 0.681,
+  "attempts": 2,
   "commit": null,
-  "notes": ""
+  "notes": "theme-aware statusBarColor (black in night)"
  },
  {
   "id": "apikey.light",
   "path": "src/components/settings/ApiKeyScreen.tsx",
   "type": "screen-state",
   "reach": "shot apikey.light",
-  "status": "todo",
-  "blurred_ssim": null,
-  "color_mad": null,
-  "attempts": 0,
+  "status": "done",
+  "blurred_ssim": 0.9908,
+  "color_mad": 0.574,
+  "attempts": 2,
   "commit": null,
-  "notes": ""
+  "notes": "same as default"
  },
  {
   "id": "welcome.default",

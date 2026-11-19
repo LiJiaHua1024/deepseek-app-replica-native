@@ -95,12 +95,21 @@ function blockReply({ thinking, text, delay = 25, drop = false }) {
   };
 }
 
+let globalDelayMs = 0;
 const server = http.createServer((req, res) => {
+  // runtime delay toggle for capturing transient UI states (e.g. "verifying")
+  const setMatch = /^\/__set_delay\?ms=(\d+)/.exec(req.url || '');
+  if (setMatch) {
+    globalDelayMs = Number(setMatch[1]);
+    res.writeHead(200, { 'content-type': 'text/plain' }).end('ok');
+    return;
+  }
   const delayMatch = /[?&]__delay=(\d+)/.exec(req.url || '');
   if (delayMatch) {
     req.url = req.url.replace(/[?&]__delay=\d+/, '').replace(/[?&]$/, '') || '/';
     return setTimeout(() => handle(req, res), Number(delayMatch[1]));
   }
+  if (globalDelayMs) return setTimeout(() => handle(req, res), globalDelayMs);
   handle(req, res);
 });
 function handle(req, res) {
