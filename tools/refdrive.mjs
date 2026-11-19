@@ -307,6 +307,14 @@ async function chatDone(evaluate, text) {
   await delay(400)
 }
 
+// 'refused' scenario: one-line reply so the tested feature fills the frame
+async function chatShort(evaluate) {
+  await enterKey(evaluate)
+  await sendMessage(evaluate, 'refused')
+  await until('short reply done', async () => /换个话题/.test(await replyText(evaluate)), 40000)
+  await delay(400)
+}
+
 async function dispatchTouchOnSession(evaluate, holdMs) {
   // contextmenu is browser-generated on real long-press; dispatch it directly
   // so React's onContextMenu (long-press menu) fires deterministically.
@@ -489,6 +497,41 @@ const scenes = {
   async 'chat.err_402'(evaluate) { await errorScene(evaluate, '402') },
   async 'chat.err_429'(evaluate) { await errorScene(evaluate, '429') },
   async 'chat.err_500'(evaluate) { await errorScene(evaluate, '500') },
+  async 'chat.edit'(evaluate) {
+    await chatShort(evaluate)
+    await evaluate(`(() => {
+      const b = [...document.querySelectorAll('div')].find(e => /bubble/.test(e.className||'') && e.textContent.trim() === 'refused');
+      b && b.click(); })()`)
+    await until('editor', async () => evaluate(`!!document.querySelector('textarea[aria-label]')`), 10000)
+    await delay(500)
+  },
+  async 'chat.menu'(evaluate) {
+    await chatShort(evaluate)
+    await evaluate(`(() => {
+      const b = [...document.querySelectorAll('div')].find(e => /bubble/.test(e.className||'') && e.textContent.trim() === 'refused');
+      b && b.dispatchEvent(new MouseEvent('contextmenu', {bubbles: true})); })()`)
+    await until('menu', async () => evaluate(`!!document.querySelector('[role=menu]')`), 10000)
+    await delay(500)
+  },
+  async 'chat.branch'(evaluate) {
+    await chatShort(evaluate)
+    // regenerate -> second branch -> BranchSwitcher "2 / 2"
+    await evaluate(`(() => {
+      const b = document.querySelector('[aria-label*="重新生成"],[aria-label*="Regenerate"]');
+      b && b.click(); })()`)
+    await until('switcher', async () => evaluate(`!!document.querySelector('[aria-label*="版本"],[aria-label*="ersion"]')`), 60000)
+    await delay(500)
+  },
+  async 'chat.toast'(evaluate) {
+    await chatShort(evaluate)
+    await evaluate(`(() => {
+      const btns = [...document.querySelectorAll('[aria-label="朗读"],[aria-label="Read aloud"]')];
+      const b = btns[btns.length - 1];
+      b && b.click(); })()`)
+    await until('toast', async () => evaluate(
+      `[...document.querySelectorAll('div')].some(e => /朗读失败|Failed to read/.test(e.textContent||''))`), 15000)
+    await delay(300)
+  },
   async 'chat.long'(evaluate) {
     await enterKey(evaluate)
     await sendMessage(evaluate, 'long')

@@ -237,6 +237,7 @@ fun DrawerFrame(
                     .background(DsTheme.colors.bgBase)
             ) {
                 mainContent { settleTo(1f) }
+                io.github.lijiahua1024.dsnative.ui.session.DsToastHost()
                 if (progress > 0f) {
                     // ref: .main::after — bg-base tint at 0.7*progress (washes toward bg, not black)
                     Box(Modifier.fillMaxSize()

@@ -209,10 +209,15 @@ function handle(req, res) {
       let scenario = req.headers['x-mock-scenario'] || '';
       try {
         const parsed = JSON.parse(body);
-        const last = (parsed.messages || []).filter((m) => m.role === 'user').pop();
-        const text = last && (last.content?.[0]?.text || last.content) || '';
-        const m = /^(thinking|long|slow|interrupted|401|402|429|500|refused|hold|search)$/i.exec(String(text).trim());
-        if (m) scenario = m[1].toLowerCase();
+        // newest user message that carries a scenario token wins; a trailing
+        // empty/structured turn (e.g. ref's regenerate request) is skipped
+        const users = (parsed.messages || []).filter((m) => m.role === 'user');
+        for (let i = users.length - 1; i >= 0; i--) {
+          const c = users[i].content;
+          const text = (Array.isArray(c) ? c.find((p) => p && p.text)?.text : c) || '';
+          const m = /^(thinking|long|slow|interrupted|401|402|429|500|refused|hold|search)$/i.exec(String(text).trim());
+          if (m) { scenario = m[1].toLowerCase(); break; }
+        }
       } catch (e) {}
       switch (scenario) {
         case '401': return send(res, 401, { error: { message: 'Invalid API key' } });

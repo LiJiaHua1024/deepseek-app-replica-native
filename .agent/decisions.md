@@ -68,3 +68,18 @@ Residual cause: nondeterministic delivery timing in the measurement channel, not
 - refdrive: system immersive cling (package android, android:id/ok) is not in
   the DOM; dismiss via uiautomator dump + adb tap. scenes-native tap target is
   hy-320 (draft chip), not hy-150 (suggestion chip → sends a message).
+
+## 2026-11-19 chat interaction scenes (edit/menu/branch/toast)
+
+- Scenes use mock 'refused' scenario (one-line reply) so the feature fills the frame;
+  long-reply text ceiling (~0.97) would otherwise dominate the score.
+- Mock scenario detection scans user messages newest-first for a token, because
+  ref's regenerate request carries an empty/structured trailing turn.
+- UserBubble: tap -> inline editor (ref .editor), long-press -> Popup menu
+  (TopEnd offset 22,97 == anchored.ts clamp math), min-width 124dp.
+- DsToast: 3000ms (toastState.ts DURATION), center+31 device px (ref measured),
+  bg 0xDB202020 r16, 14/22.
+- Editor paddings fitted to pixels: textarea top 13.3dp, actions bottom 11.2dp;
+  post-message spacer 21.6dp normal / 20.1dp editing (edit-mode gap is ~6px less).
+- ReadAloudButton -> POST {API_ORIGIN}/tts; mock lacks /tts -> ttsFailed toast.
+- BranchSwitcher under user+assistant messages when versions>1; regenerate -> 2/2.

@@ -2,8 +2,12 @@ package io.github.lijiahua1024.dsnative.ui.session
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -25,6 +30,12 @@ import androidx.compose.ui.unit.sp
 import io.github.lijiahua1024.dsnative.R
 import io.github.lijiahua1024.dsnative.data.*
 import io.github.lijiahua1024.dsnative.data.replyText
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import io.github.lijiahua1024.dsnative.data.visibleMessages
 import io.github.lijiahua1024.dsnative.theme.DsTheme
 import io.github.lijiahua1024.dsnative.theme.Strings
@@ -69,11 +80,7 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
             val ctx = LocalContext.current
             IconButton(onClick = {
                 settings.setAutoRead(!autoRead)
-                android.widget.Toast.makeText(
-                    ctx,
-                    Strings.get(if (autoRead) "androidAutoReadDisabled" else "androidAutoReadEnabled"),
-                    android.widget.Toast.LENGTH_SHORT,
-                ).show()
+                DsToast.show(Strings.get(if (autoRead) "androidAutoReadDisabled" else "androidAutoReadEnabled"))
             }, modifier = Modifier.size(44.dp)) {
                 Icon(
                     painterResource(if (autoRead) R.drawable.ic_sound else R.drawable.ic_sound_muted),
@@ -93,8 +100,8 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
                 contentPadding = PaddingValues(bottom = 20.5.dp)) {
                 items(visible, key = { it.id }) { msg ->
                     when (msg) {
-                        is Message.User -> UserBubble(msg)
-                        is Message.Assistant -> AssistantView(msg, activeId ?: "", chatStore, onOpenSettings)
+                        is Message.User -> session?.let { UserBubble(msg, it, chatStore) }
+                        is Message.Assistant -> session?.let { AssistantView(msg, it, chatStore, onOpenSettings) }
                     }
                 }
             }
@@ -196,18 +203,171 @@ fun Welcome(modifier: Modifier = Modifier) {
     }
 }
 
+/** Android toast overlay — ref [data-android] .toast: centered at 50%, r16,
+ * bg rgb(32 32 32 / 86%), no border/shadow, 14/22 text */
+object DsToast {
+    val message = MutableStateFlow<String?>(null)
+    fun show(text: String) { message.value = text }
+}
+
 @Composable
-fun UserBubble(msg: Message.User) {
-    val c = DsTheme.colors
-    Column(Modifier.fillMaxWidth().padding(start = 48.dp, end = 16.dp, top = 22.dp)) {
-        Box(Modifier.align(Alignment.End)
-            .clip(RoundedCornerShape(22.dp, 22.dp, 4.dp, 22.dp))
-            .background(c.bubble)
-            .padding(horizontal = 16.dp, vertical = 10.dp)) {
-            Text(msg.content, fontSize = 16.sp, lineHeight = 24.sp, color = c.labelPrimary)
-        }
-        Spacer(Modifier.height(22.2.dp))
+fun DsToastHost() {
+    val text by DsToast.message.collectAsState()
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(text) {
+        if (text != null) { kotlinx.coroutines.delay(3000); DsToast.message.value = null }
     }
+    if (text != null) {
+        // ref [data-android] .toast: top 50% translateY(-50%) of its container,
+        // whose measured centre lands ~31 device px below the screen centre
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(text!!, fontSize = 14.sp, lineHeight = 22.sp, color = Color(0xFFF7F9FC),
+                modifier = Modifier.offset(y = 11.3.dp).clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xDB202020))
+                    .padding(horizontal = 18.dp, vertical = 12.dp))
+        }
+    }
+}
+
+/** versions of a message = siblings sharing parentId, in insertion order */
+private fun versionsOf(session: Session, msg: Message): Pair<List<String>, Int> {
+    val ids = session.messages.filter { it.parentId == msg.parentId }.map { it.id }
+    return ids to ids.indexOf(msg.id).coerceAtLeast(0)
+}
+
+@Composable
+fun BranchSwitcher(session: Session, msg: Message, chatStore: ChatStore) {
+    val c = DsTheme.colors
+    val (ids, index) = versionsOf(session, msg)
+    if (ids.size <= 1) return
+    Row(Modifier.height(28.dp), verticalAlignment = Alignment.CenterVertically) {
+        IconButton(enabled = index > 0,
+            onClick = { chatStore.selectVersion(session.id, ids[index - 1]) },
+            modifier = Modifier.size(32.dp)) {
+            Icon(painterResource(R.drawable.ic_chevron_right), null,
+                tint = c.labelTertiary, modifier = Modifier.size(14.dp).rotate(180f))
+        }
+        Text("${index + 1} / ${ids.size}", fontSize = 15.sp, lineHeight = 18.sp,
+            fontWeight = FontWeight.Medium, color = c.labelTertiary)
+        IconButton(enabled = index < ids.size - 1,
+            onClick = { chatStore.selectVersion(session.id, ids[index + 1]) },
+            modifier = Modifier.size(32.dp)) {
+            Icon(painterResource(R.drawable.ic_chevron_right), null,
+                tint = c.labelTertiary, modifier = Modifier.size(14.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun UserBubble(msg: Message.User, session: Session, chatStore: ChatStore) {
+    val c = DsTheme.colors
+    val ctx = LocalContext.current
+    var editing by remember { mutableStateOf(false) }
+    var draft by remember { mutableStateOf(msg.content) }
+    var menuOpen by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().padding(top = 22.dp)) {
+        if (editing) {
+            // ref .editor: width 100% of message column (20css px side margins),
+            // brand border r22, textarea 16/24 pad 10/16, actions gap 8 margin 6/10/10
+            Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp)
+                .border(1.dp, c.brandPrimary, RoundedCornerShape(22.dp))
+                .clip(RoundedCornerShape(22.dp))
+                .background(c.bgBase)) {
+                // editor body
+                BasicTextField(
+                    value = draft,
+                    onValueChange = { draft = it },
+                    textStyle = androidx.compose.ui.text.TextStyle(
+                        fontSize = 16.sp, lineHeight = 24.sp, color = c.labelPrimary),
+                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 13.3.dp, end = 16.dp, bottom = 11.4.dp)
+                )
+                Row(Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 6.dp, bottom = 11.2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    SmallOutlinedButton(Strings.get("cancel")) { editing = false }
+                    SmallPrimaryButton(Strings.get("send"), enabled = draft.trim().isNotEmpty()) {
+                        chatStore.editMessage(session.id, msg.id, draft.trim()); editing = false
+                    }
+                }
+            }
+        } else {
+            Box(Modifier.fillMaxWidth().padding(start = 48.dp, end = 16.dp)) {
+                Box(Modifier.align(Alignment.TopEnd)
+                    .clip(RoundedCornerShape(22.dp, 22.dp, 4.dp, 22.dp))
+                    .background(c.bubble)
+                    .combinedClickable(
+                        onClick = { editing = true; draft = msg.content },
+                        onLongClick = { menuOpen = true })
+                    .padding(horizontal = 16.dp, vertical = 10.dp)) {
+                    Text(msg.content, fontSize = 16.sp, lineHeight = 24.sp, color = c.labelPrimary)
+                }
+                if (menuOpen) {
+                    // ref Menu: anchored at bubble top-right, aligned start with -5px;
+                    // for right-side bubbles it clamps to viewport right edge (-8css px).
+                    // top = first text line bottom + 4px ~= bubble top + 40css px = 110dp-px
+                    androidx.compose.ui.window.Popup(
+                        alignment = Alignment.TopEnd,
+                        offset = androidx.compose.ui.unit.IntOffset(22, 97),
+                        onDismissRequest = { menuOpen = false }) {
+                        // ref .menu: min-width 124px, padding 4px, r12, menu bg
+                        Column(Modifier.defaultMinSize(minWidth = 124.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(c.menu).padding(4.dp)) {
+                            MenuOption(Strings.get("copy"), R.drawable.ic_copy, c.labelPrimary) {
+                                val cb = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                cb.setPrimaryClip(android.content.ClipData.newPlainText("msg", msg.content))
+                                DsToast.show(Strings.get("copied"))
+                                menuOpen = false
+                            }
+                            MenuOption(Strings.get("androidEditMessage"), R.drawable.ic_edit, c.labelPrimary) {
+                                editing = true; draft = msg.content; menuOpen = false
+                            }
+                        }
+                    }
+                }
+            }
+            BranchSwitcher(session, msg, chatStore)
+        }
+        // editing: ref's .editor-in-textWrap leaves ~6px less room below than the bubble
+        Spacer(Modifier.height(if (editing) 20.1.dp else 21.6.dp))
+    }
+}
+
+@Composable
+private fun MenuOption(label: String, icon: Int, tint: Color, onClick: () -> Unit) {
+    Row(Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick)
+        .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Icon(painterResource(icon), null, tint = tint, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(label, fontSize = 14.sp, lineHeight = 24.sp, color = tint)
+    }
+}
+
+@Composable
+private fun SmallOutlinedButton(label: String, onClick: () -> Unit) {
+    val c = DsTheme.colors
+    Text(label, fontSize = 14.sp, lineHeight = 22.sp, color = c.labelPrimary,
+        modifier = Modifier.height(32.dp).defaultMinSize(minWidth = 58.dp)
+            .clip(RoundedCornerShape(100))
+            .border(1.dp, c.borderL2, RoundedCornerShape(100))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp)
+            .wrapContentHeight(Alignment.CenterVertically))
+}
+
+@Composable
+private fun SmallPrimaryButton(label: String, enabled: Boolean, onClick: () -> Unit) {
+    val c = DsTheme.colors
+    Text(label, fontSize = 14.sp, lineHeight = 22.sp,
+        color = if (enabled) c.labelPrimaryForeground else c.labelTertiary,
+        modifier = Modifier.height(32.dp).defaultMinSize(minWidth = 58.dp)
+            .clip(RoundedCornerShape(100))
+            .background(if (enabled) c.buttonPrimaryFill else c.interactiveBgHover)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 14.dp)
+            .wrapContentHeight(Alignment.CenterVertically))
 }
 
 @Composable
@@ -239,9 +399,10 @@ fun WaitingDots() {
 }
 
 @Composable
-fun AssistantView(msg: Message.Assistant, sessionId: String, chatStore: ChatStore, onOpenSettings: () -> Unit = {}) {
+fun AssistantView(msg: Message.Assistant, session: Session, chatStore: ChatStore, onOpenSettings: () -> Unit = {}) {
     val c = DsTheme.colors
     val ctx = LocalContext.current
+    val sessionId = session.id
     val sources = remember(msg.blocks) { searchSources(msg.blocks) }
     val openSources = LocalOpenSources.current
     Column(Modifier.fillMaxWidth().padding(start = 24.dp, end = 19.dp)) {
@@ -313,19 +474,37 @@ fun AssistantView(msg: Message.Assistant, sessionId: String, chatStore: ChatStor
         if (msg.status == ReplyStatus.DONE || msg.status == ReplyStatus.STOPPED) {
             // 6px main-content padding-bottom + 12px .bottom padding-top
             Row(Modifier.padding(top = 18.dp, bottom = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                verticalAlignment = Alignment.CenterVertically) {
+                BranchSwitcher(session, msg, chatStore)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
                 val clipboard = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                val scope = androidx.compose.runtime.rememberCoroutineScope()
                 IconButton({
                     clipboard.setPrimaryClip(android.content.ClipData.newPlainText("reply", replyText(msg)))
+                    DsToast.show(Strings.get("copied"))
                 }, modifier = Modifier.size(32.dp)) {
-                    Icon(painterResource(R.drawable.ic_copy), null, tint = c.labelTertiary, modifier = Modifier.size(16.dp))
+                    Icon(painterResource(R.drawable.ic_copy), Strings.get("copy"), tint = c.labelTertiary, modifier = Modifier.size(16.dp))
                 }
-                IconButton({ /* read aloud */ }, modifier = Modifier.size(32.dp)) {
-                    Icon(painterResource(R.drawable.ic_speaker), null, tint = c.labelTertiary, modifier = Modifier.size(16.dp))
+                IconButton({
+                    // ref ReadAloudButton: POST {TOOLS_BASE_URL}/tts, fails -> error toast
+                    scope.launch {
+                        try {
+                            val body = "{}".toRequestBody("application/json".toMediaType())
+                            val resp = OkHttpClient().newCall(Request.Builder()
+                                .url(io.github.lijiahua1024.dsnative.api.API_ORIGIN + "/tts")
+                                .post(body).build()).execute()
+                            if (!resp.isSuccessful) throw java.io.IOException("tts " + resp.code)
+                        } catch (e: Exception) {
+                            DsToast.show(Strings.get("ttsFailed"))
+                        }
+                    }
+                }, modifier = Modifier.size(32.dp)) {
+                    Icon(painterResource(R.drawable.ic_speaker), Strings.get("ttsPlay"), tint = c.labelTertiary, modifier = Modifier.size(16.dp))
                 }
                 IconButton({ chatStore.regenerateReply(sessionId, msg.id) }, modifier = Modifier.size(32.dp)) {
-                    Icon(painterResource(R.drawable.ic_refresh), null, tint = c.labelTertiary, modifier = Modifier.size(16.dp))
+                    Icon(painterResource(R.drawable.ic_refresh), Strings.get("regenerate"), tint = c.labelTertiary, modifier = Modifier.size(16.dp))
+                }
                 }
             }
         }

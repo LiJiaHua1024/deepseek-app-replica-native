@@ -126,6 +126,22 @@ case "$SCENE" in
   chat.err_401|chat.err_402|chat.err_429|chat.err_500|err_401|err_402|err_429|err_500)
     enter_key; send_msg "${SCENE##*_}"
     wait_text "无效|余额|频繁|繁忙|错误|失败" 20; sleep 0.4 ;;
+  chat.menu)
+    # 'refused' scenario: one-line reply so the feature fills the frame
+    enter_key; send_msg "refused"; wait_text "换个话题" 40; sleep 0.5
+    for i in 1 2 3; do $ADB shell input swipe 540 700 540 2200 250; sleep 0.3; done; sleep 0.5
+    c=$(find_node "^refused$"); $ADB shell input swipe $(echo "$c" | awk '{print $1, $2, $1, $2}') 1200
+    wait_text "复制|修改" 10; sleep 0.4 ;;
+  chat.edit)
+    enter_key; send_msg "refused"; wait_text "换个话题" 40; sleep 0.5
+    for i in 1 2 3; do $ADB shell input swipe 540 700 540 2200 250; sleep 0.3; done; sleep 0.5
+    tap_node "^refused$"; wait_text "取消" 10; sleep 0.4 ;;
+  chat.branch)
+    enter_key; send_msg "refused"; wait_text "换个话题" 40; sleep 0.5
+    tap_node "重新生成|Regenerate"; sleep 1; wait_text "2 / 2|1 / 2" 60; sleep 0.4 ;;
+  chat.toast)
+    enter_key; send_msg "refused"; wait_text "换个话题" 40; sleep 0.5
+    tap_node "朗读|Read aloud"; wait_text "朗读失败|Failed to read" 15; sleep 0.2 ;;
   chat.long|chat_long)
     enter_key; send_msg "long"
     # 问候 appears as the header title once message_delta lands (stream end)
