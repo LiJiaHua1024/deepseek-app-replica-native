@@ -18,3 +18,4 @@
 - compare.py: mask.json gains scene-scoped regions ("scenes.<scene>.regions") so dynamic bands don't mask other scenes; CLI path now reads .agent/mask.json with scene key too.
 - Native window is fully edge-to-edge (parent bottom = 2340): composer bottom padding = 51dp (ref 27px composer-bottom + 24dp nav inset ref WebView gets). Keyboard-open: 35dp.
 - Composer internals (measured): card margin 8.7dp, textarea zone h56 pad-top 14.5, functionRow h48 pad top6 — chips top-aligned, icons centered -5dp offset, row padding start15/end15.3, icon gap 10.3dp.
+- welcome.keyboard: native must set KeyboardCapitalization.Sentences so GBoard shows shift state (uppercase) like ref's textarea; keyboardOpen composer bottom pad 27.7dp.

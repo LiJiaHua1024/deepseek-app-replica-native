@@ -78,7 +78,7 @@ case "$SCENE" in
   welcome.keyboard|composer_focus)
     enter_key
     f=$(find_node "发消息或按住说话|发消息|请输入消息|Message")
-    $ADB shell input tap $(echo "$f" | awk '{print $1, $2}'); sleep 1.0 ;;
+    $ADB shell input tap $(echo "$f" | awk '{print $1, $2}'); sleep 2.2 ;;
   sider.empty|drawer)
     enter_key; open_drawer
     wait_text "搜索对话内容|暂无历史对话|今天|昨天" 10 ; sleep 0.4 ;;

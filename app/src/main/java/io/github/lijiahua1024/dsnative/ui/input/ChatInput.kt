@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -53,7 +54,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     Column(
         Modifier.fillMaxWidth()
             .imePadding()
-            .padding(start = 8.7.dp, end = 8.7.dp, bottom = if (keyboardOpen) 35.dp else 51.dp)
+            .padding(start = 8.7.dp, end = 8.7.dp, bottom = if (keyboardOpen) 27.7.dp else 51.dp)
             // ref .session box-shadow: 0 4px 10px rgba(0,0,0,.02), 0 2px 4px rgba(0,0,0,.04)
             .shadow(4.dp, RoundedCornerShape(24.dp), clip = false,
                 ambientColor = Color.Black.copy(alpha = 0.02f),
@@ -69,7 +70,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                 textStyle = TextStyle(fontSize = 16.sp, color = c.labelPrimary, lineHeight = 24.sp),
                 cursorBrush = SolidColor(c.brandText),
                 singleLine = false,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                keyboardOptions = KeyboardOptions(autoCorrect = true, capitalization = KeyboardCapitalization.Sentences),
                 keyboardActions = KeyboardActions(onSend = {
                     if (canSend) { chatStore.setDraft(activeId, text); chatStore.sendMessage(activeId); text = "" }
                 }),

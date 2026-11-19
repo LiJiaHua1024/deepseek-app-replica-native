@@ -8,7 +8,7 @@
     },
     "welcome.keyboard": {
       "regions": [
-        {"x": 140, "y": 1100, "w": 800, "h": 130, "reason": "random greeting text — declared dynamic content"}
+        {"x": 140, "y": 700, "w": 800, "h": 140, "reason": "random greeting text — declared dynamic content"}
       ]
     },
     "welcome.dark": {
