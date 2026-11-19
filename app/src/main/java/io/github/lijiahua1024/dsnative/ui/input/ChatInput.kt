@@ -143,7 +143,7 @@ private fun TogglePill(label: String, on: Boolean, onClick: () -> Unit, icon: In
             tint = if (on) c.brandText else c.labelPrimary,
             modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(4.dp))
-        Text(label, fontSize = 13.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium,
+        Text(label, fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Normal,
             color = if (on) c.brandText else c.labelPrimary)
     }
 }

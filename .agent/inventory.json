@@ -65,8 +65,8 @@
     "type": "screen-state",
     "reach": "shot welcome.default",
     "status": "done",
-    "blurred_ssim": 0.9812,
-    "color_mad": 0.936,
+    "blurred_ssim": 0.9841,
+    "color_mad": 0.855,
     "attempts": 0,
     "commit": null,
     "notes": ""
@@ -77,8 +77,8 @@
     "type": "screen-state",
     "reach": "shot welcome.keyboard",
     "status": "done",
-    "blurred_ssim": 0.9832,
-    "color_mad": 0.924,
+    "blurred_ssim": 0.983,
+    "color_mad": 0.943,
     "attempts": 0,
     "commit": null,
     "notes": ""
@@ -89,8 +89,8 @@
     "type": "screen-state",
     "reach": "shot welcome.dark",
     "status": "done",
-    "blurred_ssim": 0.9819,
-    "color_mad": 0.701,
+    "blurred_ssim": 0.9848,
+    "color_mad": 0.628,
     "attempts": 0,
     "commit": null,
     "notes": ""
@@ -100,12 +100,12 @@
     "path": "src/components/session/Welcome.tsx",
     "type": "screen-state",
     "reach": "shot welcome.light",
-    "status": "todo",
-    "blurred_ssim": null,
-    "color_mad": null,
-    "attempts": 0,
+    "status": "done",
+    "blurred_ssim": 0.9841,
+    "color_mad": 0.855,
+    "attempts": 1,
     "commit": null,
-    "notes": ""
+    "notes": "bridge-write+relaunch path; chips 14sp/w400/px11"
   },
   {
     "id": "chat.default",

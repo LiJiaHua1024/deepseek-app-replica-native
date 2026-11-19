@@ -189,6 +189,22 @@ async function enterKey(evaluate) {
       const tv = t && t.getBoundingClientRect().width > 0;
       return pv ? 'key' : (tv ? 'chat' : 'none') })()`)
   if (state === 'chat') return
+  // fast path: write the key through the native bridge (skips flaky verify)
+  const bridged = await evaluate(`(window.DeepSeekAndroid && window.DeepSeekAndroid.writeApiKey(${JSON.stringify(KEY)})) || false`)
+  if (bridged) {
+    // kill and relaunch so the app boots straight into welcome; the CDP
+    // session dies with the old WebView, so swap in a fresh one
+    adb('shell', 'am', 'force-stop', appId)
+    await delay(400)
+    if (relaunch) await relaunch()
+    else {
+      adb('shell', 'monkey', '-p', appId, '-c', 'android.intent.category.LAUNCHER', '1')
+      await delay(2500)
+    }
+    await until('welcome composer', () => evaluate(vis('textarea')), 30000)
+    await delay(1500) // WebView DOM reports visible before paint reaches the screen
+    return
+  }
   await until('password input', () => evaluate(vis(passwordInput)))
   await evaluate(setInput(passwordInput, KEY))
   await evaluate(`(() => {
@@ -200,8 +216,13 @@ async function enterKey(evaluate) {
     `(() => { const el = document.querySelector('input[type=password]');
       return !el || el.getBoundingClientRect().width === 0 })()`), 20000)
   await until('welcome composer', () => evaluate(vis('textarea')), 20000)
-  await until('key screen gone', async () =>
-    !/输入 API Key|API Key 开始使用/.test(await evaluate(bodyText)), 20000)
+  const gone = async () => !/输入 API Key|API Key 开始使用/.test(await evaluate(bodyText))
+  await until('key screen gone', gone, 12000).catch(async () => {
+    await evaluate(`(() => {
+      const b = [...document.querySelectorAll('button')].find(b => /确定|Confirm|OK/i.test(b.textContent));
+      if (b) { b.click(); return true } return false })()`)
+    await until('key screen gone (retry)', gone, 20000)
+  })
   await delay(300)
 }
 
@@ -434,12 +455,20 @@ async function errorScene(evaluate, code) {
   await delay(400)
 }
 
+let relaunch = null
+
 const main = async () => {
-  const { evaluate, close } = await launch()
+  let session = await launch()
+  const evaluate = (expr) => session.evaluate(expr)
+  relaunch = async () => {
+    try { session.close() } catch {}
+    session = await launch()
+  }
   try {
     const fn = scenes[scene] ?? scenes[`${scene}.default`]
     if (!fn) throw new Error(`unknown scene ${scene}`)
     await fn(evaluate)
+    await delay(600)
     screencap(out)
     console.log(`ref scene ${scene} -> ${out}`)
   } catch (e) {
@@ -448,7 +477,7 @@ const main = async () => {
     try { console.error('bodytext:', (await evaluate(bodyText)).slice(0, 500)) } catch {}
     process.exitCode = 1
   } finally {
-    close()
+    try { session.close() } catch {}
     process.exit(process.exitCode ?? 0)
   }
 }
