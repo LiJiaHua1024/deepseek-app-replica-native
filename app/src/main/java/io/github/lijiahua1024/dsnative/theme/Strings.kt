@@ -71,6 +71,8 @@ object Strings {
             "regenerate" -> pick("重新生成", "Regenerate")
             "continueGenerating" -> pick("继续生成", "Continue")
             "changeApiKey" -> pick("更换 API Key", "Change API Key")
+            "openPlatform" -> pick("开放平台", "Open platform")
+            "openPlatformHelp" -> pick("开放平台帮助", "API help")
             "topUp" -> pick("前往充值", "Top up")
             "messageSearchSummary" -> pick("1 个网页", "1 page")
             "messageSearchSummaries" -> pick("{count} 个网页", "{count} pages")

@@ -136,10 +136,10 @@ case "$SCENE" in
     exit 0 ;;
   settings|settings.root)
     enter_key; open_drawer
-    tap_node "^设置$|^Settings$"; wait_text "API Key|通用设置|语言|主题" 10; sleep 0.4 ;;
+    tap_node "^设置$|^Settings$|^API Key$"; wait_text "API Key|通用设置|语言|主题" 10; sleep 0.4 ;;
   settings.*)
     enter_key; open_drawer
-    tap_node "^设置$|^Settings$"; wait_text "API Key|通用设置|语言|主题" 10
+    tap_node "^设置$|^Settings$|^API Key$"; wait_text "API Key|通用设置|语言|主题" 10
     sub="${SCENE#settings.}"
     case "$sub" in
       account) tap_node "账号|API Key|个人" ;;

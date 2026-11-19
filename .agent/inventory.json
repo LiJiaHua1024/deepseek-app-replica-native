@@ -393,12 +393,13 @@
     "path": "src/components/settings/AndroidSettings.tsx",
     "type": "screen-state",
     "reach": "shot settings.account.default",
-    "status": "todo",
-    "blurred_ssim": null,
-    "color_mad": null,
-    "attempts": 0,
+    "status": "done",
+    "blurred_ssim": 0.9857,
+    "color_mad": 0.764,
+    "attempts": 1,
     "commit": null,
-    "notes": ""
+    "notes": "",
+    "note": "refactored to ref 账户 group: masked-key row (••••••••) + inline editor + 开放平台/帮助 links"
   },
   {
     "id": "settings.data.default",

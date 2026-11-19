@@ -45,6 +45,7 @@ case "$SCENE" in
   *.dark)  UIMODE=yes; SCENE="${SCENE%.dark}" ;;
   *.light) UIMODE=no;  SCENE="${SCENE%.light}" ;;
 esac
+SCENE="${SCENE%.default}"
 if [ -n "$UIMODE" ]; then
   $ADB shell cmd uimode night $UIMODE >/dev/null 2>&1 || true
 fi

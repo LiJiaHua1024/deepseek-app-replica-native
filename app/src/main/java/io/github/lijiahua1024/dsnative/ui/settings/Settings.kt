@@ -288,12 +288,39 @@ private fun SettingsRow(
 
 @Composable
 private fun AccountPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Color, muted: Color, settings: SettingsStore) {
-    val apiKey by settings.apiKey.collectAsState()
-    SettingsGroup(null, card, muted) {
-        SettingsRow(c, muted, Strings.get("apiKeyLabel"), arrow = false,
-            value = apiKey?.let { it.take(6) + "…" + it.takeLast(4) }) { }
-        SettingsRow(c, muted, Strings.get("changeApiKey"),
-            value = Strings.get("apiKeyEdit")) { settings.setApiKey(null) }
+    var editing by remember { mutableStateOf(false) }
+    val ctx = LocalContext.current
+    val open = { url: String ->
+        ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+    }
+    // ref account page: 账户 group -> masked-key row + 开放平台 + 开放平台帮助 links
+    SettingsGroup(Strings.get("settingsGroupAccount"), card, muted) {
+        SettingsRow(c, muted, Strings.get("apiKeyLabel"), { ProfileGlyph(c.labelPrimary) },
+            value = "••••••••") { editing = true }
+        if (editing) {
+            // ref .credentials: inline password field + confirm under the key row
+            var value by remember { mutableStateOf("") }
+            Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
+                .padding(start = 16.dp, end = 15.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                androidx.compose.foundation.text.BasicTextField(
+                    value = value, onValueChange = { value = it }, singleLine = true,
+                    textStyle = androidx.compose.ui.text.TextStyle(fontSize = 16.sp, color = c.labelPrimary),
+                    modifier = Modifier.weight(1f),
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    decorationBox = { inner ->
+                        if (value.isEmpty()) Text(Strings.get("apiKeyPlaceholder"), fontSize = 16.sp, color = muted)
+                        inner()
+                    })
+                Text(Strings.get("confirm"), fontSize = 16.sp, color = c.brandPrimary,
+                    modifier = Modifier.clickable(enabled = value.isNotBlank()) {
+                        settings.setApiKey(value.trim()); editing = false
+                    })
+            }
+        }
+        SettingsRow(c, muted, Strings.get("openPlatform")) { open("https://platform.deepseek.com/api_keys") }
+        SettingsRow(c, muted, Strings.get("openPlatformHelp")) { open("https://api-docs.deepseek.com/zh-cn/") }
     }
 }
 

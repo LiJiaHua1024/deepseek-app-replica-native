@@ -501,6 +501,15 @@ const scenes = {
     await evaluate(`(() => { const b=document.querySelector('[aria-label="设置"],[aria-label="Settings"]') || [...document.querySelectorAll('button,a,li')].find(e=>/设置|API Key/.test(e.textContent.trim())); if(b){b.click();return true} return false })()`)
     await delay(600)
   },
+  async 'settings.account'(evaluate) { await settingsPage(evaluate, /账号管理|Account/) },
+  async 'settings.data'(evaluate) { await settingsPage(evaluate, /数据管理|Data/) },
+  async 'settings.export'(evaluate) {
+    await settingsPage(evaluate, /数据管理|Data/)
+    await settingsRow(evaluate, /导出所有历史对话|Export all/)
+  },
+  async 'settings.font'(evaluate) { await settingsPage(evaluate, /字体大小|Text size/) },
+  async 'settings.personalization'(evaluate) { await settingsPage(evaluate, /个性化|Personalization/) },
+  async 'settings.agreements'(evaluate) { await settingsPage(evaluate, /服务协议|agreement|协议/) },
   async 'debug.meas'(evaluate) {
     await enterKey(evaluate)
     const meas = await evaluate(`(() => {
@@ -518,6 +527,22 @@ const scenes = {
       }) })()`)
     console.log('MEAS', meas)
   },
+}
+
+// open settings.root, then click the Row whose label matches `re`, and wait
+// until the page region's aria-label changes (sub-page mounted)
+async function settingsRow(evaluate, re) {
+  const src = re.source.replace(/\\/g, '\\\\')
+  const ok = await evaluate(`(() => {
+    const els = [...document.querySelectorAll('button,[role=button],div,li')].filter(e => e.children.length && new RegExp('${src}').test(e.textContent.trim().slice(0,60)) && e.getBoundingClientRect().height < 90);
+    const b = els[els.length - 1]; if (b) { b.click(); return true } return false })()`)
+  if (!ok) throw new Error(`settings row ${re} not found`)
+  await delay(600)
+}
+
+async function settingsPage(evaluate, re) {
+  await scenes['settings.root'](evaluate)
+  await settingsRow(evaluate, re)
 }
 
 async function errorScene(evaluate, code) {

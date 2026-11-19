@@ -45,3 +45,4 @@
 - sider.multiselect DONE 0.9806/1.398. Ref selection mode entered only via top-right select icon (aria-label=选择对话 — textContent search missed it). Native fixes: icon declared after LazyColumn (z-order tap theft), circled close button (bg-base+shadow, dark glyph), pin svg icon, disabled buttons alpha 0.35, selection rows drop active accent.
 - sider.dark DONE 0.9853/0.667. Drawer container used bgLayer2 (2C2C2E); ref [data-android].mobile uses bg-base (151517). Fixed in DrawerFrame.
 - sider.light DONE 0.9892/1.116 (same fix; identical light bg). Both use `sider` scene alias -> sider.sessions.
+- settings.account DONE 0.9857/0.764. Rebuilt page to ref layout: 账户 group, icon+key row (fixed "••••••••" mask), inline password editor on tap, 开放平台 + 开放平台帮助 link rows. Driver: strip ".default" in shot.sh; ref settingsPage/settingsRow click rows by label.
