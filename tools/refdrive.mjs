@@ -394,6 +394,18 @@ const scenes = {
     await dispatchTouchOnSession(evaluate, 1500)
     await delay(500)
   },
+  async 'sider.delmodal'(evaluate) {
+    await chatDone(evaluate, '你好')
+    await openDrawer(evaluate)
+    await dispatchTouchOnSession(evaluate, 1500)
+    await delay(500)
+    const ok = await evaluate(`(() => {
+      const b=[...document.querySelectorAll('button,div,span,li')].find(e=>/^(删除|Delete)$/.test(e.textContent.trim())&&e.querySelectorAll('*').length<4);
+      const t=b&&(b.closest('button,[role=menuitem],[role=menu] *')||b);
+      if(t){t.click();return true} return false })()`)
+    if (!ok) throw new Error('delete menu item not found')
+    await delay(600)
+  },
   async 'sider.multiselect'(evaluate) {
     await chatDone(evaluate, '你好')
     await openDrawer(evaluate)
