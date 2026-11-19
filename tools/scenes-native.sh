@@ -103,7 +103,7 @@ case "$SCENE" in
     open_drawer; wait_text "问候" 10
     c=$(find_node "问候"); $ADB shell input swipe $(echo "$c" | awk '{print $1, $2, $1, $2}') 1200
     wait_text "多选" 10; tap_node "多选"; sleep 0.6 ;;
-  chat.default|chat_done)
+  chat.default|chat_done|chat)
     enter_key; send_msg "你好"
     wait_text "结束" 40; sleep 0.5 ;;
   chat.thinking|chat_thinking)

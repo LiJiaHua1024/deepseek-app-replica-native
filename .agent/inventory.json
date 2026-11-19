@@ -255,12 +255,13 @@
     "path": "src/components/session/SessionView.tsx",
     "type": "screen-state",
     "reach": "shot chat.light",
-    "status": "todo",
-    "blurred_ssim": null,
-    "color_mad": null,
-    "attempts": 0,
+    "status": "residual",
+    "blurred_ssim": 0.9717,
+    "color_mad": 1.58,
+    "attempts": 1,
     "commit": null,
-    "notes": ""
+    "notes": "",
+    "备注": "residual: same scene as chat.default in light theme; identical glyph-rasterization band diffs (y1172 ~0.86). All chat.default fixes already applied."
   },
   {
     "id": "sider.empty",

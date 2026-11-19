@@ -39,3 +39,4 @@
 - chat.err_401/402/429/500 all DONE (0.9814-0.9891). Native error block rebuilt to ref .notice: ic_warning 14dp + inline action link (更换API Key→settings, 前往充值→top_up URL) + .bottom copy/regenerate icon row. onOpenSettings plumbed SessionView→AssistantView.
 - chat.interrupted RESIDUAL 0.9712/1.605. Behavior fix: dropped stream with partial content now settles STOPPED silently (matches ref: partial reply + copy/speaker/refresh row, no error notice). Score short only on same glyph-rasterization text bands as chat.default.
 - chat.long DONE 0.9841/1.718. Scene fix: wait for stream END (header title 问候 from message_delta) instead of mid-stream capture — both settle scrolled to bottom.
+- chat.light RESIDUAL 0.9717/1.58 — same content as chat.default residual.
