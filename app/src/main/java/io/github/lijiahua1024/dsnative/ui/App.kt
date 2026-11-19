@@ -146,7 +146,8 @@ fun DrawerFrame(
                 Modifier
                     .width(with(density) { edgePx.toDp() })
                     .fillMaxSize()
-                    .background(DsTheme.colors.bgLayer2)
+                    // ref [data-android] .mobile: background = --dsw-alias-bg-base
+                    .background(DsTheme.colors.bgBase)
             ) {
                 siderContent { settleTo(0f) }
             }

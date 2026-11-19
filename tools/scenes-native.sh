@@ -82,7 +82,7 @@ case "$SCENE" in
   sider.empty|drawer)
     enter_key; open_drawer
     wait_text "搜索对话内容|暂无历史对话|今天|昨天" 10 ; sleep 0.4 ;;
-  sider.sessions|drawer_sessions)
+  sider|sider.sessions|drawer_sessions)
     enter_key; send_msg "你好"
     wait_text "结束" 40; sleep 0.8
     open_drawer

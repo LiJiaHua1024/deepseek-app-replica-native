@@ -358,6 +358,7 @@ const scenes = {
   async 'sider.empty'(evaluate) {
     await openDrawer(evaluate)
   },
+  async 'sider.default'(evaluate) { return scenes['sider.sessions'](evaluate) },
   async 'sider.sessions'(evaluate) {
     await chatDone(evaluate, '你好')
     await openDrawer(evaluate)
