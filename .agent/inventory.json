@@ -272,7 +272,7 @@
     "blurred_ssim": 0.9831,
     "color_mad": 1.258,
     "attempts": 1,
-    "commit": null,
+    "commit": "5ec779a",
     "notes": "push-drawer bg-tint overlay (not black scrim); mobile drawer: search pill, select icon, 48dp rows, active pill, API Key row"
   },
   {
