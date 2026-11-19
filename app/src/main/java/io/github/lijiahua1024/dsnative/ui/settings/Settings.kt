@@ -40,23 +40,34 @@ fun ApiKeyScreen(settings: SettingsStore) {
     var verifying by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
+    // ref ApiKeyScreen.module.css: page padding 24, form grid gap 18, max-width 360,
+    // whale 52, h1 22, input/button minH48 r16, input 1px borderL2, button primary-fill
+    // ref .page spans below-status-bar to screen bottom (nav inset 0) → center sits
+    // ~22.5dp lower than Compose's inset-reduced center; matching with top padding
     Column(
-        Modifier.fillMaxSize().padding(horizontal = 32.dp),
+        Modifier.fillMaxSize().padding(horizontal = 24.dp).padding(top = 22.5.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Icon(painterResource(R.drawable.whale), null, tint = c.brandPrimary, modifier = Modifier.size(64.dp))
-        Spacer(Modifier.height(24.dp))
-        Text(Strings.get("apiKeyStart"), fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = c.labelPrimary)
-        Spacer(Modifier.height(24.dp))
+        Icon(painterResource(R.drawable.whale), null, tint = c.brandPrimary, modifier = Modifier.size(52.dp))
+        Spacer(Modifier.height(18.dp))
+        Text(Strings.get("apiKeyStart"), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = c.labelPrimary,
+            modifier = Modifier.padding(top = 2.dp, bottom = 6.dp))
+        Spacer(Modifier.height(18.dp))
         OutlinedTextField(
             value = key, onValueChange = { key = it; error = null },
             placeholder = { Text(Strings.get("apiKeyPlaceholder"), color = c.labelTertiary) },
             visualTransformation = PasswordVisualTransformation(),
-            singleLine = true, modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = c.borderL2, focusedBorderColor = c.borderL2,
+                unfocusedContainerColor = Color.Transparent, focusedContainerColor = Color.Transparent,
+            ),
         )
-        error?.let { Text(it, color = c.stateErrorPrimary, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)) }
-        Spacer(Modifier.height(20.dp))
+        error?.let { Text(it, color = c.stateErrorPrimary, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp)) }
+        Spacer(Modifier.height(18.dp))
         Button(
             enabled = key.isNotBlank() && !verifying,
             onClick = {
@@ -71,11 +82,17 @@ fun ApiKeyScreen(settings: SettingsStore) {
                     verifying = false
                 }
             },
-            modifier = Modifier.fillMaxWidth().height(44.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = c.brandPrimary),
-        ) { Text(if (verifying) Strings.get("apiKeyVerifying") else Strings.get("confirm"), fontSize = 15.sp) }
-        Spacer(Modifier.height(16.dp))
-        Text(Strings.get("apiKeyGet"), fontSize = 14.sp, color = c.brandPrimary,
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = c.buttonPrimaryFill,
+                disabledContainerColor = c.buttonPrimaryFill.copy(alpha = 0.5f),
+                disabledContentColor = Color.White.copy(alpha = 0.5f),
+            ),
+        ) { Text(if (verifying) Strings.get("apiKeyVerifying") else Strings.get("confirm"), fontSize = 16.sp) }
+        Spacer(Modifier.height(18.dp))
+        Text(Strings.get("apiKeyGet"), fontSize = 14.sp, color = c.brandText,
+            textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
             modifier = Modifier.clickable {
                 ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://platform.deepseek.com/api_keys")))
             })
