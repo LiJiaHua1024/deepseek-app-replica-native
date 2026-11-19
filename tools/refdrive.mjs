@@ -583,6 +583,17 @@ const scenes = {
       const d = [...document.querySelectorAll('div')].find(e =>
         /裁剪|Crop/.test(e.textContent||'') && e.querySelector('img'));
       return !!d })()`), 10000)
+    // System immersive cling (package "android") overlays the viewer on first
+    // open; it's not in the DOM, so dismiss via uiautomator bounds + adb tap.
+    adb('shell', 'uiautomator', 'dump', '/data/local/tmp/cling.xml')
+    const cling = adb('shell', 'cat', '/data/local/tmp/cling.xml').toString()
+    const clingOk = /immersive_cling_title/.test(cling)
+      && /bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"/.exec(
+        /android:id\/ok[^>]*bounds="[^"]+"/.exec(cling)?.[0] || '')
+    if (clingOk) {
+      adb('shell', 'input', 'tap',
+        String((+clingOk[1] + +clingOk[3]) / 2), String((+clingOk[2] + +clingOk[4]) / 2))
+    }
     await delay(700)
   },
   async 'voice.default'(evaluate, call) {

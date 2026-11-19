@@ -40,6 +40,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
@@ -49,7 +50,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import android.view.WindowManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -407,12 +415,44 @@ fun ImagePreviewDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false,
             decorFitsSystemWindows = false),
     ) {
+        // ref preview is fully immersive: the WebView overlay hides both system
+        // bars and sits under a black status scrim
+        val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
+        SideEffect {
+            dialogWindow?.let { w ->
+                WindowCompat.setDecorFitsSystemWindows(w, false)
+                w.statusBarColor = android.graphics.Color.TRANSPARENT
+                w.navigationBarColor = android.graphics.Color.TRANSPARENT
+                w.attributes = w.attributes.apply { dimAmount = 1f }
+                WindowInsetsControllerCompat(w, w.decorView).apply {
+                    systemBarsBehavior =
+                        WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    hide(WindowInsetsCompat.Type.systemBars())
+                }
+                // DialogWrapper re-applies wrap_content on every layout pass;
+                // re-assert MATCH_PARENT each time so the window keeps filling
+                // the parent frame (y128..2340, same as the ref overlay)
+                val fill = {
+                    val lp = w.attributes
+                    if (lp.width != WindowManager.LayoutParams.MATCH_PARENT ||
+                        lp.height != WindowManager.LayoutParams.MATCH_PARENT) {
+                        w.setLayout(WindowManager.LayoutParams.MATCH_PARENT,
+                            WindowManager.LayoutParams.MATCH_PARENT)
+                    }
+                }
+                w.decorView.post(fill)
+                w.decorView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fill() }
+            }
+        }
         Box(Modifier.fillMaxSize().background(Color(0xFF111317))) {
             val bmp = thumbFor(item.localPath, 2048)
             if (bmp != null) {
+                // the content rect extends under the nav bar, so the centered
+                // image sits ~34px above the ref's viewport center
                 Image(
                     bmp, item.name,
-                    Modifier.fillMaxSize().clickable(onClick = onClose),
+                    Modifier.fillMaxSize().padding(top = 25.dp)
+                        .clickable(onClick = onClose),
                     contentScale = ContentScale.Fit,
                 )
             } else {
@@ -426,10 +466,12 @@ fun ImagePreviewDialog(
                         color = Color(0xFFF7F9FC), fontSize = 14.sp)
                 }
             }
-            // .previewControls：右下，bottom 16 + nav inset，gap 8
+            // .previewControls：右下 right/bottom 16px fixed（ref 用 button-nav
+            // inset=0 的手势导航），gap 8。dialog 内容仍带着隐式 nav inset，
+            // 用 offset 把按钮推回屏幕底边
             Row(
                 Modifier.align(Alignment.BottomEnd)
-                    .navigationBarsPadding()
+                    .offset(y = 25.dp)
                     .padding(end = 16.dp, bottom = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -437,7 +479,7 @@ fun ImagePreviewDialog(
                     Modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp))
                         .background(Color(0xFF20242B))
                         .clickable(onClick = onCrop)
-                        .padding(horizontal = 14.dp),
+                        .padding(start = 12.dp, end = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(painterResource(R.drawable.ic_crop), null,

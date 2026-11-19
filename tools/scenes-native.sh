@@ -170,9 +170,9 @@ case "$SCENE" in
     a=$(find_node "相册|Gallery"); ay=$(echo "$a" | awk '{print $2}')
     py=$((ay - 314))
     $ADB shell input tap 165 $py; sleep 0.8
-    # chip sits ~150px above the composer hint text
+    # draft chip sits ~320px above the composer hint text (suggestions sit in between)
     h=$(find_node "发消息|Message"); hy=$(echo "$h" | awk '{print $2}')
-    $ADB shell input tap 170 $((hy - 150)); sleep 0.8 ;;
+    $ADB shell input tap 165 $((hy - 320)); sleep 0.8 ;;
   searchpanel|searchpanel.default)
     enter_key; send_msg "search"
     wait_text "个网页|pages" 45; sleep 0.6
