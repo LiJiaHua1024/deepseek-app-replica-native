@@ -515,24 +515,26 @@
   "path": "src/components/base/AndroidIcons.tsx",
   "type": "interaction",
   "reach": "app shell scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.edit (pass)"
  },
  {
   "id": "comp.Button.module",
   "path": "src/components/base/Button.module.css",
   "type": "interaction",
   "reach": "app shell scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via apikey.default (pass)"
  },
  {
   "id": "comp.Button.module.css.d",
@@ -551,36 +553,39 @@
   "path": "src/components/base/Button.tsx",
   "type": "interaction",
   "reach": "app shell scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via apikey.default (pass)"
  },
  {
   "id": "comp.IconButton.module",
   "path": "src/components/base/IconButton.module.css",
   "type": "interaction",
   "reach": "app shell scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.edit (pass)"
  },
  {
   "id": "comp.IconButton",
   "path": "src/components/base/IconButton.tsx",
   "type": "interaction",
   "reach": "app shell scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.edit (pass)"
  },
  {
   "id": "comp.Menu.module",
@@ -635,36 +640,39 @@
   "path": "src/components/base/Select.module.css",
   "type": "interaction",
   "reach": "app shell scenes",
-  "status": "todo",
+  "status": "n-a",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
   "commit": null,
-  "notes": ""
+  "notes": "",
+  "note": "same: Select unreachable on Android"
  },
  {
   "id": "comp.Select.module.css.d",
   "path": "src/components/base/Select.module.css.d.ts",
   "type": "interaction",
   "reach": "app shell scenes",
-  "status": "todo",
+  "status": "n-a",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
   "commit": null,
-  "notes": ""
+  "notes": "",
+  "note": "same"
  },
  {
   "id": "comp.Select",
   "path": "src/components/base/Select.tsx",
   "type": "interaction",
   "reach": "app shell scenes",
-  "status": "todo",
+  "status": "n-a",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
   "commit": null,
-  "notes": ""
+  "notes": "",
+  "note": "only used inside SettingsDialog which is replaced by AndroidSettings on android (App.tsx:203) -> dead code"
  },
  {
   "id": "comp.Toast.module",
@@ -695,24 +703,26 @@
   "path": "src/components/base/Tooltip.module.css",
   "type": "interaction",
   "reach": "app shell scenes",
-  "status": "todo",
+  "status": "n-a",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
   "commit": null,
-  "notes": ""
+  "notes": "",
+  "note": "same: mobile never renders tooltip"
  },
  {
   "id": "comp.Tooltip",
   "path": "src/components/base/Tooltip.tsx",
   "type": "interaction",
   "reach": "app shell scenes",
-  "status": "todo",
+  "status": "n-a",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
   "commit": null,
-  "notes": ""
+  "notes": "",
+  "note": "unreachable on Android: Tooltip visible only when !isMobile (hover-only), Tooltip.tsx line ~40"
  },
  {
   "id": "comp.anchored",
@@ -731,12 +741,13 @@
   "path": "src/components/base/icons.tsx",
   "type": "interaction",
   "reach": "app shell scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.edit (pass)"
  },
  {
   "id": "comp.toastState",
@@ -815,36 +826,39 @@
   "path": "src/components/chatInput/ChatInput.module.css",
   "type": "interaction",
   "reach": "composer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.edit (pass)"
  },
  {
   "id": "comp.ChatInput.module.css.d",
   "path": "src/components/chatInput/ChatInput.module.css.d.ts",
   "type": "interaction",
   "reach": "composer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.edit (pass)"
  },
  {
   "id": "comp.ChatInput",
   "path": "src/components/chatInput/ChatInput.tsx",
   "type": "interaction",
   "reach": "composer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.edit (pass)"
  },
  {
   "id": "comp.DraftAttachments",
@@ -959,24 +973,26 @@
   "path": "src/components/files/AndroidImageViewer.module.css",
   "type": "interaction",
   "reach": "attachment/image-viewer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via imageviewer.default (pass)"
  },
  {
   "id": "comp.AndroidImageViewer",
   "path": "src/components/files/AndroidImageViewer.tsx",
   "type": "interaction",
   "reach": "attachment/image-viewer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via imageviewer.default (pass)"
  },
  {
   "id": "comp.FileCard.module",
@@ -1031,24 +1047,26 @@
   "path": "src/components/files/imageCrop.ts",
   "type": "interaction",
   "reach": "attachment/image-viewer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via imageviewer.default (pass)"
  },
  {
   "id": "comp.usePreviewZoom",
   "path": "src/components/files/usePreviewZoom.ts",
   "type": "interaction",
   "reach": "attachment/image-viewer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via imageviewer.default (pass)"
  },
  {
   "id": "comp.CodeBlock.module",
@@ -1144,12 +1162,13 @@
   "path": "src/components/markdown/highlight.css",
   "type": "interaction",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.code (pass)"
  },
  {
   "id": "comp.markdown",
@@ -1381,36 +1400,39 @@
   "path": "src/components/messages/ReplyArea.module.css",
   "type": "interaction",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.edit (pass)"
  },
  {
   "id": "comp.ReplyArea.module.css.d",
   "path": "src/components/messages/ReplyArea.module.css.d.ts",
   "type": "interaction",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.edit (pass)"
  },
  {
   "id": "comp.ReplyArea",
   "path": "src/components/messages/ReplyArea.tsx",
   "type": "interaction",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.edit (pass)"
  },
  {
   "id": "comp.UserMessage.module",
@@ -1453,12 +1475,13 @@
   "path": "src/components/messages/scrollContext.ts",
   "type": "interaction",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.edit (pass)"
  },
  {
   "id": "comp.thinking.markdown",
@@ -1478,12 +1501,13 @@
   "path": "src/components/messages/useReplyView.ts",
   "type": "interaction",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.edit (pass)"
  },
  {
   "id": "comp.AndroidSearchPanel.module",
@@ -1658,288 +1682,312 @@
   "path": "src/components/session/MobileHeader.module.css",
   "type": "interaction",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.edit (pass)"
  },
  {
   "id": "comp.MobileHeader",
   "path": "src/components/session/MobileHeader.tsx",
   "type": "interaction",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.edit (pass)"
  },
  {
   "id": "comp.SessionView.module",
   "path": "src/components/session/SessionView.module.css",
   "type": "interaction",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.edit (pass)"
  },
  {
   "id": "comp.SessionView",
   "path": "src/components/session/SessionView.tsx",
   "type": "interaction",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.edit (pass)"
  },
  {
   "id": "comp.Welcome.module",
   "path": "src/components/session/Welcome.module.css",
   "type": "interaction",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via welcome.default (pass)"
  },
  {
   "id": "comp.Welcome.module.css.d",
   "path": "src/components/session/Welcome.module.css.d.ts",
   "type": "interaction",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via welcome.default (pass)"
  },
  {
   "id": "comp.Welcome",
   "path": "src/components/session/Welcome.tsx",
   "type": "interaction",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via welcome.default (pass)"
  },
  {
   "id": "comp.AndroidSettings.module",
   "path": "src/components/settings/AndroidSettings.module.css",
   "type": "interaction",
   "reach": "settings scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via settings.root (pass)"
  },
  {
   "id": "comp.AndroidSettings",
   "path": "src/components/settings/AndroidSettings.tsx",
   "type": "interaction",
   "reach": "settings scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via settings.root (pass)"
  },
  {
   "id": "comp.ApiKeyField",
   "path": "src/components/settings/ApiKeyField.tsx",
   "type": "interaction",
   "reach": "settings scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via apikey.default (pass)"
  },
  {
   "id": "comp.ApiKeyScreen.module",
   "path": "src/components/settings/ApiKeyScreen.module.css",
   "type": "interaction",
   "reach": "settings scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via apikey.default (pass)"
  },
  {
   "id": "comp.ApiKeyScreen",
   "path": "src/components/settings/ApiKeyScreen.tsx",
   "type": "interaction",
   "reach": "settings scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via apikey.default (pass)"
  },
  {
   "id": "comp.Settings.module",
   "path": "src/components/settings/Settings.module.css",
   "type": "interaction",
   "reach": "settings scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via settings.root (pass)"
  },
  {
   "id": "comp.Settings.module.css.d",
   "path": "src/components/settings/Settings.module.css.d.ts",
   "type": "interaction",
   "reach": "settings scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via settings.root (pass)"
  },
  {
   "id": "comp.SettingsDialog",
   "path": "src/components/settings/SettingsDialog.tsx",
   "type": "interaction",
   "reach": "settings scenes",
-  "status": "todo",
+  "status": "n-a",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
   "commit": null,
-  "notes": ""
+  "notes": "",
+  "note": "App.tsx:203 renders AndroidSettings instead when android -> dead code on this platform"
  },
  {
   "id": "comp.settingsDialogState",
   "path": "src/components/settings/settingsDialogState.ts",
   "type": "interaction",
   "reach": "settings scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via settings.root (pass)"
  },
  {
   "id": "comp.useApiKeyForm",
   "path": "src/components/settings/useApiKeyForm.ts",
   "type": "interaction",
   "reach": "settings scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via apikey.default (pass)"
  },
  {
   "id": "comp.CollapsedSider",
   "path": "src/components/sider/CollapsedSider.tsx",
   "type": "interaction",
   "reach": "drawer scenes",
-  "status": "todo",
+  "status": "n-a",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
   "commit": null,
-  "notes": ""
+  "notes": "",
+  "note": "siderCollapsed forced false when isMobile (App.tsx:107) -> unreachable on phone layout"
  },
  {
   "id": "comp.SessionItem.module",
   "path": "src/components/sider/SessionItem.module.css",
   "type": "interaction",
   "reach": "drawer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via sider.sessions (pass)"
  },
  {
   "id": "comp.SessionItem",
   "path": "src/components/sider/SessionItem.tsx",
   "type": "interaction",
   "reach": "drawer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via sider.sessions (pass)"
  },
  {
   "id": "comp.Sider.module",
   "path": "src/components/sider/Sider.module.css",
   "type": "interaction",
   "reach": "drawer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via sider.sessions (pass)"
  },
  {
   "id": "comp.Sider.module.css.d",
   "path": "src/components/sider/Sider.module.css.d.ts",
   "type": "interaction",
   "reach": "drawer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via sider.sessions (pass)"
  },
  {
   "id": "comp.Sider",
   "path": "src/components/sider/Sider.tsx",
   "type": "interaction",
   "reach": "drawer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via sider.sessions (pass)"
  },
  {
   "id": "comp.mobileSiderState",
   "path": "src/components/sider/mobileSiderState.ts",
   "type": "interaction",
   "reach": "drawer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via sider.sessions (pass)"
  },
  {
   "id": "comp.useAndroidDrawerGesture",
@@ -1959,12 +2007,13 @@
   "path": "src/components/sider/useSessionSearch.ts",
   "type": "interaction",
   "reach": "drawer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via sider.search (pass)"
  },
  {
   "id": "text.welcomeMessageChat250808",
@@ -4647,48 +4696,52 @@
   "path": "src/services/chat/store.ts",
   "type": "data",
   "reach": "behavioral check via scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.default (pass)"
  },
  {
   "id": "store.retrySaveSessions",
   "path": "src/services/chat/store.ts",
   "type": "data",
   "reach": "behavioral check via scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.default (pass)"
  },
  {
   "id": "store.bindChatPersistence",
   "path": "src/services/chat/store.ts",
   "type": "data",
   "reach": "behavioral check via scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.default (pass)"
  },
  {
   "id": "store.initChat",
   "path": "src/services/chat/store.ts",
   "type": "data",
   "reach": "behavioral check via scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.default (pass)"
  },
  {
   "id": "store.replaceHistory",
@@ -4707,108 +4760,117 @@
   "path": "src/services/chat/store.ts",
   "type": "data",
   "reach": "behavioral check via scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via sider.empty (pass)"
  },
  {
   "id": "store.selectSession",
   "path": "src/services/chat/store.ts",
   "type": "data",
   "reach": "behavioral check via scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via sider.sessions#2 (pass)"
  },
  {
   "id": "store.renameSession",
   "path": "src/services/chat/store.ts",
   "type": "data",
   "reach": "behavioral check via scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via sider.longpress (pass)"
  },
  {
   "id": "store.removeSession",
   "path": "src/services/chat/store.ts",
   "type": "data",
   "reach": "behavioral check via scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via sider.multiselect (pass)"
  },
  {
   "id": "store.stopReply",
   "path": "src/services/chat/store.ts",
   "type": "data",
   "reach": "behavioral check via scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.interrupted (pass)"
  },
  {
   "id": "store.sendMessage",
   "path": "src/services/chat/store.ts",
   "type": "data",
   "reach": "behavioral check via scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.default (pass)"
  },
  {
   "id": "store.regenerateReply",
   "path": "src/services/chat/store.ts",
   "type": "data",
   "reach": "behavioral check via scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.branch (pass)"
  },
  {
   "id": "store.editMessage",
   "path": "src/services/chat/store.ts",
   "type": "data",
   "reach": "behavioral check via scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.edit (pass)"
  },
  {
   "id": "store.selectMessageVersion",
   "path": "src/services/chat/store.ts",
   "type": "data",
   "reach": "behavioral check via scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via chat.branch (pass)"
  },
  {
   "id": "store.continueReply",
@@ -4839,12 +4901,13 @@
   "path": "android/app/src/main/java/io/github/lijiahua1024/dsreplica/ApiKeyStore.java",
   "type": "interaction",
   "reach": "native feature check",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via apikey.default (pass)"
  },
  {
   "id": "native.CaptureProvider",
@@ -4863,12 +4926,13 @@
   "path": "android/app/src/main/java/io/github/lijiahua1024/dsreplica/FileExport.java",
   "type": "interaction",
   "reach": "native feature check",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via settings.export.default (pass)"
  },
  {
   "id": "native.ImageSave",
@@ -4887,12 +4951,13 @@
   "path": "android/app/src/main/java/io/github/lijiahua1024/dsreplica/MainActivity.java",
   "type": "interaction",
   "reach": "native feature check",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via settings.root (pass)"
  },
  {
   "id": "native.NativeRecorder",
@@ -4947,12 +5012,13 @@
   "path": "android/app/src/main/java/io/github/lijiahua1024/dsreplica/SystemBars.java",
   "type": "interaction",
   "reach": "native feature check",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "pending",
+  "notes": "",
+  "note": "verified via settings.root (pass)"
  },
  {
   "id": "product.account-system",
