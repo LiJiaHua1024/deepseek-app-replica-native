@@ -293,7 +293,8 @@ private fun RenderParagraph(text: AnnotatedString, c: io.github.lijiahua1024.dsn
             if (math != null) {
                 // Reference falls back to the raw tex source when KaTeX is
                 // unavailable; render it as plain paragraph text.
-                Text(math, fontSize = 16.sp, lineHeight = 28.sp, color = c.labelPrimary, style = cssLeading)
+                Text(math, fontSize = 16.sp, lineHeight = 28.sp, color = c.labelPrimary, style = cssLeading,
+                    fontFamily = DsTheme.fontFamily)
             } else {
                 ParagraphText(str, c)
             }
