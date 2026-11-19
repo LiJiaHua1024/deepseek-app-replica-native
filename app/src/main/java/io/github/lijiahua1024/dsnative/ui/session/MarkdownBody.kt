@@ -99,6 +99,14 @@ private val mathInline = Regex("\\$([^$\\n]+?)\\$")
 // space, so following text starts after the chip edge. A drawn-only chip
 // would overlap the next glyph; zero-height placeholders reproduce the gap.
 private const val CHIP_PAD = "ds-inline-chip-pad"
+
+// CSS half-leading + no last-line trim, applied wherever a line box's own
+// height feeds layout (paragraphs, tables, code, headings, math).
+private val dsLineStyle = LineHeightStyle(
+    alignment = LineHeightStyle.Alignment.Center,
+    trim = LineHeightStyle.Trim.None,
+)
+private val cssLeading = androidx.compose.ui.text.TextStyle(lineHeightStyle = dsLineStyle)
 private val chipPadContent = mapOf(
     CHIP_PAD to InlineTextContent(
         Placeholder(
@@ -164,7 +172,7 @@ private fun RenderBlock(
             }
             Text(inlineText(node, c, uriHandler), fontSize = size,
                 lineHeight = lh, fontWeight = if (node.level <= 3) FontWeight.Bold else FontWeight.SemiBold,
-                color = c.labelPrimary)
+                style = cssLeading, color = c.labelPrimary)
         }
         is FencedCodeBlock, is IndentedCodeBlock -> {
             val literal = when (node) {
@@ -202,6 +210,7 @@ private fun RenderBlock(
                 Text(
                     highlightCode(literal.trimEnd('\n'), c),
                     fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 22.sp,
+                    style = cssLeading,
                     modifier = Modifier.fillMaxWidth()
                         .horizontalScroll(rememberScrollState())
                         .padding(16.dp),
@@ -245,7 +254,7 @@ private fun RenderBlock(
                     if (item is ListItem) {
                         Row(Modifier.fillMaxWidth().padding(start = 2.dp)) {
                             Text("$i.", fontSize = 16.sp, lineHeight = 28.sp, color = c.labelSecondary,
-                                modifier = Modifier.width(16.dp))
+                                style = cssLeading, modifier = Modifier.width(16.dp))
                             Column(Modifier.weight(1f)) {
                                 var ch = item.firstChild
                                 while (ch != null) { RenderBlock(ch, c, uriHandler); ch = ch.next }
@@ -284,7 +293,7 @@ private fun RenderParagraph(text: AnnotatedString, c: io.github.lijiahua1024.dsn
             if (math != null) {
                 // Reference falls back to the raw tex source when KaTeX is
                 // unavailable; render it as plain paragraph text.
-                Text(math, fontSize = 16.sp, lineHeight = 28.sp, color = c.labelPrimary)
+                Text(math, fontSize = 16.sp, lineHeight = 28.sp, color = c.labelPrimary, style = cssLeading)
             } else {
                 ParagraphText(str, c)
             }
@@ -306,12 +315,7 @@ private fun ParagraphText(str: AnnotatedString, c: io.github.lijiahua1024.dsnati
         // the last line's descent (~13px) which shrinks every paragraph box
         // and shifts all following content up. Center+None reproduces CSS
         // half-leading exactly for this font.
-        style = androidx.compose.ui.text.TextStyle(
-            lineHeightStyle = LineHeightStyle(
-                alignment = LineHeightStyle.Alignment.Center,
-                trim = LineHeightStyle.Trim.None,
-            ),
-        ),
+        style = cssLeading,
         onTextLayout = { layout = it },
         inlineContent = chipPadContent,
         modifier = Modifier.drawBehind {
@@ -364,9 +368,13 @@ private fun RenderTable(
                                     inlineText(cell, c, uriHandler),
                                     fontSize = 15.sp, lineHeight = 25.sp,
                                     fontWeight = if (header) FontWeight.Medium else FontWeight.Normal,
+                                    style = cssLeading,
                                     color = c.labelPrimary,
                                     modifier = Modifier
-                                        .defaultMinSize(minWidth = 100.dp)
+                                        // CSS min-width:100px is content-box:
+                                        // cell = max(100px, content) + padding
+                                        // (16px right, +16px left on non-first).
+                                        .defaultMinSize(minWidth = if (first) 116.dp else 132.dp)
                                         .drawBehind {
                                             drawLine(line, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
                                         }

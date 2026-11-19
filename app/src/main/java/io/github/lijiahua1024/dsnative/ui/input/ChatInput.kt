@@ -97,11 +97,11 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
         // -> chips sit 6dp below row top ((48-4-32)/2);
         // .right gap 0; IconButton xl = 44px hit target with 25px icon inside
         Row(
-            Modifier.fillMaxWidth().height(48.dp).padding(start = 11.dp, end = 7.dp, bottom = 4.dp),
+            Modifier.fillMaxWidth().height(48.dp).padding(start = 12.5.dp, end = 7.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TogglePill(Strings.get("thinkingSwitch"), thinking, { settings.setThinking(!thinking) }, R.drawable.ic_think)
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(10.dp))
             TogglePill(Strings.get("search"), search, { settings.setSearch(!search) }, R.drawable.ic_globe)
             Spacer(Modifier.weight(1f))
             Icon(painterResource(R.drawable.ic_add_circle), null,

@@ -113,11 +113,12 @@
   "type": "screen-state",
   "reach": "shot chat.default",
   "status": "residual",
-  "blurred_ssim": 0.9335,
-  "color_mad": 3.135,
-  "attempts": 8,
+  "blurred_ssim": 0.9665,
+  "color_mad": 1.804,
+  "attempts": 11,
   "commit": null,
-  "notes": "worst rects: y1758 icons 0.82, y1172 table 0.83, y2051 pills 0.84. Tried: card shadow+border, textarea pad/minHeight calibration, contentPadding anchor, pill geometry, pill border token, statusbar/nav colors, marker disc, sound icon margin, functionRow pad. Remaining diff dominated by WebView-vs-Compose glyph rasterization on text-dense screen; all measured positions within ~5px."
+  "notes": "worst rects: y1758 icons 0.82, y1172 table 0.83, y2051 pills 0.84. Tried: card shadow+border, textarea pad/minHeight calibration, contentPadding anchor, pill geometry, pill border token, statusbar/nav colors, marker disc, sound icon margin, functionRow pad. Remaining diff dominated by WebView-vs-Compose glyph rasterization on text-dense screen; all measured positions within ~5px.",
+  "备注": "residual 0.9665/1.804; worst rects [293,1172,293,293]=0.86 table ink, [293,1465]=0.87 math/KaTeX fallback, [0,1465]=0.886; tried: cssLeading trim fix, content-box table min-width, fnRow pad/gap nudge, icon spec check. KaTeX display math rendered as raw tex fallback — structural gap."
  },
  {
   "id": "chat.streaming",
