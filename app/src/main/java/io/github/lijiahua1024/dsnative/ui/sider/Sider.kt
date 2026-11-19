@@ -1,6 +1,7 @@
 package io.github.lijiahua1024.dsnative.ui.sider
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -49,6 +50,8 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
     var menuFor by remember { mutableStateOf<SessionSummary?>(null) }
     var renameFor by remember { mutableStateOf<SessionSummary?>(null) }
     var deleteFor by remember { mutableStateOf<SessionSummary?>(null) }
+    var pinning by remember { mutableStateOf<Pair<Set<String>, Boolean>?>(null) }
+    var deletingSel by remember { mutableStateOf<Set<String>?>(null) }
 
     // ref [data-android] .mobile: padding 12px 24px 16px 16px (CSS px == dp here)
     Column(Modifier.fillMaxSize().statusBarsPadding().imePadding().padding(start = 16.dp, end = 24.dp, top = 12.dp, bottom = 16.dp)) {
@@ -141,13 +144,13 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
                 .drawBehind { drawLine(c.borderL2, androidx.compose.ui.geometry.Offset(0f, 0f), androidx.compose.ui.geometry.Offset(size.width, 0f), 1.dp.toPx()) }) {
                 // &:disabled { opacity: 0.35 } — whole button fades
                 val actionsAlpha = if (selected.isEmpty()) 0.35f else 1f
-                TextButton(onClick = { if (selected.isNotEmpty()) { settings.setPinnedSessions(if (allPinned(selected, pinned)) pinned - selected else pinned + selected); selectionMode = false; selected = emptySet() } },
+                TextButton(onClick = { if (selected.isNotEmpty()) pinning = selected to allPinned(selected, pinned) },
                     enabled = selected.isNotEmpty(), modifier = Modifier.weight(1f).alpha(actionsAlpha)) {
                     Icon(painterResource(R.drawable.ic_pin), null, tint = c.labelPrimary, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(Strings.get(if (allPinned(selected, pinned)) "androidUnpin" else "androidPinned"), fontSize = 15.sp, color = c.labelPrimary)
                 }
-                TextButton(onClick = { if (selected.isNotEmpty()) { selected.forEach { chatStore.removeSession(it) }; selectionMode = false; selected = emptySet() } },
+                TextButton(onClick = { if (selected.isNotEmpty()) deletingSel = selected },
                     enabled = selected.isNotEmpty(), modifier = Modifier.weight(1f).alpha(actionsAlpha)) {
                     Icon(painterResource(R.drawable.ic_trash), null, tint = c.labelPrimary, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
@@ -189,11 +192,132 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
     }
 
     deleteFor?.let { s ->
-        AlertDialog(onDismissRequest = { deleteFor = null },
-            title = { Text(Strings.get("deleteSessionModalContentTitle")) },
-            text = { Text(Strings.get("deleteSessionWithFilesDescription")) },
-            confirmButton = { TextButton({ chatStore.removeSession(s.id); deleteFor = null }) { Text(Strings.get("delete"), color = c.stateErrorPrimary) } },
-            dismissButton = { TextButton({ deleteFor = null }) { Text(Strings.get("cancel")) } })
+        DsModal(
+            title = Strings.get("deleteSessionModalContentTitle"),
+            body = Strings.get("deleteSessionWithFilesDescription"),
+            onDismiss = { deleteFor = null },
+            buttons = {
+                DsModalButton(Strings.get("cancel"), DsBtn.Outlined) { deleteFor = null }
+                DsModalButton(Strings.get("delete"), DsBtn.Danger) {
+                    chatStore.removeSession(s.id); deleteFor = null
+                }
+            })
+    }
+
+    deletingSel?.let { ids ->
+        DsModal(
+            title = Strings.get("deleteSessionModalContentTitle"),
+            body = Strings.get("deleteSessionWithFilesDescription"),
+            onDismiss = { deletingSel = null },
+            buttons = {
+                DsModalButton(Strings.get("cancel"), DsBtn.Outlined) { deletingSel = null }
+                DsModalButton(Strings.get("delete"), DsBtn.Danger) {
+                    ids.forEach { chatStore.removeSession(it) }
+                    deletingSel = null; selectionMode = false; selected = emptySet()
+                }
+            })
+    }
+
+    pinning?.let { (ids, unpin) ->
+        DsModal(
+            title = Strings.get(if (unpin) "androidUnpinConfirm" else "androidPinConfirm").replace("{count}", ids.size.toString()),
+            body = null,
+            onDismiss = { pinning = null },
+            buttons = {
+                DsModalButton(Strings.get(if (unpin) "androidKeepPinned" else "cancel"), DsBtn.Outlined) { pinning = null }
+                DsModalButton(Strings.get(if (unpin) "androidUnpin" else "androidPinned"), DsBtn.Primary) {
+                    settings.setPinnedSessions(if (unpin) pinned - ids else pinned + ids)
+                    io.github.lijiahua1024.dsnative.ui.session.DsToast.show(
+                        Strings.get(if (unpin) "androidUnpinnedChats" else "androidPinnedChats").replace("{count}", ids.size.toString()))
+                    pinning = null; selectionMode = false; selected = emptySet()
+                }
+            })
+    }
+}
+
+private enum class DsBtn { Outlined, Primary, Danger }
+
+// ref Button default size l: h40, min-width 72, padding 0 14, pill r4096, 14/22;
+// outlined: transparent bg + borderL2 + w400; primary: brand fill; danger: error fill
+@Composable
+private fun DsModalButton(text: String, variant: DsBtn, onClick: () -> Unit) {
+    val c = DsTheme.colors
+    val bg = when (variant) {
+        DsBtn.Primary -> c.brandPrimary
+        DsBtn.Danger -> c.stateErrorPrimary
+        DsBtn.Outlined -> androidx.compose.ui.graphics.Color.Transparent
+    }
+    val fg = if (variant == DsBtn.Outlined) c.labelPrimary
+        else androidx.compose.ui.graphics.Color(0xFFFFFFFF)
+    Box(Modifier.defaultMinSize(minWidth = 72.dp, minHeight = 40.dp)
+        .clip(RoundedCornerShape(4096.dp))
+        .background(bg)
+        .then(if (variant == DsBtn.Outlined)
+            Modifier.border(1.dp, c.borderL2, RoundedCornerShape(4096.dp)) else Modifier)
+        .clickable(onClick = onClick)
+        .padding(horizontal = 14.dp, vertical = 7.dp),
+        contentAlignment = Alignment.Center) {
+        Text(text, fontSize = 14.sp, lineHeight = 22.sp,
+            fontWeight = if (variant == DsBtn.Outlined) FontWeight.Normal else FontWeight.Medium,
+            color = fg)
+    }
+}
+
+// ref base/Modal: overlay rgba(0,0,0,.36) (dark .6) + backdrop-blur(2px);
+// card w380 max(100vw-32), padding 22/24, r24, bg-layer-2, inset borderInverted;
+// title 16/24 w500; body 14/22 secondary; footer end gap8 margin-top20
+// Popup, not Dialog: platform Dialog adds its own 0.6 dim behind (double dim).
+@Composable
+private fun DsModal(title: String, body: String?, onDismiss: () -> Unit,
+                    buttons: @Composable RowScope.() -> Unit) {
+    val c = DsTheme.colors
+    val dark = c.bgBase.red < 0.3f
+    val atWindowOrigin = remember {
+        object : androidx.compose.ui.window.PopupPositionProvider {
+            override fun calculatePosition(
+                anchorBounds: androidx.compose.ui.unit.IntRect,
+                windowSize: androidx.compose.ui.unit.IntSize,
+                layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+                popupContentSize: androidx.compose.ui.unit.IntSize) =
+                androidx.compose.ui.unit.IntOffset(-anchorBounds.left, -anchorBounds.top)
+        }
+    }
+    androidx.compose.ui.window.Popup(
+        popupPositionProvider = atWindowOrigin,
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.PopupProperties(
+            focusable = true, dismissOnBackPress = true, dismissOnClickOutside = true)) {
+        Box(Modifier.fillMaxSize()
+            .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = if (dark) 0.6f else 0.36f))
+            .clickable(onClick = onDismiss),
+            contentAlignment = Alignment.Center) {
+            Column(
+                // ref width: min(380, 100vw-32) — pad outside the card so the
+                // card itself (bg + radius) spans the full constraint
+                Modifier.padding(horizontal = 16.dp)
+                    .widthIn(max = 380.dp).fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .clickable(enabled = false) {}
+                    .background(c.bgLayer2)
+                    .then(if (c.borderInverted.alpha > 0f)
+                        Modifier.border(1.dp, c.borderInverted, RoundedCornerShape(24.dp)) else Modifier)
+                    // top pad +1.1dp / bottom -1.1dp: measured content sits ~3px
+                    // high inside the card vs ref at equal total height
+                    .padding(start = 24.dp, end = 24.dp, top = 23.1.dp, bottom = 20.9.dp)) {
+                Text(title, fontSize = 16.sp, lineHeight = 24.sp,
+                    fontWeight = FontWeight.Medium, color = c.labelPrimary)
+                if (body != null) {
+                    // measured: ref gaps are ~3px (1.1dp) wider after the title
+                    // and ~5px (1.8dp) wider before the footer than 12/20dp give
+                    Spacer(Modifier.height(13.1.dp))
+                    Text(body, fontSize = 14.sp, lineHeight = 22.sp, color = c.labelSecondary)
+                }
+                Row(Modifier.fillMaxWidth().padding(top = 21.8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically,
+                    content = buttons)
+            }
+        }
     }
 }
 
@@ -250,6 +374,9 @@ private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean,
             alignment = Alignment.TopEnd,
             offset = androidx.compose.ui.unit.IntOffset(offX, offY),
             onDismissRequest = onMenuDismiss,
+            // focusable so the menu reaches the accessibility tree (uiautomator
+            // cannot see non-focusable popups) — ref menu is a real focusable listbox
+            properties = androidx.compose.ui.window.PopupProperties(focusable = true),
         ) {
             // .menu: min-width 124, pad 4, r12, bg menu, layered shadow
             androidx.compose.material3.Surface(

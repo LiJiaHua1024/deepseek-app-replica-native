@@ -541,12 +541,43 @@
   "path": "src/components/base/Button.module.css.d.ts",
   "type": "interaction",
   "reach": "app shell scenes",
-  "status": "todo",
-  "blurred_ssim": null,
-  "color_mad": null,
-  "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "status": "residual",
+  "blurred_ssim": 0.9768,
+  "color_mad": 1.603,
+  "attempts": 5,
+  "commit": "pending",
+  "notes": "",
+  "worst_rects": [
+   {
+    "x": 586,
+    "y": 879,
+    "w": 293,
+    "h": 293,
+    "ssim": 0.8755
+   },
+   {
+    "x": 293,
+    "y": 879,
+    "w": 293,
+    "h": 293,
+    "ssim": 0.9186
+   },
+   {
+    "x": 879,
+    "y": 879,
+    "w": 201,
+    "h": 293,
+    "ssim": 0.9406
+   }
+  ],
+  "methods_tried": [
+   "AlertDialog->custom Popup card (Dialog adds own 0.6 dim)",
+   "card width=min(380,vw-32) via padding order",
+   "Button size l h40 pill",
+   "content offset +3px top pad",
+   "scrim 0.36/0.60 alpha"
+  ],
+  "note": "sider.delmodal shot: Popup-based Modal replacing AlertDialog; reached via long-press menu (Popup made focusable so uiautomator sees it). adj_ssim 0.9768/mad 1.60 after 5 rounds; remaining diff is CJK glyph rasterization in title/body/button text + ref's 2px backdrop blur"
  },
  {
   "id": "comp.Button",
@@ -616,24 +647,86 @@
   "path": "src/components/base/Modal.module.css",
   "type": "interaction",
   "reach": "app shell scenes",
-  "status": "todo",
-  "blurred_ssim": null,
-  "color_mad": null,
-  "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "status": "residual",
+  "blurred_ssim": 0.9768,
+  "color_mad": 1.603,
+  "attempts": 5,
+  "commit": "pending",
+  "notes": "",
+  "worst_rects": [
+   {
+    "x": 586,
+    "y": 879,
+    "w": 293,
+    "h": 293,
+    "ssim": 0.8755
+   },
+   {
+    "x": 293,
+    "y": 879,
+    "w": 293,
+    "h": 293,
+    "ssim": 0.9186
+   },
+   {
+    "x": 879,
+    "y": 879,
+    "w": 201,
+    "h": 293,
+    "ssim": 0.9406
+   }
+  ],
+  "methods_tried": [
+   "AlertDialog->custom Popup card (Dialog adds own 0.6 dim)",
+   "card width=min(380,vw-32) via padding order",
+   "Button size l h40 pill",
+   "content offset +3px top pad",
+   "scrim 0.36/0.60 alpha"
+  ],
+  "note": "sider.delmodal shot: Popup-based Modal replacing AlertDialog; reached via long-press menu (Popup made focusable so uiautomator sees it). adj_ssim 0.9768/mad 1.60 after 5 rounds; remaining diff is CJK glyph rasterization in title/body/button text + ref's 2px backdrop blur"
  },
  {
   "id": "comp.Modal",
   "path": "src/components/base/Modal.tsx",
   "type": "interaction",
   "reach": "app shell scenes",
-  "status": "todo",
-  "blurred_ssim": null,
-  "color_mad": null,
-  "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "status": "residual",
+  "blurred_ssim": 0.9768,
+  "color_mad": 1.603,
+  "attempts": 5,
+  "commit": "pending",
+  "notes": "",
+  "worst_rects": [
+   {
+    "x": 586,
+    "y": 879,
+    "w": 293,
+    "h": 293,
+    "ssim": 0.8755
+   },
+   {
+    "x": 293,
+    "y": 879,
+    "w": 293,
+    "h": 293,
+    "ssim": 0.9186
+   },
+   {
+    "x": 879,
+    "y": 879,
+    "w": 201,
+    "h": 293,
+    "ssim": 0.9406
+   }
+  ],
+  "methods_tried": [
+   "AlertDialog->custom Popup card (Dialog adds own 0.6 dim)",
+   "card width=min(380,vw-32) via padding order",
+   "Button size l h40 pill",
+   "content offset +3px top pad",
+   "scrim 0.36/0.60 alpha"
+  ],
+  "note": "sider.delmodal shot: Popup-based Modal replacing AlertDialog; reached via long-press menu (Popup made focusable so uiautomator sees it). adj_ssim 0.9768/mad 1.60 after 5 rounds; remaining diff is CJK glyph rasterization in title/body/button text + ref's 2px backdrop blur"
  },
  {
   "id": "comp.Select.module",

@@ -102,6 +102,23 @@ case "$SCENE" in
     open_drawer; wait_text "问候" 10
     c=$(find_node "问候"); $ADB shell input swipe $(echo "$c" | awk '{print $1, $2, $1, $2}') 1200
     wait_text "重命名|Rename|置顶|Pin|删除|Delete" 10; sleep 0.4 ;;
+  sider.delmodal)
+    enter_key; send_msg "你好"
+    wait_text "结束" 40; sleep 0.8
+    open_drawer; wait_text "问候" 10
+    c=$(dump; python3 - "$REPO" <<'EOF'
+import re,sys,xml.etree.ElementTree as ET
+for el in ET.parse('/tmp/dsn.xml').iter('node'):
+    if (el.get('text') or '') in ('问候','Greeting'):
+        x1,y1,x2,y2 = map(int, re.match(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', el.get('bounds')).groups())
+        if x2 < 950:
+            print((x1+x2)//2, (y1+y2)//2); break
+EOF
+)
+    $ADB shell input swipe $c $c 1500
+    wait_text "^删除$|^Delete$" 10 || { $ADB shell input swipe $c $c 1800; wait_text "^删除$|^Delete$" 10; }
+    tap_node "^删除$|^Delete$"
+    wait_text "永久删除对话" 10; sleep 0.4 ;;
   sider.multiselect)
     enter_key; send_msg "你好"
     wait_text "结束" 40; sleep 0.8

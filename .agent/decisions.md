@@ -95,3 +95,23 @@ Residual cause: nondeterministic delivery timing in the measurement channel, not
   645-708 (device px); native matched to within ~5px.
 - Residual: remaining gap is KaTeX_Math_Italic vs Noto Serif italic glyph
   shapes; 5 attempts, last two <0.005 improvement → timebox.
+
+## Sider delete/pin Modal (comp.Modal residual 0.9768)
+- Compose `Dialog` adds its own 0.6 system dim behind the window — stacked with the
+  ref's own 0.36 overlay this looked twice as dark. `DsModal` uses a `Popup`
+  positioned at the window origin instead (no system dim), focusable so the card
+  and menu reach the accessibility tree (uiautomator cannot see non-focusable
+  popups — this is also why `input swipe` long-press appeared broken: the menu
+  was opening fine but `wait_text` never saw it).
+- Selection-mode delete/pin in ref both open confirm Modals (`setDeleting`,
+  `setPinning`); native previously deleted/pinned directly — now both paths share
+  `DsModal`, with toast after pin/unpin (androidPinnedChats {count}).
+- Card: width min(380, 100vw-32), r24, pad 22/24 (top+1.1/bottom-1.1 measured
+  offset), title 16/24 w500, body 14/22 secondary, footer end gap8 margin 21.8dp.
+- Buttons are ref `Button` size **l** (h40) pill r4096: outlined=borderL2 w400,
+  primary=brand fill, danger=stateErrorPrimary fill.
+- Residual 0.9768/mad 1.60: worst rects all inside the card — remaining delta is
+  text rasterization (browser vs Compose CJK glyph metrics) + ref's 2px
+  backdrop-filter blur that has no cheap Compose equivalent.
+- Strings: fixed en/zh wording to match ref i18n verbatim for the pin/delete/
+  select keys.
