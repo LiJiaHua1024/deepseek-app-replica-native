@@ -1,20 +1,25 @@
 package io.github.lijiahua1024.dsnative.ui.input
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.lijiahua1024.dsnative.R
@@ -43,31 +48,44 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
 
     Column(
         Modifier.fillMaxWidth()
+            .imePadding()
             .padding(start = 12.dp, end = 12.dp, bottom = 8.dp)
+            .shadow(6.dp, RoundedCornerShape(30.dp))
             .clip(RoundedCornerShape(30.dp))
-            .background(c.bgLayer3)
+            .background(c.bgBase)
+            .border(1.dp, c.labelPrimary.copy(alpha = 0.07f), RoundedCornerShape(30.dp))
     ) {
-        Box(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 14.75.dp)) {
+        Box(Modifier.fillMaxWidth().padding(start = 17.dp, end = 17.dp, top = 14.75.dp)) {
             BasicTextField(
                 value = text,
                 onValueChange = { text = it; chatStore.setDraft(activeId, it) },
                 textStyle = TextStyle(fontSize = 16.75.sp, color = c.labelPrimary, lineHeight = 24.sp),
                 cursorBrush = SolidColor(c.brandPrimary),
+                singleLine = false,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                keyboardActions = KeyboardActions(onSend = {
+                    if (canSend) { chatStore.setDraft(activeId, text); chatStore.sendMessage(activeId); text = "" }
+                }),
+                decorationBox = { inner ->
+                    Box {
+                        if (text.isEmpty()) {
+                            Text(
+                                Strings.get(if (sessionHasMessages) "androidMessageHint" else "androidHoldHint"),
+                                fontSize = 16.75.sp, color = c.labelTertiary,
+                            )
+                        }
+                        inner()
+                    }
+                },
                 modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp),
             )
-            if (text.isEmpty()) {
-                Text(
-                    Strings.get(if (sessionHasMessages) "androidMessageHint" else "androidHoldHint"),
-                    fontSize = 16.75.sp, color = c.labelTertiary,
-                )
-            }
         }
         Row(
-            Modifier.fillMaxWidth().height(48.dp).padding(start = 7.dp, end = 11.dp, bottom = 4.dp),
+            Modifier.fillMaxWidth().height(48.dp).padding(start = 11.dp, end = 7.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TogglePill(Strings.get("thinkingSwitch"), thinking, { settings.setThinking(!thinking) }, R.drawable.ic_think)
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(8.dp))
             TogglePill(Strings.get("search"), search, { settings.setSearch(!search) }, R.drawable.ic_globe)
             Spacer(Modifier.weight(1f))
             Box(
@@ -97,12 +115,12 @@ private fun TogglePill(label: String, on: Boolean, onClick: () -> Unit, icon: In
         Modifier.height(32.dp).clip(RoundedCornerShape(18.dp))
             .background(if (on) c.brandPrimary else c.bgBase)
             .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp),
+            .padding(horizontal = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(painterResource(icon), null,
             tint = if (on) androidx.compose.ui.graphics.Color.White else c.labelSecondary,
-            modifier = Modifier.size(14.dp))
+            modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(4.dp))
         Text(label, fontSize = 14.sp,
             color = if (on) androidx.compose.ui.graphics.Color.White else c.labelSecondary)

@@ -84,7 +84,7 @@ fun Welcome(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(painterResource(R.drawable.whale), null, tint = c.brandPrimary,
             modifier = Modifier.size(42.dp))
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(15.dp))
         Text(greeting, fontSize = 20.sp, lineHeight = 28.sp, fontWeight = FontWeight.SemiBold,
             color = c.labelPrimary)
     }
@@ -93,7 +93,7 @@ fun Welcome(modifier: Modifier = Modifier) {
 @Composable
 fun UserBubble(msg: Message.User) {
     val c = DsTheme.colors
-    Column(Modifier.fillMaxWidth().padding(start = 48.dp, end = 12.dp, top = 22.dp)) {
+    Column(Modifier.fillMaxWidth().padding(start = 48.dp, end = 16.dp, top = 22.dp)) {
         Box(Modifier.align(Alignment.End)
             .clip(RoundedCornerShape(22.dp, 22.dp, 4.dp, 22.dp))
             .background(c.bubble)
@@ -108,7 +108,7 @@ fun UserBubble(msg: Message.User) {
 fun AssistantView(msg: Message.Assistant, sessionId: String, chatStore: ChatStore) {
     val c = DsTheme.colors
     val ctx = LocalContext.current
-    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
         for (block in msg.blocks) {
             when (block) {
                 is ReplyBlock.Thinking -> ThinkingBlock(block, msg)
@@ -133,7 +133,9 @@ fun AssistantView(msg: Message.Assistant, sessionId: String, chatStore: ChatStor
             else -> {}
         }
         if (msg.status == ReplyStatus.DONE || msg.status == ReplyStatus.STOPPED) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.padding(top = 12.dp, bottom = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 val clipboard = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                 IconButton({
                     clipboard.setPrimaryClip(android.content.ClipData.newPlainText("reply", replyText(msg)))
@@ -152,7 +154,11 @@ fun AssistantView(msg: Message.Assistant, sessionId: String, chatStore: ChatStor
 @Composable
 fun ThinkingBlock(block: ReplyBlock.Thinking, msg: Message.Assistant) {
     val c = DsTheme.colors
-    var expanded by remember { mutableStateOf(msg.status != ReplyStatus.DONE) }
+    val hasResponse =
+        msg.blocks.any { it is ReplyBlock.Text && it.text.isNotEmpty() }
+    var expanded by remember(msg.status, hasResponse) {
+      mutableStateOf(msg.status == ReplyStatus.STREAMING && !hasResponse)
+    }
     val title = when {
         msg.status == ReplyStatus.STREAMING -> Strings.get("messageThinking")
         msg.status == ReplyStatus.STOPPED -> Strings.get("messageThinkStopped")

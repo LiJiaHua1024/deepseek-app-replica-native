@@ -31,13 +31,13 @@ fun MarkdownBody(text: String, modifier: Modifier = Modifier) {
                 when {
                     seg.first == "code" -> {
                         Box(Modifier.fillMaxWidth().padding(vertical = 6.dp)
-                            .background(c.bgLayer3, androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                            .background(c.markdownCodeBlock, androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
                             .padding(12.dp).horizontalScroll(rememberScrollState())) {
                             Text(seg.second, fontFamily = FontFamily.Monospace, fontSize = 13.sp,
-                                color = c.labelPrimary, lineHeight = 20.sp)
+                                color = c.labelPrimary, lineHeight = 22.sp)
                         }
                     }
-                    else -> Text(renderInline(seg.second), fontSize = 16.sp, lineHeight = 26.sp,
+                    else -> Text(renderInline(seg.second, c.markdownInlineCode), fontSize = 16.sp, lineHeight = 26.sp,
                         color = c.labelPrimary, modifier = Modifier.padding(vertical = 3.dp))
                 }
             }
@@ -61,7 +61,7 @@ private fun splitBlocks(text: String): List<Pair<String, String>> {
     return out
 }
 
-private fun renderInline(text: String): AnnotatedString = buildAnnotatedString {
+private fun renderInline(text: String, inlineCodeBg: androidx.compose.ui.graphics.Color): AnnotatedString = buildAnnotatedString {
     var i = 0
     val bold = Regex("\\*\\*(.+?)\\*\\*")
     val italic = Regex("(?<!\\*)\\*([^*]+?)\\*(?!\\*)")
@@ -76,7 +76,7 @@ private fun renderInline(text: String): AnnotatedString = buildAnnotatedString {
         when (t.second) {
             "b" -> withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(t.third) }
             "i" -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(t.third) }
-            "c" -> withStyle(SpanStyle(fontFamily = FontFamily.Monospace)) { append(t.third) }
+            "c" -> withStyle(SpanStyle(fontFamily = FontFamily.Monospace, background = inlineCodeBg)) { append(t.third) }
         }
         i = t.first.last + 1
     }
