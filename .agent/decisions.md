@@ -53,3 +53,18 @@ Residual cause: nondeterministic delivery timing in the measurement channel, not
 - Tried and kept: per-item edge padding for 5th-thumb sliver (LazyRow padding clips viewport — clipToPadding absent in compose-bom 2024.12.01), badge check strokeWidth 0.8 (vector scales stroke), badge drop shadow.
 - Tried and reverted: 10dp spacer chips→suggestions (ref has none — regressed to 0.9341), composer bottom pad 52→49.5dp (uniform shift theory wrong — regressed to 0.950).
 - Residual: blurred ssim floor ~0.95 from icon/badge AA and ~3px drift in bottom-anchored stack; mad passes.
+
+## imageviewer.default (done, 0.997/0.135)
+- ref AndroidImageViewer is a WebView overlay: content region y128..2340 (below
+  status inset to screen bottom), img centered → center 1234.5; status area is
+  framebuffer black (nothing drawn). previewControls: right/bottom 16px fixed
+  (gesture nav → --android-button-nav-inset 0).
+- Compose Dialog: DialogWrapper re-applies wrap_content each layout pass, so a
+  re-asserting OnLayoutChangeListener keeps window MATCH_PARENT (fills parent
+  frame 128..2340 exactly). decorFitsSystemWindows=false + hide(systemBars) +
+  dimAmount=1f gives the black status band.
+- Content rect still extends ~69px under nav → image needed padding(top=25dp),
+  controls needed offset(y=25dp) after navigationBarsPadding() removed.
+- refdrive: system immersive cling (package android, android:id/ok) is not in
+  the DOM; dismiss via uiautomator dump + adb tap. scenes-native tap target is
+  hy-320 (draft chip), not hy-150 (suggestion chip → sends a message).

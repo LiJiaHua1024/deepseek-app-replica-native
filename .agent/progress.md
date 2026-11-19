@@ -54,3 +54,4 @@
 - searchpanel.default RESIDUAL 0.8862/4.58 (see decisions.md). Next: imageviewer.default, voice.default, attachments.default, then comp.*/store.*/native.* entries.
 - voice.default DONE 0.9973/3.446. Native overlay bisected via DEBUG_VOICE mode broadcast: offscreen DstIn saveLayer killed QEMU -> per-bar alpha; fakeRecorder guard on ranchu skips real capture (guest audio capture also fatal); broadcast replaces input swipe (sustained stream fatal); composer card alpha hoisted before shadow/border; overlay bottom = nav inset only; animations frozen via ANIMATOR_DURATION_SCALE=0 read in-composition. Ref side: DeepSeekAndroid proxy stub + CSS animation freeze.
 - attachments.default -> residual 0.9533/2.7 after 5 rounds (worst: thumbs band y1465-1758). Methods in decisions.md. Next: imageviewer.default.
+- imageviewer.default done 0.997/0.135 (aa3d494): immersive dialog MATCH_PARENT + insets compensation; next = next todo

@@ -478,12 +478,12 @@
     "path": "src/components/files/AndroidImageViewer.tsx",
     "type": "screen-state",
     "reach": "shot imageviewer.default",
-    "status": "todo",
-    "blurred_ssim": null,
-    "color_mad": null,
-    "attempts": 0,
-    "commit": null,
-    "notes": ""
+    "status": "done",
+    "blurred_ssim": 0.997,
+    "color_mad": 0.135,
+    "attempts": 5,
+    "commit": "aa3d494",
+    "notes": "dialog fills parent frame 128..2340 via re-asserted MATCH_PARENT; bars hidden; dimAmount 1; image centered matches ref (830..1639); 裁剪 button 16px fixed offset +25dp for implicit nav inset"
   },
   {
     "id": "voice.default",
