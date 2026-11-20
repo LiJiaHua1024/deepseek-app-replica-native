@@ -56,6 +56,17 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
     val apiKey by settings.apiKey.collectAsState()
     var nav by remember { mutableStateOf<NavState>(NavState.Chat) }
 
+    // 系统栏图标对比度跟随应用主题（ref SystemBars.setAppearance）。
+    val barView = androidx.compose.ui.platform.LocalView.current
+    LaunchedEffect(dark) {
+        (barView.context as? android.app.Activity)?.window?.let { w ->
+            androidx.core.view.WindowCompat.getInsetsController(w, barView).apply {
+                isAppearanceLightStatusBars = !dark
+                isAppearanceLightNavigationBars = !dark
+            }
+        }
+    }
+
     DsTheme(colors) {
         // ref base/Modal .overlay has backdrop-filter: blur(2px), but
         // RenderEffect is a no-op on this emulator's GPU path, so the
@@ -104,6 +115,18 @@ fun DrawerFrame(
         val edgePx = with(density) { min(widthPx - 68.4.dp.toPx(), 380.dp.toPx()) }
         var progress by remember { mutableStateOf(0f) }
         var settling by remember { mutableStateOf(false) }
+
+        // 返回手势关闭打开的抽屉（ref: sider open -> closeMobileSider）。
+        // PredictiveBackHandler：手势进度直接驱动抽屉位移，取消则弹回。
+        androidx.activity.compose.PredictiveBackHandler(enabled = progress >= 0.999f) { flow ->
+            try {
+                flow.collect { ev -> progress = (1f - ev.progress).coerceIn(0f, 1f) }
+                progress = 0f
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                progress = 1f
+                throw e
+            }
+        }
 
         fun settleTo(target: Float) {
             progress = target.coerceIn(0f, 1f)

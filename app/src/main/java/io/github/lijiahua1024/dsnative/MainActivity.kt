@@ -49,17 +49,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        @Suppress("DEPRECATION")
-        window.navigationBarColor = android.graphics.Color.BLACK
-        val night = resources.configuration.uiMode and
-            android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
-            android.content.res.Configuration.UI_MODE_NIGHT_YES
-        window.statusBarColor = if (night) android.graphics.Color.BLACK else 0xFF757575.toInt()
+        // 官方无系统栏色带：状态栏/导航栏透明，背景由页面自身绘制。
         if (Build.VERSION.SDK_INT >= 29) {
             window.isNavigationBarContrastEnforced = false
             window.isStatusBarContrastEnforced = false
         }
         settings = SettingsStore(applicationContext)
+        io.github.lijiahua1024.dsnative.api.ApiOrigin.init(applicationContext)
         chatStore = ChatStore(applicationContext, settings, appScope)
         if (BuildConfig.DEBUG) {
             val filter = IntentFilter("$packageName.DEBUG_INPUT")

@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.rotate
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.ui.platform.LocalContext
@@ -126,6 +127,19 @@ fun AndroidSettings(settings: SettingsStore, chatStore: ChatStore, onBack: () ->
     var confirmLogout by remember { mutableStateOf(false) }
     val ctx = LocalContext.current
 
+    // ref back(): 弹窗自行处理；root → onBack；export → data；其余 → root。
+    // PredictiveBackHandler：手势进度驱动页面右移预览，取消则复位。
+    var backProgress by remember { mutableStateOf(0f) }
+    androidx.activity.compose.PredictiveBackHandler(enabled = true) { flow ->
+        try {
+            flow.collect { backProgress = it.progress }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            backProgress = 0f; throw e
+        }
+        backProgress = 0f
+        if (page == "root") onBack() else page = if (page == "export") "data" else "root"
+    }
+
     val bg = if (c.dark) Color(0xFF161616) else Color(0xFFF8F8F8)
     val card = if (c.dark) Color(0xFF242424) else Color(0xFFFFFFFF)
     val muted = if (c.dark) Color(0xFFA1A1A4) else Color(0xFF8C9097)
@@ -141,7 +155,8 @@ fun AndroidSettings(settings: SettingsStore, chatStore: ChatStore, onBack: () ->
         "export" to Strings.get("exportAllLabel"),
     )
 
-    Column(Modifier.fillMaxSize().background(bg).statusBarsPadding()) {
+    Column(Modifier.fillMaxSize().background(bg).statusBarsPadding()
+        .graphicsLayer { translationX = backProgress * size.width * 0.35f }) {
         // ref .header: h44, centered 16/24 w500 title; back = 32dp circle at left 14
         Box(Modifier.fillMaxWidth().height(44.dp)) {
             Box(Modifier.align(Alignment.CenterStart).padding(start = 14.dp)

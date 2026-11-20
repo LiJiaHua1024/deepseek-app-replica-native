@@ -66,10 +66,44 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     val canSend = (text.isNotBlank() || atts.isNotEmpty()) && !isStreaming
     var showAttachments by remember { mutableStateOf(false) }
     var previewAtt by remember { mutableStateOf<DraftAttachment?>(null) }
+    // ref android-back: 附件面板打开时返回先收面板，不退出页面。
+    androidx.activity.compose.BackHandler(enabled = showAttachments) {
+        showAttachments = false
+    }
     val inputScope = rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
-    val photos by produceState<List<RecentPhoto>>(emptyList(), showAttachments) {
-        value = if (showAttachments) queryRecentPhotos(context) else emptyList()
+    // ref MainActivity.showRecentPhotos：打开附件面板时按版本请求媒体读取权限，
+    // 每次会话只问一次；34+ 同时请求 READ_MEDIA_VISUAL_USER_SELECTED（部分授权也算）。
+    var mediaGranted by remember { mutableStateOf(false) }
+    val mediaPermission = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants ->
+        mediaGranted = grants[android.Manifest.permission.READ_MEDIA_IMAGES] == true ||
+            grants[android.Manifest.permission.READ_EXTERNAL_STORAGE] == true ||
+            grants[android.Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED] == true
+    }
+    var askedForPhotos by remember { mutableStateOf(false) }
+    LaunchedEffect(showAttachments) {
+        if (!showAttachments) return@LaunchedEffect
+        val sdk = android.os.Build.VERSION.SDK_INT
+        val imagesPerm = if (sdk >= 33) android.Manifest.permission.READ_MEDIA_IMAGES
+            else android.Manifest.permission.READ_EXTERNAL_STORAGE
+        fun granted(p: String) = androidx.core.content.ContextCompat.checkSelfPermission(
+            context, p) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        val has = granted(imagesPerm) ||
+            (sdk >= 34 && granted(android.Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED))
+        if (!has && !askedForPhotos) {
+            askedForPhotos = true
+            val perms = if (sdk >= 34) arrayOf(
+                imagesPerm, android.Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)
+                else arrayOf(imagesPerm)
+            mediaPermission.launch(perms)
+        } else {
+            mediaGranted = has
+        }
+    }
+    val photos by produceState<List<RecentPhoto>>(emptyList(), showAttachments, mediaGranted) {
+        value = if (showAttachments && mediaGranted) queryRecentPhotos(context) else emptyList()
     }
     val addFiles: (List<android.net.Uri>) -> Unit = { uris ->
         inputScope.launch {
