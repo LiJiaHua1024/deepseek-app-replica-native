@@ -20,6 +20,17 @@ $ADB shell monkey -p $PKG -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 
   $ADB shell am start -n $PKG/.MainActivity >/dev/null 2>&1 || true
 sleep 5
 
+# warm-up: Chromium's input pipeline intermittently withholds pointermove
+# delivery while cold; ~30 swipes settle it before measurement.
+if [ "${WARMUP:-0}" != "0" ]; then
+  for i in $(seq 1 "$WARMUP"); do
+    $ADB shell input swipe 80 1200 480 1200 150 >/dev/null
+    sleep 0.3
+    $ADB shell input swipe 480 1200 80 1200 150 >/dev/null
+    sleep 0.3
+  done
+fi
+
 # enter API key if the app asks for one (first run after pm clear happens in shot.sh;
 # here we reuse existing state — if apikey screen shows, fill it).
 for i in 1 2 3; do

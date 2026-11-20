@@ -2509,10 +2509,10 @@
   "status": "residual",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 6,
+  "attempts": 7,
   "commit": null,
   "notes": "",
-  "备注": "grid majority match 85-89% (<95%); boundary cells coin-flip on both apps — Chromium intermittently holds pointermove delivery ~290ms; deterministic logic verified identical (see decisions.md). tried: velocity-unit, upTime, coalesced samples, hold emulation, up-tail eval, cancel parity."
+  "备注": "grid majority match 85-89% (<95%); boundary cells coin-flip on both apps — Chromium intermittently holds pointermove delivery ~290ms; deterministic logic verified identical (see decisions.md). tried: velocity-unit, upTime, coalesced samples, hold emulation, up-tail eval, cancel parity. retry2: window-level MotionEvent handler (true timestamps) + warm grid 90.7%; residual=Chromium input-hold coin-flips."
  },
  {
   "id": "comp.useSessionSearch",

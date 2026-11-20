@@ -12,6 +12,7 @@ import androidx.activity.enableEdgeToEdge
 import io.github.lijiahua1024.dsnative.data.ChatStore
 import io.github.lijiahua1024.dsnative.data.SettingsStore
 import io.github.lijiahua1024.dsnative.ui.App
+import io.github.lijiahua1024.dsnative.ui.DrawerGestureBus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -72,5 +73,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             App(settings, chatStore)
         }
+    }
+
+    override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
+        DrawerGestureBus.dispatch(ev)
+        return super.dispatchTouchEvent(ev)
     }
 }

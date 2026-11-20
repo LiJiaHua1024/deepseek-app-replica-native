@@ -111,101 +111,97 @@ fun DrawerFrame(
 
         LaunchedEffect(progress) { /* progress is the single source of truth */ }
 
-        Box(
-            Modifier
-                .fillMaxSize()
-                .pointerInput(edgePx) {
-                    // Literal port of useAndroidDrawerGesture.ts:
-                    // drag anywhere; per-event cumulative dx/dy decide start
-                    // and vertical-cancel (skipped when freePan); samples from
-                    // every raw move over the last 60ms; flick sign or p>=0.5.
-                    val slopPx = 8f * density.density
-                    awaitEachGesture {
-                        val down = awaitFirstDown(requireUnconsumed = false)
-                        val startedOpen = progress >= 0.999f
-                        val downX = down.position.x
-                        val downY = down.position.y
-                        val samples = java.util.ArrayDeque<Pair<Float, Long>>()
-                        samples.add(down.position.x to down.uptimeMillis)
-                        fun record(x: Float, t: Long) {
-                            if (t <= samples.last().second) return
-                            samples.add(x to t)
-                            while (samples.size > 1 && t - samples.first().second > 60) samples.removeFirst()
-                        }
-                        record(downX, down.uptimeMillis)
-                        var start: Float? = null
-                        var current = 0f
-                        var cancelled = false
-                        var up = false
-                        var upTime = 0L
-                        fun evalMove(x: Float, y: Float, t: Long) {
-                            record(x, t)
-                            val dx = x - downX
-                            val horizontal = abs(dx)
-                            if (start == null) {
-                                val dy = abs(y - downY)
-                                if (!freePan && dy >= slopPx && dy > horizontal) {
-                                    // ref: gesture.current = null — up does nothing.
-                                    cancelled = true
-                                    return
-                                }
-                                if (horizontal <= slopPx || (!freePan && horizontal < dy)) return
-                                start = progress // take over live position
-                                if ((start!! <= 0.001f && dx < 0) || (start!! >= 0.999f && dx > 0)) {
-                                    start = null
-                                    return
-                                }
-                            }
-                            val distance = kotlin.math.sign(dx) * max(0f, horizontal - slopPx)
-                            current = (start!! + (1.031f * distance) / edgePx).coerceIn(0f, 1f)
-                            progress = current
-                        }
-                        try {
-                        while (!up) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                            if (!change.pressed) {
-                                upTime = change.uptimeMillis
-                                // The gesture tail coalesced into the UP event:
-                                // Chrome flushes those queued points as real
-                                // pointermoves (with original timestamps)
-                                // before pointerup, so evaluate them as moves.
-                                for (h in change.historical) {
-                                    evalMove(h.position.x, h.position.y, h.uptimeMillis)
-                                    if (cancelled) break
-                                }
-                                if (!cancelled) {
-                                    evalMove(change.position.x, change.position.y, change.uptimeMillis)
-                                }
-                                up = true
-                                break
-                            }
-                            for (h in change.historical) record(h.position.x, h.uptimeMillis)
-                            evalMove(change.position.x, change.position.y, change.uptimeMillis)
-                            if (cancelled) break
-                            change.consume()
-                        }
-                        } catch (e: kotlinx.coroutines.CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            // ref pointercancel/lostpointercapture → settle(cancelled)
-                            cancelled = true
-                        }
-                        if (start != null) {
-                            // ref: releaseVelocity uses the UP event's own timeStamp
-                            val now = upTime
-                            val first = samples.first()
-                            val last = samples.last()
-                            val velocity = if (first != last && now - last.second < 56)
-                                (last.first - first.first) / (last.second - first.second) else 0f
-                            // ref 0.33 css px/ms → device px = 0.33 * density
-                            val flick = abs(velocity) >= 0.33f * density.density
-                            val open = if (cancelled) startedOpen else if (flick) velocity > 0 else current >= 0.5f
-                            settleTo(if (open) 1f else 0f)
-                        }
+        // Literal port of useAndroidDrawerGesture.ts at window level, on raw
+        // MotionEvents delivered through Activity.dispatchTouchEvent — the same
+        // stream Chromium turns into pointer events. Compose's coalesced
+        // historical[].uptimeMillis collapses to batch eventTime, but
+        // MotionEvent.getHistoricalEventTime keeps the true injection times
+        // that decide the 60ms velocity window and 56ms fling-pause check.
+        class Gesture {
+            var downX = 0f; var downY = 0f
+            var startedOpen = false
+            var start = -1f // -1 = not started (progress is 0..1)
+            var current = 0f
+            var cancelled = false
+            val samples = java.util.ArrayDeque<Pair<Float, Long>>()
+        }
+        DisposableEffect(edgePx, freePan) {
+            val slopPx = 8f * density.density
+            var g: Gesture? = null
+            fun record(g: Gesture, x: Float, t: Long) {
+                if (t <= g.samples.last().second) return
+                g.samples.add(x to t)
+                while (g.samples.size > 1 && t - g.samples.first().second > 60) g.samples.removeFirst()
+            }
+            fun evalMove(g: Gesture, x: Float, y: Float, t: Long) {
+                record(g, x, t)
+                val dx = x - g.downX
+                val horizontal = abs(dx)
+                if (g.start < 0f) {
+                    val dy = abs(y - g.downY)
+                    if (!freePan && dy >= slopPx && dy > horizontal) {
+                        // ref: gesture.current = null — up does nothing.
+                        g.cancelled = true
+                        return
+                    }
+                    if (horizontal <= slopPx || (!freePan && horizontal < dy)) return
+                    g.start = progress // take over live position
+                    if ((g.start <= 0.001f && dx < 0) || (g.start >= 0.999f && dx > 0)) {
+                        g.start = -1f
+                        return
                     }
                 }
-        ) {
+                val distance = kotlin.math.sign(dx) * max(0f, horizontal - slopPx)
+                g.current = (g.start + (1.031f * distance) / edgePx).coerceIn(0f, 1f)
+                progress = g.current
+            }
+            DrawerGestureBus.handler = handler@{ ev ->
+                var cur = g
+                if (cur == null) {
+                    if (ev.actionMasked == android.view.MotionEvent.ACTION_DOWN) {
+                        cur = Gesture()
+                        g = cur
+                        cur.downX = ev.x; cur.downY = ev.y
+                        cur.startedOpen = progress >= 0.999f
+                        cur.samples.add(ev.x to ev.eventTime)
+                    } else return@handler
+                }
+                if (cur == null) return@handler
+                when (ev.actionMasked) {
+                    android.view.MotionEvent.ACTION_MOVE,
+                    android.view.MotionEvent.ACTION_UP -> {
+                        for (i in 0 until ev.historySize) {
+                            evalMove(cur, ev.getHistoricalX(i), ev.getHistoricalY(i), ev.getHistoricalEventTime(i))
+                            if (cur.cancelled) break
+                        }
+                        if (!cur.cancelled) evalMove(cur, ev.x, ev.y, ev.eventTime)
+                        if (ev.actionMasked == android.view.MotionEvent.ACTION_UP) {
+                            if (cur.start >= 0f) {
+                                // ref: releaseVelocity uses the UP event's own timeStamp
+                                val now = ev.eventTime
+                                val first = cur.samples.first()
+                                val last = cur.samples.last()
+                                val velocity = if (first != last && now - last.second < 56)
+                                    (last.first - first.first) / (last.second - first.second) else 0f
+                                // ref 0.33 css px/ms → device px = 0.33 * density
+                                val flick = abs(velocity) >= 0.33f * density.density
+                                val open = if (cur.cancelled) cur.startedOpen else if (flick) velocity > 0 else cur.current >= 0.5f
+                                settleTo(if (open) 1f else 0f)
+                            }
+                            g = null
+                        }
+                    }
+                    android.view.MotionEvent.ACTION_CANCEL -> {
+                        // ref pointercancel/lostpointercapture → settle(cancelled)
+                        if (cur.start >= 0f) settleTo(if (cur.startedOpen) 1f else 0f)
+                        g = null
+                    }
+                }
+            }
+            onDispose { DrawerGestureBus.handler = null }
+        }
+
+        Box(Modifier.fillMaxSize()) {
             // Sider (behind), dimmed by (1-p)*0.207
             Box(
                 Modifier
@@ -253,4 +249,11 @@ fun DrawerFrame(
             }
         }
     }
+}
+
+// Feeds raw window-level MotionEvents (true historical times) to the active
+// drawer gesture handler; MainActivity.dispatchTouchEvent calls this first.
+object DrawerGestureBus {
+    var handler: ((android.view.MotionEvent) -> Unit)? = null
+    fun dispatch(ev: android.view.MotionEvent) { handler?.invoke(ev) }
 }
