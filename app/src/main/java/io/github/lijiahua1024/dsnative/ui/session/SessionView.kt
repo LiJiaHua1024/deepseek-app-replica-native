@@ -266,14 +266,16 @@ fun DsToastHost() {
         if (text != null) { kotlinx.coroutines.delay(3000); DsToast.message.value = null }
     }
     if (text != null) {
-        // ref [data-android] .toast: top 50% translateY(-50%) of its container,
-        // whose measured centre lands ~31 device px below the screen centre
+        // ref [data-android] .toast: top 50% translateY(-50%) of the viewport —
+        // measured centre = screen-centre + ~31 device px. Our host's Box centres
+        // on the main layer (which starts below the status band), so the offset
+        // must pull the toast back up to y≈1201.
         // ref Toast.module enter 0.2s ease-in-out: opacity 0->1 + translateY(-8px)
         val enter = remember { androidx.compose.animation.core.Animatable(0f) }
         LaunchedEffect(text) { enter.animateTo(1f, androidx.compose.animation.core.tween(200)) }
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(text!!, fontSize = 14.sp, lineHeight = 22.sp, color = Color(0xFFF7F9FC),
-                modifier = Modifier.offset(y = 11.3.dp)
+                modifier = Modifier.offset(y = (-11.8).dp)
                     .graphicsLayer { alpha = enter.value; translationY = -8.dp.toPx() * (1f - enter.value) }
                     .clip(RoundedCornerShape(16.dp))
                     .background(Color(0xDB202020))

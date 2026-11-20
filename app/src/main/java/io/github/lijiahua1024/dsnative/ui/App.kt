@@ -278,6 +278,18 @@ fun DrawerFrame(
             ) {
                 Box(Modifier.width(with(density) { edgePx.toDp() }).fillMaxSize()) {
                     siderContent { settleTo(0f) }
+                    // ref .frame::after — 缩放后的 main 层把 box-shadow(-7px 3px 33px
+                    // rgb(0 0 0/.12)) 投到抽屉右缘，抽屉上呈现约 90px 的内侧渐变。
+                    if (progress > 0f) {
+                        Box(
+                            Modifier.align(Alignment.CenterEnd)
+                                .width(30.dp).fillMaxSize()
+                                .graphicsLayer { alpha = progress }
+                                .background(
+                                    androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.09f))))
+                        )
+                    }
                 }
             }
             // ref .drawerMask exists only while the drawer is open/moving; at
