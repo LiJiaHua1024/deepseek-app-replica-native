@@ -152,7 +152,9 @@ class SourceBrowserActivity : Activity() {
             isAppearanceLightStatusBars = !dark
             isAppearanceLightNavigationBars = !dark
         }
-        window.isNavigationBarContrastEnforced = false
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            window.isNavigationBarContrastEnforced = false
+        }
 
         val history = if (state == null) null else web.restoreState(state)
         if (history == null) {

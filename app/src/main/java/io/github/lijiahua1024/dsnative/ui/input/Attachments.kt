@@ -1,5 +1,6 @@
 package io.github.lijiahua1024.dsnative.ui.input
 
+import android.annotation.SuppressLint
 import android.content.ContentResolver
 import android.content.ContentUris
 import android.content.Context
@@ -161,6 +162,7 @@ private fun guessMime(name: String): String {
     }
 }
 
+@SuppressLint("ProduceStateDoesNotAssignValue")
 @Composable
 private fun rememberThumb(producer: suspend () -> Bitmap?): ImageBitmap? {
     val bmp by produceState<ImageBitmap?>(initialValue = null, producer) {
@@ -185,6 +187,7 @@ private fun decodeScaled(path: String, reqSize: Int): Bitmap? {
         path, BitmapFactory.Options().apply { inSampleSize = sample })
 }
 
+@SuppressLint("ProduceStateDoesNotAssignValue")
 @Composable
 internal fun thumbFor(path: String, sizePx: Int): ImageBitmap? {
     val bmp by produceState<ImageBitmap?>(initialValue = null, path) {
@@ -199,6 +202,7 @@ internal fun thumbFor(path: String, sizePx: Int): ImageBitmap? {
     return bmp
 }
 
+@SuppressLint("ProduceStateDoesNotAssignValue")
 @Composable
 private fun photoThumb(resolver: ContentResolver, uri: Uri, sizePx: Int): ImageBitmap? {
     val bmp by produceState<ImageBitmap?>(initialValue = null, uri) {

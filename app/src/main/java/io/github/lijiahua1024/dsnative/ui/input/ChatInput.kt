@@ -1,5 +1,6 @@
 package io.github.lijiahua1024.dsnative.ui.input
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -46,6 +47,7 @@ import kotlinx.coroutines.launch
 // 0 10px 22px 7% / 0 1px 4px 4%; textarea padding-top 14.75px padding-inline
 // 17px; functionRow h48 padding 0/7/4/11 gap4 center; toggles h32 r18 px11
 // font 14/20 w400; right gap 0; send/stop 30px circle margin-right 7px.
+@SuppressLint("ProduceStateDoesNotAssignValue")
 @Composable
 fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     val c = DsTheme.colors
@@ -67,7 +69,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     val inputScope = rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
     val photos by produceState<List<RecentPhoto>>(emptyList(), showAttachments) {
-        if (showAttachments) value = queryRecentPhotos(context)
+        value = if (showAttachments) queryRecentPhotos(context) else emptyList()
     }
     val addFiles: (List<android.net.Uri>) -> Unit = { uris ->
         inputScope.launch {
