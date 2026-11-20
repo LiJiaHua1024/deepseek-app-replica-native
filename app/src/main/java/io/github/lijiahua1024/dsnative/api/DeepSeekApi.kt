@@ -51,6 +51,15 @@ class ApiError(
 data class StreamEvent(val type: String, val payload: JSONObject?)
 
 private val client = OkHttpClient.Builder()
+    // 参照物(WebView fetch) 发出的传输级头；原生端补齐以逐字节对齐
+    .addInterceptor { chain ->
+        val req = chain.request().newBuilder()
+            .header("Origin", "https://appassets.androidplatform.net")
+            .header("Referer", "https://appassets.androidplatform.net/")
+            .apply { if (chain.request().header("Accept") == null) header("Accept", "*/*") }
+            .build()
+        chain.proceed(req)
+    }
     .connectTimeout(30, TimeUnit.SECONDS)
     .readTimeout(0, TimeUnit.SECONDS) // SSE：读超时交给应用层
     .writeTimeout(60, TimeUnit.SECONDS)
@@ -210,7 +219,7 @@ suspend fun openMessageStream(apiKey: String, body: JSONObject): StreamSession =
         .apply { if (hasFile(json)) header("anthropic-beta", FILES_BETA) }
         .header("Content-Type", "application/json")
         .header("Accept", "text/event-stream")
-        .post(json.toString().toRequestBody("application/json".toMediaType()))
+        .post(json.toString().toByteArray().toRequestBody("application/json".toMediaType()))
         .build()
     val call = client.newCall(request)
     val response = try {

@@ -512,10 +512,10 @@ class ChatStore(
 
     private fun latestReminder(): String {
         val locale = Locale.getDefault()
-        val date = SimpleDateFormat("yyyy/MM/dd", locale).format(Date())
+        val date = SimpleDateFormat("yyyy-MM-dd", locale).format(Date())
         val weekday = SimpleDateFormat("EEEE", locale).format(Date())
         val language = if (locale.language == "zh") "中文" else "English"
-        return "$date,$weekday,,App,$language"
+        return "$date,$weekday,,Web,$language"
     }
 
     private fun toUserParam(message: Message.User): JSONObject {

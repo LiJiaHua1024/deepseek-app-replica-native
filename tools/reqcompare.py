@@ -20,7 +20,7 @@ import sys
 
 IGNORE_HEADERS = {
     'user-agent', 'date', 'content-length', 'host', 'connection',
-    'accept-encoding', 'x-request-id', 'traceparent', 'tracestate',
+    'accept-encoding', 'transfer-encoding', 'x-request-id', 'traceparent', 'tracestate',
 }
 IGNORE_BODY_KEYS = {'client_ts', 'client_send_ts', 'device_session_id'}
 
@@ -36,7 +36,10 @@ def norm_headers(h):
         lk = k.lower()
         if lk in IGNORE_HEADERS or 'time' in lk:
             continue
-        out[lk] = v if not isinstance(v, list) else ','.join(map(str, v))
+        v = v if not isinstance(v, list) else ','.join(map(str, v))
+        if lk == 'content-type':
+            v = re.sub(r';\s*boundary=[^;]*', '', v)
+        out[lk] = v
     return out
 
 
@@ -60,6 +63,9 @@ def flatten(obj, prefix=''):
         for i, v in enumerate(obj):
             out.update(flatten(v, f'{prefix}[{i}].'))
     else:
+        if isinstance(obj, str):
+            # 服务端分配的随机 id（mock 每次上传生成新的 file-*）
+            obj = re.sub(r'file-[A-Za-z0-9]{6,}', 'file-<id>', obj)
         out[prefix or '$'] = obj
     return out
 
@@ -91,9 +97,12 @@ def compare_req(a, b, idx, errors):
             if va != vb:
                 errors.append(f'{tag}: body {k}: {va!r} != {vb!r}')
     elif 'multipart' in str(a.get('headers', {}).get('content-type', '')):
-        fa, fb = multipart_fields(ba), multipart_fields(bb)
-        if [n for n, _ in fa] != [n for n, _ in fb]:
-            errors.append(f'{tag}: multipart fields {fa} != {fb}')
+        if not ba or not bb:
+            pass  # refdrive 的 CDP 拦截拿不到上传 body；只能比对单侧，跳过
+        else:
+            fa, fb = multipart_fields(ba), multipart_fields(bb)
+            if [n for n, _ in fa] != [n for n, _ in fb]:
+                errors.append(f'{tag}: multipart fields {fa} != {fb}')
     elif ba != bb:
         errors.append(f'{tag}: raw body differs ({len(ba)}B vs {len(bb)}B)')
 

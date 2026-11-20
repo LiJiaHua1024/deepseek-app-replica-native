@@ -265,7 +265,7 @@ function handle(req, res) {
         for (let i = users.length - 1; i >= 0; i--) {
           const c = users[i].content;
           const text = (Array.isArray(c) ? c.find((p) => p && p.text)?.text : c) || '';
-          const m = /^(thinking|long|slow|interrupted|401|402|429|500|refused|hold|search|md|code|math|table|mermaid)$/i.exec(String(text).trim());
+          const m = /^(thinking|long|slow|interrupted|401|402|429|500|refused|hold|search|md|code|math|table|mermaid|toolong)$/i.exec(String(text).trim());
           if (m) { scenario = m[1].toLowerCase(); break; }
         }
       } catch (e) {}
@@ -280,6 +280,17 @@ function handle(req, res) {
         case 'hold': return blockReply({ text: REPLY, delay: 60, holdAfter: REPLY.indexOf('- 列表项一') - 2 })(res);
         case 'interrupted': return blockReply({ text: REPLY, drop: true })(res);
         case 'search': return searchReply(res);
+        case 'toolong': {
+          // real API rejects the extended-mode request (tools/safety_check/title)
+          // on over-long input; the stripped retry succeeds.
+          try {
+            const parsed = JSON.parse(body);
+            if (parsed.tools || parsed.safety_check || parsed.title) {
+              return send(res, 400, { error: { message: 'user input too long, 40000 tokens exceeds max 32768 tokens' } });
+            }
+          } catch (e) {}
+          return blockReply({ text: REPLY })(res);
+        }
         case 'refused':
           return blockReply({ text: '你好，这个问题我暂时无法回答，让我们换个话题再聊聊吧。' })(res);
         case 'md':

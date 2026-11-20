@@ -65,14 +65,14 @@ open_drawer() {
 
 case "$SCENE" in
   apikey|apikey.default)
-    launch; wait_text "输入 API Key" 20; sleep 0.3 ;;
+    launch; wait_text "输入 API Key|Enter API Key" 20; sleep 0.3 ;;
   apikey.invalid|apikey_error)
-    launch; wait_text "输入 API Key" 20
+    launch; wait_text "输入 API Key|Enter API Key" 20
     tap_edittext 0; sleep 0.4; $ADB shell input text "sk-wrong-key"; sleep 0.3
     tap_node "^确定$|^Confirm$"; wait_text "无效|invalid|Invalid" 15
     $ADB shell input keyevent KEYCODE_BACK; sleep 0.8 ;;
   apikey.verifying)
-    launch; wait_text "输入 API Key" 20
+    launch; wait_text "输入 API Key|Enter API Key" 20
     curl -s "http://localhost:8321/__set_delay?ms=1500" >/dev/null
     tap_edittext 0; sleep 0.4; $ADB shell input text "$KEY"; sleep 0.3
     tap_node "^确定$|^Confirm$"; sleep 0.5
@@ -203,7 +203,7 @@ EOF
   attachments|attachments.default)
     enter_key
     $ADB shell pm grant $PKG android.permission.READ_MEDIA_IMAGES >/dev/null 2>&1 || true
-    tap_node "uploadFile|上传文件"
+    tap_node "Upload|uploadFile|上传文件"
     wait_text "相册|Gallery|相册" 10; sleep 0.8
     # tap 2 recent-photo thumbs: row sits ~314px above the 相册 label center
     a=$(find_node "相册|Gallery"); ay=$(echo "$a" | awk '{print $2}')
@@ -214,7 +214,8 @@ EOF
     enter_key
     $ADB shell 'echo "parity test document" > /sdcard/Documents/parity_note.txt; chmod 0666 /sdcard/Documents/parity_note.txt'
     $ADB shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Documents/parity_note.txt >/dev/null 2>&1
-    tap_node "uploadFile|上传文件"
+    tap_node "Upload|uploadFile|上传文件"; sleep 1
+    tap_node "Allow all|允许所有|ALLOW ALL|while using" 2>/dev/null; sleep 1
     wait_text "^文件$|^Files$" 10; sleep 0.4
     tap_node "^文件$|^Files$"   # panel action -> DocumentsUI (OpenMultipleDocuments)
     wait_node "parity_note" 25; sleep 0.5
@@ -227,7 +228,7 @@ EOF
   imageviewer|imageviewer.default)
     enter_key
     $ADB shell pm grant $PKG android.permission.READ_MEDIA_IMAGES >/dev/null 2>&1 || true
-    tap_node "uploadFile|上传文件"
+    tap_node "Upload|uploadFile|上传文件"
     wait_text "相册|Gallery" 10; sleep 0.8
     a=$(find_node "相册|Gallery"); ay=$(echo "$a" | awk '{print $2}')
     py=$((ay - 314))
@@ -239,6 +240,32 @@ EOF
     enter_key; send_msg "search"
     wait_text "个网页|pages" 45; sleep 0.6
     tap_node "个网页|pages$"; sleep 1 ;;
+  net.record)
+    # pm-clear first so enter_key does a real GET /models verify.
+    # Records: /models, /messages, /messages+search, /files+/messages(file),
+    # /messages 400 too-long + stripped retry.
+    enter_key; send_msg "你好"
+    wait_text "结束" 45; sleep 0.5
+    tap_node "智能搜索|Search|联网搜索"; sleep 0.5
+    send_msg "search"
+    $ADB shell input keyevent KEYCODE_BACK; sleep 0.4  # dismiss IME so reply area is visible
+    $ADB shell input swipe 540 1700 540 500 300; sleep 0.4
+    $ADB shell input swipe 540 1700 540 500 300; sleep 0.4
+    wait_text "个网页|pages" 45; sleep 0.5
+    $ADB shell 'echo "parity test document" > /sdcard/Documents/parity_note.txt; chmod 0666 /sdcard/Documents/parity_note.txt'
+    $ADB shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Documents/parity_note.txt >/dev/null 2>&1
+    tap_node "Upload|uploadFile|上传文件"; sleep 1
+    tap_node "Allow all|允许所有|ALLOW ALL|while using" 2>/dev/null; sleep 1
+    wait_text "^文件$|^Files$" 10; sleep 0.4
+    tap_node "^文件$|^Files$"
+    wait_node "parity_note" 25; sleep 0.5
+    tap_node "parity_note"; sleep 1.2
+    c=$(find_node "^SELECT$|^Select$|^选择$" || true)
+    [ -n "$c" ] && { $ADB shell input tap $c; sleep 1.5; }
+    send_msg "refused"
+    wait_text "换个话题" 45; sleep 0.5
+    send_msg "toolong"
+    wait_text "结束" 45; sleep 0.5 ;;
   settings|settings.root)
     enter_key; open_drawer
     tap_node "^设置$|^Settings$|^API Key$"; wait_text "API Key|通用设置|语言|主题" 10; sleep 0.4 ;;
