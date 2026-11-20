@@ -464,7 +464,8 @@ private fun MessageFileView(
         io.github.lijiahua1024.dsnative.ui.input.ImagePreviewDialog(
             DraftAttachment(file.id, file.name, file.mimeType, file.isImage,
                 file.localPath ?: ""),
-            onClose = { preview = false })
+            onClose = { preview = false },
+            onDownload = {})  // ref: canDownload solo nel viewer dei messaggi
     }
 }
 

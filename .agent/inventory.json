@@ -5447,12 +5447,12 @@
   "path": "android/app/src/main/java/io/github/lijiahua1024/dsreplica/ImageSave.java",
   "type": "interaction",
   "reach": "native feature check",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "E2E verified emulator-5554 2026-11-20: msg image viewer -> tap 保存到相册 -> \"已保存到相册\" pill shown + file written to /sdcard/Pictures/_s.png via MediaStore (IS_PENDING flow API>=29, WRITE_EXTERNAL_STORAGE<=28). Draft preview has no download btn (ref parity)."
  },
  {
   "id": "native.MainActivity",

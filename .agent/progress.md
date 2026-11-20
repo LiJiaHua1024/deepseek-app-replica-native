@@ -72,3 +72,4 @@
 - Score 0.9802 / mad 1.171 (worst rects glyph-jitter only; card edge x diff <=1px after end=16->20dp fix).
 - Done: comp.FileCard(.module,.module.css.d), comp.FileIcon, comp.MessageFile(.module,.module.css.d), store.retryUpload.
 - Remaining todo: MermaidDiagram, ReadingBars(.module), native.ImageSave, native.SourceBrowserActivity.
+20 16:52 segment: native.ImageSave done - MediaStore save + status pill verified E2E on emulator; remaining todo: MermaidDiagram, ReadingBars, SourceBrowserActivity

@@ -40,6 +40,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -70,6 +75,7 @@ import io.github.lijiahua1024.dsnative.data.DraftAttachment
 import io.github.lijiahua1024.dsnative.theme.DsTheme
 import io.github.lijiahua1024.dsnative.theme.Strings
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
@@ -403,6 +409,46 @@ fun DraftAttachmentsRow(
  * ref AndroidImageViewer 预览态：全屏 dialog（#111317），图片 contain 居中，
  * 点按关闭；右下 action 行（裁剪、可下载时保存）。
  */
+
+/** ref saveAndroidImage: copia il file locale in MediaStore.Images (Pictures/).
+ *  API<=28 richiede WRITE_EXTERNAL_STORAGE a runtime; se manca ritorna false. */
+internal fun saveImageToGallery(context: Context, localPath: String?, name: String, mime: String): Boolean {
+    if (localPath.isNullOrEmpty()) return false
+    if (Build.VERSION.SDK_INT <= 28 &&
+        androidx.core.content.ContextCompat.checkSelfPermission(
+            context, android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+        ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+    ) return false
+    return try {
+        val values = android.content.ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, name)
+            put(MediaStore.Images.Media.MIME_TYPE, mime.ifEmpty { "image/*" })
+            if (Build.VERSION.SDK_INT >= 29) {
+                put(MediaStore.Images.Media.RELATIVE_PATH, android.os.Environment.DIRECTORY_PICTURES)
+                put(MediaStore.Images.Media.IS_PENDING, 1)
+            }
+        }
+        val collection = if (Build.VERSION.SDK_INT >= 29)
+            MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+        else MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        val resolver = context.contentResolver
+        val uri = resolver.insert(collection, values) ?: return false
+        val ok = resolver.openOutputStream(uri)?.use { out ->
+            java.io.File(localPath).inputStream().use { it.copyTo(out) }
+            true
+        } ?: false
+        if (!ok) { resolver.delete(uri, null, null); return false }
+        if (Build.VERSION.SDK_INT >= 29) {
+            values.clear()
+            values.put(MediaStore.Images.Media.IS_PENDING, 0)
+            resolver.update(uri, values, null, null)
+        }
+        true
+    } catch (_: Exception) {
+        false
+    }
+}
+
 @Composable
 fun ImagePreviewDialog(
     item: DraftAttachment,
@@ -410,6 +456,16 @@ fun ImagePreviewDialog(
     onCrop: () -> Unit = {},
     onDownload: (() -> Unit)? = null,
 ) {
+    val dlgCtx = LocalContext.current
+    val dlgScope = rememberCoroutineScope()
+    var downloadStatus by remember { mutableStateOf<String?>(null) }
+    var downloading by remember { mutableStateOf(false) }
+    LaunchedEffect(downloadStatus) {
+        if (downloadStatus != null) {
+            kotlinx.coroutines.delay(2500)
+            downloadStatus = null
+        }
+    }
     Dialog(
         onDismissRequest = onClose,
         properties = DialogProperties(usePlatformDefaultWidth = false,
@@ -469,10 +525,24 @@ fun ImagePreviewDialog(
             // .previewControls：右下 right/bottom 16px fixed（ref 用 button-nav
             // inset=0 的手势导航），gap 8。dialog 内容仍带着隐式 nav inset，
             // 用 offset 把按钮推回屏幕底边
-            Row(
+            Column(
                 Modifier.align(Alignment.BottomEnd)
                     .offset(y = 25.dp)
                     .padding(end = 16.dp, bottom = 16.dp),
+                horizontalAlignment = Alignment.End,
+            ) {
+                downloadStatus?.let { key ->
+                    // ref .downloadStatus: pill sopra i bottoni, pad 6/12 r8 bg image-toolbar
+                    Box(
+                        Modifier.padding(bottom = 8.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF20242B))
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(Strings.get(key), color = Color(0xFFF7F9FC), fontSize = 14.sp)
+                    }
+                }
+            Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Row(
@@ -492,7 +562,20 @@ fun ImagePreviewDialog(
                     Row(
                         Modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp))
                             .background(Color(0xFF20242B))
-                            .clickable(onClick = onDownload)
+                            .clickable(enabled = !downloading) {
+                                downloading = true
+                                downloadStatus = null
+                                dlgScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                    val ok = saveImageToGallery(
+                                        dlgCtx, item.localPath, item.name, item.mimeType)
+                                    withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                        downloadStatus = if (ok) "androidImageSaved"
+                                            else "androidImageSaveFailed"
+                                        downloading = false
+                                    }
+                                }
+                                onDownload()
+                            }
                             .padding(horizontal = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -503,6 +586,7 @@ fun ImagePreviewDialog(
                             color = Color(0xFFF7F9FC), fontSize = 15.sp)
                     }
                 }
+            }
             }
         }
     }
