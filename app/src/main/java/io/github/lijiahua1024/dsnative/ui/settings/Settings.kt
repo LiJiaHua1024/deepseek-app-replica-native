@@ -58,18 +58,29 @@ fun ApiKeyScreen(settings: SettingsStore) {
         Text(Strings.get("apiKeyStart"), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = c.labelPrimary,
             modifier = Modifier.padding(top = 2.dp, bottom = 6.dp))
         Spacer(Modifier.height(18.dp))
-        OutlinedTextField(
-            value = key, onValueChange = { key = it; error = null },
-            placeholder = { Text(Strings.get("apiKeyPlaceholder"), color = c.labelTertiary) },
-            visualTransformation = PasswordVisualTransformation(),
-            singleLine = true,
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth().height(48.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = c.borderL2, focusedBorderColor = c.borderL2,
-                unfocusedContainerColor = Color.Transparent, focusedContainerColor = Color.Transparent,
-            ),
-        )
+        // BasicTextField in a bordered box: OutlinedTextField's fixed internal
+        // padding crops the glyphs at the ref's 48dp field height.
+        Box(
+            Modifier.fillMaxWidth().height(48.dp)
+                .border(1.dp, c.borderL2, RoundedCornerShape(16.dp))
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            androidx.compose.foundation.text.BasicTextField(
+                value = key, onValueChange = { key = it; error = null },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 16.sp, color = c.labelPrimary),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(c.brandPrimary),
+                modifier = Modifier.fillMaxWidth(),
+                decorationBox = { inner ->
+                    if (key.isEmpty()) {
+                        Text(Strings.get("apiKeyPlaceholder"), fontSize = 16.sp, color = c.labelTertiary)
+                    }
+                    inner()
+                },
+            )
+        }
         error?.let {
             Spacer(Modifier.height(18.dp))
             Text(it, color = c.stateErrorPrimary, fontSize = 14.sp)
