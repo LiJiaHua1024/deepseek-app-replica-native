@@ -394,7 +394,7 @@ private fun SourceItem(source: Source, numbered: Boolean, single: Boolean) {
                 val date = formatSourceDate(source.publishedAt)
                 if (date.isNotEmpty()) {
                     Spacer(Modifier.width(10.36.dp))
-                    Text(date, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.10.sp, color = c.labelTertiary,
+                    Text(date, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.10.sp, color = c.searchResultDate,
                         maxLines = 1)
                 }
             }
@@ -408,7 +408,7 @@ private fun SourceItem(source: Source, numbered: Boolean, single: Boolean) {
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(source.index.toString(), fontSize = 12.sp, lineHeight = 18.sp,
-                        color = c.labelTertiary, fontFamily = FontFamily.Monospace)
+                        color = c.searchResultNumber, fontFamily = FontFamily.Monospace)
                 }
             }
         }
@@ -418,7 +418,7 @@ private fun SourceItem(source: Source, numbered: Boolean, single: Boolean) {
                 modifier = Modifier.padding(top = 12.dp))
         }
         source.snippet?.let {
-            Text(it, fontSize = 15.sp, lineHeight = 23.sp, letterSpacing = 0.10.sp, color = c.labelTertiary,
+            Text(it, fontSize = 15.sp, lineHeight = 23.sp, letterSpacing = 0.10.sp, color = c.searchResultSnippet,
                 maxLines = if (single) 4 else 2, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 5.dp))
         }
