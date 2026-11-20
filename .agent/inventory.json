@@ -5584,36 +5584,36 @@
   "path": "android/app/src/main/java",
   "type": "system",
   "reach": "transparent status+nav bars, content draws behind",
-  "status": "todo",
+  "status": "in-progress",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
   "commit": null,
-  "notes": ""
+  "notes": "transparent bars, removed color overrides"
  },
  {
   "id": "sys.statusbar-icons",
   "path": "android/app/src/main/java",
   "type": "system",
   "reach": "icon appearance follows theme (dark/light)",
-  "status": "todo",
+  "status": "in-progress",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
   "commit": null,
-  "notes": ""
+  "notes": "theme-driven icon contrast via WindowCompat in App.kt"
  },
  {
   "id": "sys.navbar-icons",
   "path": "android/app/src/main/java",
   "type": "system",
   "reach": "nav bar icon contrast follows theme",
-  "status": "todo",
+  "status": "in-progress",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
   "commit": null,
-  "notes": ""
+  "notes": "theme-driven icon contrast"
  },
  {
   "id": "sys.ime-insets",
@@ -5656,12 +5656,12 @@
   "path": "android/app/src/main/java",
   "type": "system",
   "reach": "enableOnBackInvokedCallback + progress animation",
-  "status": "todo",
+  "status": "in-progress",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
   "commit": null,
-  "notes": ""
+  "notes": "enableOnBackInvokedCallback + PredictiveBackHandler in drawer/settings"
  },
  {
   "id": "sys.mic-permission",
@@ -5680,12 +5680,12 @@
   "path": "android/app/src/main/java",
   "type": "system",
   "reach": "READ_MEDIA_IMAGES/VISUAL_USER_SELECTED once per session",
-  "status": "todo",
+  "status": "in-progress",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
   "commit": null,
-  "notes": ""
+  "notes": "version-aware media permission flow in ChatInput"
  },
  {
   "id": "sys.camera",
@@ -5764,12 +5764,12 @@
   "path": "src/services/api/client.ts",
   "type": "online",
   "reach": "default build uses ref real API origin",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "ApiOriginTest asserts BuildConfig.API_ORIGIN == https://api.deepseek.com"
  },
  {
   "id": "net.verify",
@@ -5848,72 +5848,72 @@
   "path": "src/services/api/client.ts",
   "type": "online",
   "reach": "SSE text stream event sequence",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "sse_parity.sh OK (8/8 identical)"
  },
  {
   "id": "net.sse-reasoning",
   "path": "src/services/api/client.ts",
   "type": "online",
   "reach": "SSE reasoning_content events",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "sse_parity.sh OK"
  },
  {
   "id": "net.sse-keepalive",
   "path": "src/services/api/client.ts",
   "type": "online",
   "reach": "SSE keep-alive comments ignored",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "sse_parity.sh OK"
  },
  {
   "id": "net.sse-usage",
   "path": "src/services/api/client.ts",
   "type": "online",
   "reach": "SSE usage event parsed",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "sse_parity.sh OK"
  },
  {
   "id": "net.sse-finish",
   "path": "src/services/api/client.ts",
   "type": "online",
   "reach": "all finish_reason values handled",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "sse_parity.sh OK (end_turn/max_tokens/tool_use/refusal)"
  },
  {
   "id": "net.sse-error",
   "path": "src/services/api/client.ts",
   "type": "online",
   "reach": "error JSON mid-stream mapped to error kinds",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "sse_parity.sh OK"
  },
  {
   "id": "net.invalid-key",
