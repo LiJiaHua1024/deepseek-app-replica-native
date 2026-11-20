@@ -4924,396 +4924,396 @@
   "path": "src/components/base/IconButton.module.css",
   "type": "press",
   "reach": "app shell scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "presscheck 1.0000/0.01 (ref hold vs native MotionServer hold)"
  },
  {
   "id": "press.AndroidAttachments.module",
   "path": "src/components/chatInput/AndroidAttachments.module.css",
   "type": "press",
   "reach": "composer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "presscheck 1.0000/0.00 (ref hold vs native MotionServer hold)"
  },
  {
   "id": "press.ChatInput.module",
   "path": "src/components/chatInput/ChatInput.module.css",
   "type": "press",
   "reach": "composer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "presscheck 1.0000/0.00 (ref hold vs native MotionServer hold)"
  },
  {
   "id": "press.VoiceButton.module",
   "path": "src/components/chatInput/VoiceButton.module.css",
   "type": "press",
   "reach": "composer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "presscheck 1.0000/0.00 (ref hold vs native MotionServer hold)"
  },
  {
   "id": "press.CodeBlock.module",
   "path": "src/components/markdown/CodeBlock.module.css",
   "type": "press",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "presscheck 1.0000/0.00 (ref hold vs native MotionServer hold)"
  },
  {
   "id": "press.AndroidSearchPanel.module",
   "path": "src/components/search/AndroidSearchPanel.module.css",
   "type": "press",
   "reach": "search scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "presscheck 0.9904/1.68 (ref hold vs native MotionServer hold)"
  },
  {
   "id": "press.AndroidSettings.module",
   "path": "src/components/settings/AndroidSettings.module.css",
   "type": "press",
   "reach": "settings scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "presscheck 1.0000/0.00 (ref hold vs native MotionServer hold)"
  },
  {
   "id": "press.SessionItem.module",
   "path": "src/components/sider/SessionItem.module.css",
   "type": "press",
   "reach": "drawer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "presscheck 0.9991/0.43 (ref hold vs native MotionServer hold)"
  },
  {
   "id": "press.ChatInput-longpress",
   "path": "src/components/chatInput/ChatInput.tsx",
   "type": "press",
   "reach": "composer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "presscheck 1.0000/0.00 (ref hold vs native MotionServer hold)"
  },
  {
   "id": "press.UserMessage-longpress",
   "path": "src/components/messages/UserMessage.tsx",
   "type": "press",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "presscheck 0.9885/0.79 (ref hold vs native MotionServer hold)"
  },
  {
   "id": "press.SessionItem-longpress",
   "path": "src/components/sider/SessionItem.tsx",
   "type": "press",
   "reach": "drawer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "presscheck 0.9934/0.51 (ref hold vs native MotionServer hold)"
  },
  {
   "id": "trans.Button.module",
   "path": "src/components/base/Button.module.css",
   "type": "transition",
   "reach": "app shell scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "spec 对照见 .agent/trans-map.md；duration/easing/属性一致 + screenrecord 动作存在"
  },
  {
   "id": "trans.IconButton.module",
   "path": "src/components/base/IconButton.module.css",
   "type": "transition",
   "reach": "app shell scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "spec 对照见 .agent/trans-map.md；duration/easing/属性一致 + screenrecord 动作存在"
  },
  {
   "id": "trans.Select.module",
   "path": "src/components/base/Select.module.css",
   "type": "transition",
   "reach": "app shell scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "spec 对照见 .agent/trans-map.md；duration/easing/属性一致 + screenrecord 动作存在"
  },
  {
   "id": "trans.Toast.module",
   "path": "src/components/base/Toast.module.css",
   "type": "transition",
   "reach": "app shell scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "spec 对照见 .agent/trans-map.md；duration/easing/属性一致 + screenrecord 动作存在"
  },
  {
   "id": "trans.AndroidAttachments.module",
   "path": "src/components/chatInput/AndroidAttachments.module.css",
   "type": "transition",
   "reach": "composer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "spec 对照见 .agent/trans-map.md；duration/easing/属性一致 + screenrecord 动作存在"
  },
  {
   "id": "trans.AndroidVoiceOverlay.module",
   "path": "src/components/chatInput/AndroidVoiceOverlay.module.css",
   "type": "transition",
   "reach": "composer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "spec 对照见 .agent/trans-map.md；duration/easing/属性一致 + screenrecord 动作存在"
  },
  {
   "id": "trans.ChatInput.module",
   "path": "src/components/chatInput/ChatInput.module.css",
   "type": "transition",
   "reach": "composer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "spec 对照见 .agent/trans-map.md；duration/easing/属性一致 + screenrecord 动作存在"
  },
  {
   "id": "trans.VoiceButton.module",
   "path": "src/components/chatInput/VoiceButton.module.css",
   "type": "transition",
   "reach": "composer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "spec 对照见 .agent/trans-map.md；duration/easing/属性一致 + screenrecord 动作存在"
  },
  {
   "id": "trans.AndroidImageViewer.module",
   "path": "src/components/files/AndroidImageViewer.module.css",
   "type": "transition",
   "reach": "attachment/image-viewer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "spec 对照见 .agent/trans-map.md；duration/easing/属性一致 + screenrecord 动作存在"
  },
  {
   "id": "trans.FileCard.module",
   "path": "src/components/files/FileCard.module.css",
   "type": "transition",
   "reach": "attachment/image-viewer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "spec 对照见 .agent/trans-map.md；duration/easing/属性一致 + screenrecord 动作存在"
  },
  {
   "id": "trans.markdown",
   "path": "src/components/markdown/markdown.css",
   "type": "transition",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "n-a",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
   "commit": null,
-  "notes": ""
+  "notes": "n-a: 仅 hover-scoped link 过渡，触屏无 hover"
  },
  {
   "id": "trans.AssistantMessage.module",
   "path": "src/components/messages/AssistantMessage.module.css",
   "type": "transition",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "spec 对照见 .agent/trans-map.md；duration/easing/属性一致 + screenrecord 动作存在"
  },
  {
   "id": "trans.MessageFile.module",
   "path": "src/components/messages/MessageFile.module.css",
   "type": "transition",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "spec 对照见 .agent/trans-map.md；duration/easing/属性一致 + screenrecord 动作存在"
  },
  {
   "id": "trans.ReadingBars.module",
   "path": "src/components/messages/ReadingBars.module.css",
   "type": "transition",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "spec 对照见 .agent/trans-map.md；duration/easing/属性一致 + screenrecord 动作存在"
  },
  {
   "id": "trans.ReplyArea.module",
   "path": "src/components/messages/ReplyArea.module.css",
   "type": "transition",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "spec 对照见 .agent/trans-map.md；duration/easing/属性一致 + screenrecord 动作存在"
  },
  {
   "id": "trans.UserMessage.module",
   "path": "src/components/messages/UserMessage.module.css",
   "type": "transition",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "spec 对照见 .agent/trans-map.md；duration/easing/属性一致 + screenrecord 动作存在"
  },
  {
   "id": "trans.AndroidSearchPanel.module",
   "path": "src/components/search/AndroidSearchPanel.module.css",
   "type": "transition",
   "reach": "search scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "spec 对照见 .agent/trans-map.md；duration/easing/属性一致 + screenrecord 动作存在"
  },
  {
   "id": "trans.SearchPanel.module",
   "path": "src/components/search/SearchPanel.module.css",
   "type": "transition",
   "reach": "search scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "spec 对照见 .agent/trans-map.md；duration/easing/属性一致 + screenrecord 动作存在"
  },
  {
   "id": "trans.SiteLogo.module",
   "path": "src/components/search/SiteLogo.module.css",
   "type": "transition",
   "reach": "search scenes",
-  "status": "todo",
+  "status": "n-a",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
   "commit": null,
-  "notes": ""
+  "notes": "n-a: box-shadow hover 态，触屏无等价物"
  },
  {
   "id": "trans.AndroidSettings.module",
   "path": "src/components/settings/AndroidSettings.module.css",
   "type": "transition",
   "reach": "settings scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "spec 对照见 .agent/trans-map.md；duration/easing/属性一致 + screenrecord 动作存在"
  },
  {
   "id": "trans.Settings.module",
   "path": "src/components/settings/Settings.module.css",
   "type": "transition",
   "reach": "settings scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "spec 对照见 .agent/trans-map.md；duration/easing/属性一致 + screenrecord 动作存在"
  },
  {
   "id": "trans.Sider.module",
   "path": "src/components/sider/Sider.module.css",
   "type": "transition",
   "reach": "drawer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "spec 对照见 .agent/trans-map.md；duration/easing/属性一致 + screenrecord 动作存在"
  },
  {
   "id": "back.sider",
@@ -5584,180 +5584,180 @@
   "path": "android/app/src/main/java",
   "type": "system",
   "reach": "transparent status+nav bars, content draws behind",
-  "status": "in-progress",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": "transparent bars, removed color overrides"
+  "notes": "transparent bars verified in screenshots; no forced bar color"
  },
  {
   "id": "sys.statusbar-icons",
   "path": "android/app/src/main/java",
   "type": "system",
   "reach": "icon appearance follows theme (dark/light)",
-  "status": "in-progress",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": "theme-driven icon contrast via WindowCompat in App.kt"
+  "notes": "WindowCompat theme-driven contrast; dark-mode captures show light icons"
  },
  {
   "id": "sys.navbar-icons",
   "path": "android/app/src/main/java",
   "type": "system",
   "reach": "nav bar icon contrast follows theme",
-  "status": "in-progress",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": "theme-driven icon contrast"
+  "notes": "theme-driven nav contrast verified in captures"
  },
  {
   "id": "sys.ime-insets",
   "path": "android/app/src/main/java",
   "type": "system",
   "reach": "composer follows keyboard, bottom padding switches",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "composer rides above IME; bottom padding switches (welcome.keyboard capture)"
  },
  {
   "id": "sys.cold-start",
   "path": "android/app/src/main/java",
   "type": "system",
   "reach": "launch to first frame without stale splash band",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "cold launch first frame white, no stale band (/tmp/cold.png)"
  },
  {
   "id": "sys.process-death",
   "path": "android/app/src/main/java",
   "type": "system",
   "reach": "state restore after process kill",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "am kill + relaunch restored session, history, search toggle (/tmp/pdeath.png)"
  },
  {
   "id": "sys.predictive-back",
   "path": "android/app/src/main/java",
   "type": "system",
   "reach": "enableOnBackInvokedCallback + progress animation",
-  "status": "in-progress",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": "enableOnBackInvokedCallback + PredictiveBackHandler in drawer/settings"
+  "notes": "enableOnBackInvokedCallback + PredictiveBackHandler drives drawer scrim/progress"
  },
  {
   "id": "sys.mic-permission",
   "path": "android/app/src/main/java",
   "type": "system",
   "reach": "RECORD_AUDIO runtime request before voice input",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "RECORD_AUDIO launcher fired before voice UI (ChatInput.kt:141,151)"
  },
  {
   "id": "sys.photos-permission",
   "path": "android/app/src/main/java",
   "type": "system",
   "reach": "READ_MEDIA_IMAGES/VISUAL_USER_SELECTED once per session",
-  "status": "in-progress",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": "version-aware media permission flow in ChatInput"
+  "notes": "version-aware READ_MEDIA_IMAGES/VISUAL_USER_SELECTED; grant dialog handled in scenes"
  },
  {
   "id": "sys.camera",
   "path": "android/app/src/main/java",
   "type": "system",
   "reach": "ACTION_IMAGE_CAPTURE via FileProvider uri",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "TakePicture contract + FileProvider uri (ChatInput.kt:125,367)"
  },
  {
   "id": "sys.picker-images",
   "path": "android/app/src/main/java",
   "type": "system",
   "reach": "ACTION_PICK_IMAGES multi-select",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "PickMultipleVisualMedia multi-select (ChatInput.kt:118)"
  },
  {
   "id": "sys.picker-docs",
   "path": "android/app/src/main/java",
   "type": "system",
   "reach": "document picker for non-image attachments",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "OpenMultipleDocuments for non-image attach (ChatInput.kt:121); DocumentsUI flow driven in netcheck"
  },
  {
   "id": "sys.clipboard",
   "path": "android/app/src/main/java",
   "type": "system",
   "reach": "message/copy uses clipboard",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "copy uses ClipboardManager in code block/message/mermaid"
  },
  {
   "id": "sys.share-images",
   "path": "android/app/src/main/java",
   "type": "system",
   "reach": "image viewer share/save actions",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "ref viewer only saves (no share); MediaStore save implemented = parity"
  },
  {
   "id": "sys.haptics",
   "path": "android/app/src/main/java",
   "type": "system",
   "reach": "long-press / hold-to-talk haptic feedback",
-  "status": "todo",
+  "status": "n-a",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "n-a: reference has no haptic feedback at all"
  },
  {
   "id": "net.api-origin",

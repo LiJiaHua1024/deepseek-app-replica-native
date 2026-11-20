@@ -21,7 +21,23 @@ dump() { $ADB shell uiautomator dump $DUMP >/dev/null 2>&1; $ADB shell cat $DUMP
 find_node() { for i in 1 2 3; do dump; local c; c=$(python3 "$REPO/tools/uiauto.py" find /tmp/dsn.xml "$1" 2>/dev/null) && { echo "$c"; return 0; }; sleep 0.5; done; return 1; }
 wait_node() { local deadline=$((SECONDS + ${2:-15})); while [ $SECONDS -lt $deadline ]; do find_node "$1" >/dev/null 2>&1 && return 0; sleep 0.4; done; return 1; }
 tap_node() { local c; c=$(find_node "$1") || return 1; $ADB shell input tap $c; }
-shot() { if ! $ADB exec-out screencap -p > "$1" 2>/dev/null || [ ! -s "$1" ]; then $ADB shell screencap -p /sdcard/_s.png >/dev/null 2>&1 && $ADB pull /sdcard/_s.png "$1" >/dev/null 2>&1; fi }
+shot() { # out.png — validate PNG signature, retry on truncated/empty captures
+  local i
+  for i in 1 2 3 4 5 6; do
+    if ! $ADB exec-out screencap -p > "$1" 2>/dev/null || [ ! -s "$1" ]; then
+      $ADB shell screencap -p /sdcard/_s.png >/dev/null 2>&1 && $ADB pull /sdcard/_s.png "$1" >/dev/null 2>&1
+    fi
+    [ -s "$1" ] && head -c4 "$1" | grep -q 'PNG' && return 0
+    sleep 2
+  done
+  # screencap 死窗兜底：screenrecord 走 MediaCodec 不经 SurfaceFlinger 快照
+  $ADB shell rm -f /sdcard/_fb.mp4
+  $ADB shell "screenrecord --time-limit 2 /sdcard/_fb.mp4 >/dev/null 2>&1"
+  $ADB pull /sdcard/_fb.mp4 /tmp/_fb.mp4 >/dev/null 2>&1 && \
+    ffmpeg -y -loglevel error -sseof -0.2 -i /tmp/_fb.mp4 -update 1 -frames:v 1 "$1" 2>/dev/null && \
+    [ -s "$1" ] && head -c4 "$1" | grep -q 'PNG' && return 0
+  echo "shot failed: $1" >&2; return 1
+}
 
 mock() { curl -s -o /dev/null http://localhost:8321/models || setsid nohup ~/tools/node22/bin/node "$REPO/tools/mock-api/server.js" >/tmp/mock.log 2>&1 & sleep 0.6; }
 
@@ -109,7 +125,10 @@ press_native() { # regex holdms out.png — MotionServer hold; UP lands off-targ
 }
 
 ref_scene() { # scene sel — drives ref app into state, prints element coords
-  $ADB shell am force-stop $RPKG >/dev/null 2>&1; sleep 0.6
+  # 冷启动消除上一场景残留；必须等旧进程真死掉，
+  # 否则 refdrive 会 attach 到垂死 WebView 读到残留 DOM
+  $ADB shell am force-stop $RPKG >/dev/null 2>&1
+  for i in $(seq 1 25); do [ -z "$($ADB shell pidof $RPKG 2>/dev/null | tr -d '\r')" ] && break; sleep 0.3; done
   PRESS_SEL="$2" node "$REPO/tools/refdrive.mjs" "$SERIAL" "$RPKG" "$1" "$OUT/_ref_base.png" >/tmp/refdrive.log 2>&1 \
     || { echo "refdrive $1 failed"; tail -3 /tmp/refdrive.log; return 1; }
   grep '^PRESSXY' /tmp/refdrive.log | tail -1
@@ -136,8 +155,9 @@ run() { # id refscene refsel natregex mode native_setup
     # 场景自身已呈菜单态（WebView 长按只产生文本选择）——直接用场景截图
     cp "$OUT/_ref_base.png" "$OUT/ref_$id.png"
   else
-    [ -z "$xy" ] && { echo "$id: ref element missing"; tail -3 /tmp/refdrive.log; return 1; }
-    hold_at $xy "$holdms" "$OUT/ref_$id.png"
+    local xyt="${xy//[[:space:]]/}"
+    [ -z "$xyt" -o "$xyt" = "none" ] && { echo "$id: ref element missing"; tail -3 /tmp/refdrive.log; return 1; }
+    hold_at $xy "$holdms" "$OUT/ref_$id.png" || return 1
   fi
   waitdev || { echo "$id: device lost"; return 1; }
   "$@" || { echo "$id: native setup failed"; return 1; }
@@ -166,13 +186,13 @@ ENTRIES="${@:-iconbtn attachments chatinput voicebtn codeblock searchpanel setti
 mock
 for e in $ENTRIES; do
   case "$e" in
-    iconbtn)       run iconbtn      welcome.default      "document.querySelector('button[aria-label=\\"打开边栏\\"],button[aria-label=\\"Open sidebar\\"]')" "打开边栏|Open sidebar" press s_home ;;
+    iconbtn)       run iconbtn      welcome.default      "document.querySelector('button[aria-label=\"打开边栏\"],button[aria-label=\"Open sidebar\"]')" "打开边栏|Open sidebar" press s_home ;;
     attachments)   run attachments  attachments.default  "[...document.querySelectorAll('button')].find(b=>/拍照|Camera/.test(b.textContent))" "拍照|Camera" press s_attach ;;
     chatinput)     run chatinput    welcome.default      "document.querySelector('textarea')" "按住说话|[Hh]old to talk|Message or" press s_home ;;
-    voicebtn)      run voicebtn     welcome.default      "document.querySelector('button[aria-label*=\\"oice\\"],button[aria-label*=\\"语音\\"]')" "语音输入|Voice input|oice" press s_home ;;
+    voicebtn)      run voicebtn     welcome.default      "document.querySelector('button[aria-label*=\"oice\"],button[aria-label*=\"语音\"]')" "语音输入|Voice input|oice" press s_home ;;
     codeblock)     run codeblock    chat.code            "[...document.querySelectorAll('button')].find(b=>/复制|Copy/.test(b.textContent))" "复制|Copy" press s_code ;;
     searchpanel)   run searchpanel  searchpanel.default  "[...document.querySelectorAll('a,li,div')].find(e=>/Technical Report|example-c/.test(e.textContent)&&e.getBoundingClientRect().height<220)" "Technical Report|example-c.org|DeepSeek 发布" press s_search ;;
-    settings)      run settings     settings.root        "[...document.querySelectorAll('button,div,li,a')].filter(e=>/^\\s*(外观|Appearance)\\s*$/.test(e.textContent.trim())&&e.getBoundingClientRect().height<90).pop()" "外观|Appearance" press s_sett ;;
+    settings)      run settings     settings.root        "[...document.querySelectorAll('button,div,li,a')].filter(e=>/^(外观|Appearance)/.test(e.textContent.trim())&&e.getBoundingClientRect().height<90).pop()" "外观|Appearance" press s_sett ;;
     sessionitem)   run sessionitem  sider.sessions       "[...document.querySelectorAll('a,li,div')].filter(e=>/^(问候|你好)$/.test(e.textContent.trim())).pop()" "你好|问候" press s_session ;;
     chatinput-lp)  run chatinput-lp welcome.default      "document.querySelector('textarea')" "按住说话|[Hh]old to talk|Message or" long  s_home ;;
     usermsg-lp)    run usermsg-lp   chat.menu            "document.body" "^refused$" menu  s_usermsg ;;

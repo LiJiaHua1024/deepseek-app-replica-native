@@ -90,7 +90,7 @@ async function launch() {
       userGesture: true,
       awaitPromise: true,
     })
-    if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description ?? 'eval failed')
+    if (r.exceptionDetails) throw new Error(`${r.exceptionDetails.exception?.description ?? 'eval failed'} | expr=${expression.slice(0, 160)}`)
     return r.result.value
   }
   await call('Runtime.enable')
@@ -189,7 +189,13 @@ async function enterKey(evaluate) {
       const pv = p && p.getBoundingClientRect().width > 0;
       const tv = t && t.getBoundingClientRect().width > 0;
       return pv ? 'key' : (tv ? 'chat' : 'none') })()`)
-  if (state === 'chat') return
+  if (state === 'chat') {
+    // 上一场景可能留下抽屉/选择态/面板——硬重载回 welcome，保证确定性
+    await evaluate('location.reload()')
+    await until('welcome composer', () => evaluate(vis('textarea')), 20000)
+    await delay(1500)
+    return
+  }
   // fast path: write the key through the native bridge (skips flaky verify)
   const bridged = await evaluate(`(window.DeepSeekAndroid && window.DeepSeekAndroid.writeApiKey(${JSON.stringify(KEY)})) || false`)
   if (bridged) {
@@ -360,17 +366,6 @@ const scenes = {
   },
   async 'welcome.default'(evaluate) {
     await enterKey(evaluate)
-    // previous scenes may leave the drawer open — click the scrim to close
-    await evaluate(`(() => {
-      const f = document.querySelector('.frame');
-      if (!f || f.getAttribute('data-drawer-open') !== 'true') return false;
-      const w = [...document.querySelectorAll('div')].find(e => {
-        const s = getComputedStyle(e); const r = e.getBoundingClientRect();
-        return s.position === 'fixed' && r.width >= innerWidth - 1 && r.height >= innerHeight - 1
-          && parseFloat(s.backgroundColor.match(/[\\d.]+(?=\\))/)?.[0] ?? 1) > 0;
-      });
-      if (w) { w.click(); return true }
-      return false })()`)
     await delay(500)
   },
   async 'welcome.keyboard'(evaluate) {
@@ -872,6 +867,12 @@ const scenes = {
         toggles: [...document.querySelectorAll('[class*=toggle]')].map(e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height}}),
       }) })()`)
     console.log('MEAS', meas)
+  },
+  // attach to the already-running app and evaluate REF_EXPR verbatim —
+  // used by transcheck to trigger transitions inside a screenrecord window
+  async evalonly(evaluate) {
+    const r = await evaluate(process.env.REF_EXPR ?? 'null')
+    console.log('EVAL', typeof r === 'object' ? JSON.stringify(r) : r)
   },
 }
 
