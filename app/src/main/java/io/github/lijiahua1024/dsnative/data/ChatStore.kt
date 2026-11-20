@@ -8,6 +8,7 @@ import io.github.lijiahua1024.dsnative.api.MODEL
 import io.github.lijiahua1024.dsnative.api.SYSTEM_PROMPT
 import io.github.lijiahua1024.dsnative.api.StreamSession
 import io.github.lijiahua1024.dsnative.api.openMessageStream
+import io.github.lijiahua1024.dsnative.api.uploadFile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -445,6 +446,47 @@ class ChatStore(
         }
     }
 
+    /** 补传失败的回复重置为 pending 后重发（ref retryUpload：仅 error.kind=='upload'）。 */
+    fun retryUpload(sessionId: String, messageId: String) {
+        if (_importingHistory.value || streamJobs.containsKey(sessionId)) return
+        val session = _sessionCache.value[sessionId] ?: return
+        val path = visibleMessages(session)
+        val index = path.indexOfFirst { it.id == messageId }
+        val question = path.getOrNull(index - 1) as? Message.User ?: return
+        val previous = path.getOrNull(index) as? Message.Assistant ?: return
+        if (previous.error?.kind != "upload") return
+        val reply = previous.copy(status = ReplyStatus.PENDING, error = null)
+        updateReply(sessionId, reply)
+        scope.launch { persist(sessionId) }
+        streamJobs[sessionId] = scope.launch(Dispatchers.IO) {
+            streamReply(sessionId, reply, path.subList(0, index - 1), question)
+        }
+    }
+
+    /** 需要服务端版面解析的文档扩展名（ref LAYOUT_RECOGNITION_EXTS）。 */
+    private val layoutExts = setOf("pdf", "doc", "docx", "ppt", "pptx")
+
+    /** ref getUploadPurpose：图片不传 purpose，PDF/Office 文档走版面解析，其余 user_data。 */
+    private fun uploadPurpose(name: String, isImage: Boolean): String? =
+        if (isImage) null
+        else if (layoutExts.contains(name.substringAfterLast('.', "").lowercase()))
+            "rich_layout_recognition" else "user_data"
+
+    /** 把补传得到的 serverId 写回所有引用同一附件的 user 消息（ref saveUploadedFiles）。 */
+    private fun saveUploadedFiles(sessionId: String, uploads: Map<String, String>) {
+        if (uploads.isEmpty()) return
+        scope.launch {
+            updateSession(sessionId) { session ->
+                session.copy(messages = session.messages.map { m ->
+                    if (m is Message.User && m.files.any { uploads.containsKey(it.id) }) {
+                        m.copy(files = m.files.map { f ->
+                            uploads[f.id]?.let { f.copy(serverId = it) } ?: f })
+                    } else m
+                })
+            }
+        }
+    }
+
     /** 编辑一条 user 消息并重新生成其回答（产生新版本分支）。 */
     fun editMessage(sessionId: String, messageId: String, newContent: String) {
         if (_importingHistory.value || streamJobs.containsKey(sessionId)) return
@@ -619,7 +661,30 @@ class ChatStore(
             val reminder = latestReminder()
             reply = reply.copy(latestReminder = reminder)
             updateReply(sessionId, reply)
-            val messages = toRequestMessages(history, question, reminder, prefix)
+            // ref ensureUploadedFiles/prepareFiles: 发请求前补齐附件 serverId；
+            // 补传失败归 upload 错误（kind 'upload'，由 retryUpload 重试）。
+            val pending = question.files.filter { it.serverId == null && !it.localPath.isNullOrEmpty() }
+            var preparedQuestion = question
+            if (pending.isNotEmpty()) {
+                val uploads = HashMap<String, String>()
+                for (file in pending) {
+                    try {
+                        uploads[file.id] = uploadFile(
+                            settings.apiKey.value ?: "", File(file.localPath!!),
+                            file.name, file.mimeType, uploadPurpose(file.name, file.isImage))
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        throw ApiError(ApiErrorKind.UPLOAD,
+                            (e as? ApiError)?.message ?: e.message ?: e.toString(),
+                            (e as? ApiError)?.status)
+                    }
+                }
+                saveUploadedFiles(sessionId, uploads)
+                preparedQuestion = question.copy(files = question.files.map { f ->
+                    uploads[f.id]?.let { f.copy(serverId = it) } ?: f })
+            }
+            val messages = toRequestMessages(history, preparedQuestion, reminder, prefix)
             val tools = JSONArray().put(
                 JSONObject().put("type", "deepseek_read_url").put("name", "deepseek_read_url")
             )

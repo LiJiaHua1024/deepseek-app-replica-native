@@ -180,7 +180,7 @@ private fun decodeScaled(path: String, reqSize: Int): Bitmap? {
 }
 
 @Composable
-private fun thumbFor(path: String, sizePx: Int): ImageBitmap? {
+internal fun thumbFor(path: String, sizePx: Int): ImageBitmap? {
     val bmp by produceState<ImageBitmap?>(initialValue = null, path) {
         value = withContext(Dispatchers.IO) {
             try {

@@ -13,7 +13,8 @@ data class DraftAttachment(
     val recentPhotoId: String? = null,
 ) {
     fun toFileAttachment(size: Long) =
-        FileAttachment(id = id, name = name, size = size, isImage = isImage, mimeType = mimeType)
+        FileAttachment(id = id, name = name, size = size, isImage = isImage, mimeType = mimeType,
+            localPath = localPath)
 }
 
 @Serializable
@@ -24,6 +25,8 @@ data class FileAttachment(
     val size: Long,
     val isImage: Boolean,
     val mimeType: String = "",
+    /** 本地原件路径；缺失时（导入无原件）只展示、不上传（ref FileAttachment 语义）。 */
+    val localPath: String? = null,
 )
 
 @Serializable

@@ -13,6 +13,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,8 +24,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -260,7 +264,7 @@ fun BranchSwitcher(session: Session, msg: Message, chatStore: ChatStore) {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun UserBubble(msg: Message.User, session: Session, chatStore: ChatStore) {
     val c = DsTheme.colors
@@ -269,6 +273,20 @@ fun UserBubble(msg: Message.User, session: Session, chatStore: ChatStore) {
     var draft by remember { mutableStateOf(msg.content) }
     var menuOpen by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().padding(top = 22.dp)) {
+        // ref .files: wrap 行右对齐 gap 10px mb 8px；混排文档时缩略图 64px
+        if (msg.files.isNotEmpty()) {
+            val hasDoc = msg.files.any { !it.isImage }
+            val imgSize = if (hasDoc) 64.dp else 120.dp
+            androidx.compose.foundation.layout.FlowRow(
+                Modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp, bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                msg.files.forEach { file ->
+                    MessageFileView(session, msg, file, imgSize, chatStore)
+                }
+            }
+        }
         if (editing) {
             // ref .editor: width 100% of message column (20css px side margins),
             // brand border r22, textarea 16/24 pad 10/16, actions gap 8 margin 6/10/10
@@ -333,6 +351,120 @@ fun UserBubble(msg: Message.User, session: Session, chatStore: ChatStore) {
         }
         // editing: ref's .editor-in-textWrap leaves ~6px less room below than the bubble
         Spacer(Modifier.height(if (editing) 20.1.dp else 21.6.dp))
+    }
+}
+
+/** ref getExtension：大写扩展名。 */
+private fun fileExt(name: String) =
+    name.substringAfterLast('.', "").uppercase()
+
+/** ref formatSize：<1024 为 "N B"，KB/MB/GB <10 保留一位小数。 */
+private fun formatFileSize(bytes: Long): String {
+    if (bytes < 1024) return "$bytes B"
+    val units = listOf("KB", "MB", "GB")
+    var value = bytes / 1024.0
+    var unit = 0
+    while (value >= 1024 && unit < units.size - 1) { value /= 1024; unit++ }
+    return "${if (value < 10) "%.1f".format(value) else value.toInt()} ${units[unit]}"
+}
+
+private fun fileIconRes(ext: String): Int = when {
+    ext in setOf("JPG", "JPEG", "PNG", "GIF", "WEBP", "BMP", "SVG", "HEIC", "TIF", "TIFF") ->
+        R.drawable.ic_file_image
+    ext == "PDF" -> R.drawable.ic_file_pdf
+    ext in setOf("XLS", "XLSX", "CSV") -> R.drawable.ic_file_table
+    ext in setOf("PPT", "PPTX") -> R.drawable.ic_file_ppt
+    else -> R.drawable.ic_file_other
+}
+
+/**
+ * ref MessageFile：图片显示缩略图（纯图片 120px，混排 64px），其余显示 FileCard。
+ * 补传中的卡片显示 spinner，补传失败显示重试图标（retryable）或错误文案。
+ */
+@Composable
+private fun MessageFileView(
+    session: Session,
+    user: Message.User,
+    file: FileAttachment,
+    imgSize: androidx.compose.ui.unit.Dp,
+    chatStore: ChatStore,
+) {
+    val c = DsTheme.colors
+    var preview by remember { mutableStateOf(false) }
+    // 紧随其后的 assistant 回复若是 upload 错误则文件可重试（ref retryUploadId）
+    val path = visibleMessages(session)
+    val userIndex = path.indexOfFirst { it.id == user.id }
+    val reply = path.getOrNull(userIndex + 1) as? Message.Assistant
+    val uploadError = reply?.takeIf { it.error?.kind == "upload" }
+    val uploading = file.serverId == null && reply?.status == ReplyStatus.PENDING
+
+    if (file.isImage) {
+        Box(Modifier.size(imgSize)
+            .clip(RoundedCornerShape(16.dp))
+            .background(c.markdownPlaceholder)
+            .border(1.dp, if (uploadError != null) c.stateErrorPrimary else c.borderL2,
+                RoundedCornerShape(16.dp))
+            .clickable { preview = true }) {
+            file.localPath?.let { io.github.lijiahua1024.dsnative.ui.input.thumbFor(it, 320) }
+                ?.let { Image(it, file.name, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+            if (uploading) {
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)),
+                    contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(Modifier.size(20.dp), color = Color.White,
+                        strokeWidth = 2.dp)
+                }
+            } else if (uploadError != null) {
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f))
+                        .clickable { chatStore.retryUpload(session.id, uploadError.id) },
+                    contentAlignment = Alignment.Center) {
+                    Icon(painterResource(R.drawable.ic_refresh), null, tint = Color.White,
+                        modifier = Modifier.size(20.dp))
+                }
+            }
+        }
+    } else {
+        // ref FileCard .card：240px min-h64 pad 0/12/0/14 r16 border l2 bg input-major
+        Row(Modifier.width(240.dp).defaultMinSize(minHeight = 64.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, if (uploadError != null) c.stateErrorPrimary else c.borderL2,
+                RoundedCornerShape(16.dp))
+            .background(c.inputMajor)
+            .clickable(uploadError != null) { chatStore.retryUpload(session.id, uploadError!!.id) }
+            .padding(start = 14.dp, end = 12.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(28.dp).padding(end = 0.dp), contentAlignment = Alignment.Center) {
+                when {
+                    uploading -> CircularProgressIndicator(Modifier.size(16.dp),
+                        color = c.labelTertiary, strokeWidth = 2.dp)
+                    uploadError != null -> Icon(painterResource(R.drawable.ic_refresh), null,
+                        tint = c.labelSecondary, modifier = Modifier.size(18.dp))
+                    else -> Icon(painterResource(fileIconRes(fileExt(file.name))), null,
+                        tint = Color.Unspecified, modifier = Modifier.size(28.dp))
+                }
+            }
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
+                Text(file.name, fontSize = 14.sp, lineHeight = 22.sp,
+                    fontWeight = FontWeight.W400, color = c.labelPrimary,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    when {
+                        uploading -> Strings.get("uploadFileStatusUploading")
+                        uploadError != null -> Strings.get("uploadFileStatusFailed")
+                        else -> listOf(fileExt(file.name), formatFileSize(file.size))
+                            .filter { it.isNotEmpty() }.joinToString(" ")
+                    },
+                    fontSize = 12.sp, lineHeight = 18.sp,
+                    color = if (uploadError != null) c.stateErrorPrimary else c.labelTertiary,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+    if (preview) {
+        io.github.lijiahua1024.dsnative.ui.input.ImagePreviewDialog(
+            DraftAttachment(file.id, file.name, file.mimeType, file.isImage,
+                file.localPath ?: ""),
+            onClose = { preview = false })
     }
 }
 

@@ -7,6 +7,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
@@ -62,6 +63,45 @@ suspend fun verifyApiKey(apiKey: String): Unit = withContext(Dispatchers.IO) {
         throw e
     } catch (e: java.io.IOException) {
         throw ApiError(ApiErrorKind.NETWORK, e.message ?: e.toString())
+    }
+}
+
+/** POST /anthropic/v1/files — 返回 file_id。purpose 须在 file 之前，图片不传（ref uploadFile）。 */
+suspend fun uploadFile(
+    apiKey: String,
+    file: java.io.File,
+    name: String,
+    mimeType: String,
+    purpose: String?,
+): String = withContext(Dispatchers.IO) {
+    val multipart = okhttp3.MultipartBody.Builder().setType(okhttp3.MultipartBody.FORM)
+    if (purpose != null) {
+        multipart.addFormDataPart("purpose", purpose)
+    }
+    multipart.addFormDataPart(
+        "file", name,
+        file.asRequestBody((mimeType.ifEmpty { "application/octet-stream" }).toMediaType()),
+    )
+    val request = Request.Builder()
+        .url("$API_ORIGIN/anthropic/v1/files")
+        .header("x-api-key", apiKey)
+        .post(multipart.build())
+        .build()
+    val response = try {
+        client.newCall(request).execute()
+    } catch (e: java.io.IOException) {
+        throw ApiError(ApiErrorKind.NETWORK, e.message ?: e.toString())
+    }
+    response.use {
+        val body = it.body?.string().orEmpty()
+        if (!it.isSuccessful) {
+            throw ApiError(ApiErrorKind.HTTP, readErrorMessage(body, it.message), it.code)
+        }
+        try {
+            JSONObject(body).getString("id")
+        } catch (e: Exception) {
+            throw ApiError(ApiErrorKind.PROTOCOL, "missing file id")
+        }
     }
 }
 
