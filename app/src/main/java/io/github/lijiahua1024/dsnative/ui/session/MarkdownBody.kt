@@ -223,7 +223,7 @@ private fun RenderBlock(
     streaming: Boolean = false,
 ) {
     when (node) {
-        is Paragraph -> RenderParagraph(inlineText(node, c, uriHandler), c)
+        is Paragraph -> RenderParagraph(inlineText(node, c, uriHandler), c, streaming)
         is Heading -> {
             val (size, lh) = when (node.level) {
                 1 -> 24.sp to 34.sp
@@ -354,7 +354,7 @@ private fun RenderBlock(
 }
 
 @Composable
-private fun RenderParagraph(text: AnnotatedString, c: io.github.lijiahua1024.dsnative.theme.DsColors) {
+private fun RenderParagraph(text: AnnotatedString, c: io.github.lijiahua1024.dsnative.theme.DsColors, streaming: Boolean) {
     val segs = splitMath(text)
     if (segs.size == 1 && segs[0].second == null) {
         ParagraphText(segs[0].first, c)
@@ -363,7 +363,10 @@ private fun RenderParagraph(text: AnnotatedString, c: io.github.lijiahua1024.dsn
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         for ((str, math) in segs) {
             if (math != null) {
-                DisplayMath(math, c)
+                // ref MathBlock fallback: raw tex as a plain paragraph
+                KaTeXMath(math, streaming, c) {
+                    ParagraphText(AnnotatedString(it), c)
+                }
             } else {
                 ParagraphText(str, c)
             }

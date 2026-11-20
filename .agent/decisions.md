@@ -147,3 +147,4 @@ Worst rects: (293,1465,293,293)=0.6923, (586,1465,293,293)=0.6944,
   only a post-stream failure shows 渲染失败. CSS px == dp confirmed empirically
   (innerWidth 318 vs view dp width).
 letterSpacing retry (searchpanel): ref CJK text advances ~0.4 device px/char wider than Compose default; Compose letterSpacing 0.10sp recovers most drift (0.860->0.880); residual = per-glyph AA/positioning difference between Chromium and Minikin rasterizers
+KaTeX retry (chat.* + comp.MathFormula): display $$ math now renders via vendored KaTeX 0.16.22 in embedded WebView (fonts+lib from ref node_modules); parse errors fall back to raw tex paragraph exactly like ref MathBlock. rAF never fires reliably inside embedded WebView — gate on document.fonts.ready + setTimeout. JSON \f (\frac through JSON escaping) arrives as formfeed; ref falls back identically.

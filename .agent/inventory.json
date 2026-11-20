@@ -113,11 +113,11 @@
   "type": "screen-state",
   "reach": "shot chat.default",
   "status": "residual",
-  "blurred_ssim": 0.9665,
-  "color_mad": 1.804,
-  "attempts": 11,
+  "blurred_ssim": 0.9717,
+  "color_mad": 1.58,
+  "attempts": 12,
   "commit": null,
-  "notes": "worst rects: y1758 icons 0.82, y1172 table 0.83, y2051 pills 0.84. Tried: card shadow+border, textarea pad/minHeight calibration, contentPadding anchor, pill geometry, pill border token, statusbar/nav colors, marker disc, sound icon margin, functionRow pad. Remaining diff dominated by WebView-vs-Compose glyph rasterization on text-dense screen; all measured positions within ~5px.",
+  "notes": "worst rects: y1758 icons 0.82, y1172 table 0.83, y2051 pills 0.84. Tried: card shadow+border, textarea pad/minHeight calibration, contentPadding anchor, pill geometry, pill border token, statusbar/nav colors, marker disc, sound icon margin, functionRow pad. Remaining diff dominated by WebView-vs-Compose glyph rasterization on text-dense screen; all measured positions within ~5px. | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter",
   "备注": "residual 0.9665/1.804; worst rects [293,1172,293,293]=0.86 table ink, [293,1465]=0.87 math/KaTeX fallback, [0,1465]=0.886; tried: cssLeading trim fix, content-box table min-width, fnRow pad/gap nudge, icon spec check. KaTeX display math rendered as raw tex fallback — structural gap."
  },
  {
@@ -126,11 +126,11 @@
   "type": "screen-state",
   "reach": "shot chat.streaming",
   "status": "residual",
-  "blurred_ssim": 0.9701,
-  "color_mad": 1.538,
-  "attempts": 1,
+  "blurred_ssim": 0.97,
+  "color_mad": 1.73,
+  "attempts": 2,
   "commit": null,
-  "notes": "",
+  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter",
   "备注": "worst rect [293,2051,293,289]=composer fnRow 0.859, [293,879]=codeBanner 0.867. Tried: NotoSC font, LineHeightStyle Center+Trim.None, chip placeholders, 44dp header btns, 12dp title margin, composer bottom 52dp, ic_sound_muted size fix"
  },
  {
@@ -139,11 +139,11 @@
   "type": "screen-state",
   "reach": "shot chat.thinking",
   "status": "residual",
-  "blurred_ssim": 0.97,
+  "blurred_ssim": 0.9699,
   "color_mad": 1.655,
-  "attempts": 3,
+  "attempts": 4,
   "commit": null,
-  "notes": "",
+  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter",
   "备注": "residual 0.97/1.655; worst [293,1172]=0.857 table ink, [0,1758]=0.903 action icons +6px low (content ~6px shorter than ref -> bottom-anchored list), [293,1465]=0.914 math fallback. Tried: cssLeading, math fontFamily NotoSC, action-row pad (reverted - shifts all bands), content-box td widths."
  },
  {
@@ -165,11 +165,11 @@
   "type": "screen-state",
   "reach": "shot chat.interrupted",
   "status": "residual",
-  "blurred_ssim": 0.9712,
-  "color_mad": 1.605,
-  "attempts": 1,
+  "blurred_ssim": 0.9607,
+  "color_mad": 2.165,
+  "attempts": 2,
   "commit": "ceac381",
-  "notes": "",
+  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter",
   "备注": "residual: worst rects y586/1465 text bands ~0.89 — same glyph-rasterization root cause as chat.default residual. Fixed: INTERRUPTED+partial-content now settles STOPPED (was protocol error 未知错误), action row shows."
  },
  {
@@ -243,11 +243,11 @@
   "type": "screen-state",
   "reach": "shot chat.dark",
   "status": "residual",
-  "blurred_ssim": 0.9657,
-  "color_mad": 1.693,
-  "attempts": 1,
+  "blurred_ssim": 0.9709,
+  "color_mad": 1.462,
+  "attempts": 2,
   "commit": null,
-  "notes": "",
+  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter",
   "备注": "residual 0.9657/1.693 first shot; same worst rects as chat.default ([293,1172]=0.853 table ink, [293,1465]=0.867 math fallback, [0,1465]=0.884). Inherits all chat.default fixes (cssLeading, table min-width, fnRow). Residual gap is KaTeX display-math fallback vs raw tex + table cell ink — structural, not theme."
  },
  {
@@ -258,9 +258,9 @@
   "status": "residual",
   "blurred_ssim": 0.9717,
   "color_mad": 1.58,
-  "attempts": 1,
+  "attempts": 2,
   "commit": null,
-  "notes": "",
+  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter",
   "备注": "residual: same scene as chat.default in light theme; identical glyph-rasterization band diffs (y1172 ~0.86). All chat.default fixes already applied."
  },
  {
@@ -1324,11 +1324,11 @@
   "type": "interaction",
   "reach": "chat scenes",
   "status": "residual",
-  "blurred_ssim": 0.9767,
-  "color_mad": 1.207,
-  "attempts": 5,
+  "blurred_ssim": 0.9717,
+  "color_mad": 1.58,
+  "attempts": 6,
   "commit": null,
-  "notes": "",
+  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter",
   "note": "worst rect x0-293 y586-879 (0.806); tried: TeX parser w/ BigOp limits + stacked frac + serif glyphs; size/offset pixel-fit vs KaTeX; spacing-escape consumption; residual = KaTeX font glyph shape gap"
  },
  {

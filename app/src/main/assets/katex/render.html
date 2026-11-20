@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="katex.min.css">
+<script src="katex.min.js"></script>
+<style>
+  html, body { margin: 0; padding: 0; }
+  /* ref .ds-markdown paragraph font-size 16px; KaTeX scales 1.21em from it */
+  body { font-size: 16px; font-family: Roboto, "Noto Sans CJK SC", sans-serif; }
+  /* ref .ds-markdown-math.katex-display: padding 4px, centered, scrollable-x */
+  #d {
+    display: block;
+    text-align: center;
+    overflow-x: auto;
+    overflow-y: hidden;
+    max-width: 100%;
+    padding: 4px;
+  }
+</style>
+</head>
+<body>
+<span class="katex-display" id="d"><span class="katex" id="k"></span></span>
+<script>
+var seq = 0;
+function doRender(tex, dark) {
+  try {
+    var k = document.getElementById('k');
+    var d = document.getElementById('d');
+    d.style.color = dark ? '#F9FAFB' : '#0F0F0F';
+    var html = katex.renderToString(tex, { throwOnError: true, strict: false, displayMode: true });
+    // ref MathFormula strips the outer wrapper and re-adds .katex itself
+    k.innerHTML = html.slice('<span class="katex-display"><span class="katex">'.length,
+                             -'</span></span>'.length);
+    Android.onDone(d.offsetHeight);
+  } catch (e) {
+    Android.onError('' + e);
+  }
+}
+function render(tex, dark) {
+  // wait for the KaTeX fonts so measurement sees the real metrics.
+  // NOTE: rAF does not fire reliably in an embedded WebView; fonts.ready is
+  // enough, and a setTimeout fallback covers a stuck fonts.ready.
+  var done = false;
+  var go = function() { if (!done) { done = true; doRender(tex, dark); } };
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(go, go);
+    setTimeout(go, 1500);
+  } else go();
+}
+</script>
+</body>
+</html>
