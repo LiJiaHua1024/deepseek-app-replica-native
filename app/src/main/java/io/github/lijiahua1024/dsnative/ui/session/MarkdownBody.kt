@@ -273,7 +273,7 @@ private fun RenderBlock(
                     Row(
                         Modifier.height(28.dp)
                             .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
-                            .background(if (copyPressed) c.interactiveBgHover else androidx.compose.ui.graphics.Color.Transparent)
+                            .background(DsTheme.pressTint(copyPressed, c.interactiveBgHover))
                             .clickable(copySrc, null) {
                                 (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
                                     as android.content.ClipboardManager)

@@ -2,6 +2,7 @@ package io.github.lijiahua1024.dsnative.ui.session
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -717,15 +718,55 @@ fun ThinkingBlock(block: ReplyBlock.Thinking, msg: Message.Assistant) {
             Strings.get("messageThinkDuration", "count" to secs)
         }
     }
+    // ref ReplyArea.module.css: disclosure grid-rows 0fr->1fr 220ms cubic-bezier(0.2,0,0,1),
+    // chevron transform 220ms, .area margin-bottom 5->24px 220ms, steps opacity 160ms
+    val discEase = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
+    val chevDeg by androidx.compose.animation.core.animateFloatAsState(
+        if (expanded) 90f else 0f,
+        androidx.compose.animation.core.tween(220, easing = discEase), label = "chev")
+    val areaPad by androidx.compose.animation.core.animateDpAsState(
+        if (expanded) 24.dp else 5.dp,
+        androidx.compose.animation.core.tween(220, easing = discEase), label = "areaPad")
+    // ref .titleText.shimmer: 流式未出正文时标题文本扫光
+    // 1.5s linear infinite（gradient bg-position 100%->0，宽 400%）
+    val titleActive = msg.status == ReplyStatus.STREAMING && !hasResponse
+    val titleColor = c.thinkingText
+    val titleStyle = if (titleActive) {
+        val shimmer = androidx.compose.animation.core.rememberInfiniteTransition(label = "thinkShimmer")
+        val p = shimmer.animateFloat(0f, 1f,
+            androidx.compose.animation.core.infiniteRepeatable(
+                androidx.compose.animation.core.tween(1500,
+                    easing = androidx.compose.animation.core.LinearEasing)),
+            label = "thinkShimmerP")
+        val dim = titleColor.copy(alpha = 0.15f)
+        val w = 320f
+        TextStyle(
+            brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                0.34f to titleColor, 0.5f to dim, 0.66f to titleColor,
+                start = androidx.compose.ui.geometry.Offset(-3f * w * (1f - p.value), 0f),
+                end = androidx.compose.ui.geometry.Offset(-3f * w * (1f - p.value) + 4f * w, 0f)),
+            fontSize = 14.sp,
+        )
+    } else {
+        TextStyle(color = titleColor, fontSize = 14.sp)
+    }
     Column {
         Row(Modifier.fillMaxWidth().height(32.dp).clickable { expanded = !expanded },
             verticalAlignment = Alignment.CenterVertically) {
-            Text(title, fontSize = 14.sp, color = c.thinkingText)
+            Text(title, style = titleStyle)
             Spacer(Modifier.width(4.dp))
             Icon(painterResource(R.drawable.ic_chevron_right), null, tint = c.thinkingText,
-                modifier = Modifier.size(14.dp).rotate(if (expanded) 90f else 0f))
+                modifier = Modifier.size(14.dp).rotate(chevDeg))
         }
-        AnimatedVisibility(expanded) {
+        AnimatedVisibility(expanded,
+            enter = androidx.compose.animation.expandVertically(
+                androidx.compose.animation.core.tween(220, easing = discEase))
+                + androidx.compose.animation.fadeIn(
+                    androidx.compose.animation.core.tween(160)),
+            exit = androidx.compose.animation.shrinkVertically(
+                androidx.compose.animation.core.tween(220, easing = discEase))
+                + androidx.compose.animation.fadeOut(
+                    androidx.compose.animation.core.tween(160))) {
             Row {
                 Box(Modifier.padding(start = 7.5.dp, top = 4.dp).width(1.dp).fillMaxHeight().background(c.thinkingLine))
                 Column(Modifier.padding(start = 24.dp)) {
@@ -733,7 +774,7 @@ fun ThinkingBlock(block: ReplyBlock.Thinking, msg: Message.Assistant) {
                 }
             }
         }
-        Spacer(Modifier.height(if (expanded) 24.dp else 5.dp))
+        Spacer(Modifier.height(areaPad))
     }
 }
 

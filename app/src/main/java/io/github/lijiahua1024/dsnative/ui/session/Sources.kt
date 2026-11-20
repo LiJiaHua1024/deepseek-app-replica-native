@@ -15,6 +15,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.launch
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.Alignment
@@ -258,6 +265,26 @@ fun SearchStepRow(stepSources: List<Source>, done: Boolean, onOpen: (List<Source
 @Composable
 fun SearchSourcesPanel(sources: List<Source>, numbered: Boolean, onClose: () -> Unit) {
     val c = DsTheme.colors
+    // ref AndroidSearchPanel.module.css: scrim opacity 0->0.32 与 sheet
+    // translateY(100%)->0 共用 240ms cubic-bezier(0.2,0,0,1)；关闭同样 240ms
+    val panelEase = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
+    val prog = remember { androidx.compose.animation.core.Animatable(0f) }
+    val panelScope = androidx.compose.runtime.rememberCoroutineScope()
+    var closing by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var sheetH by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(1) }
+    LaunchedEffect(Unit) {
+        prog.animateTo(1f, androidx.compose.animation.core.tween(240, easing = panelEase))
+    }
+    val requestClose = {
+        if (!closing) {
+            closing = true
+            panelScope.launch {
+                prog.animateTo(0f, androidx.compose.animation.core.tween(240, easing = panelEase))
+                onClose()
+            }
+        }
+        Unit
+    }
     // Popup in its own window: above caveat text, a11y-visible, back/outside dismiss
     val popupPositionProvider = androidx.compose.runtime.remember {
         object : androidx.compose.ui.window.PopupPositionProvider {
@@ -273,22 +300,24 @@ fun SearchSourcesPanel(sources: List<Source>, numbered: Boolean, onClose: () -> 
         popupPositionProvider = popupPositionProvider,
         properties = androidx.compose.ui.window.PopupProperties(
             focusable = true, dismissOnBackPress = true, dismissOnClickOutside = true),
-        onDismissRequest = onClose,
+        onDismissRequest = requestClose,
     ) {
     // ref 面板底部对齐到 safe.bottom（nav inset + button-nav 余量≈75px@440dpi）
     BoxWithConstraints(Modifier.fillMaxSize().navigationBarsPadding().padding(bottom = 6.5.dp)) {
         Box(
             Modifier
                 .fillMaxSize()
-                .background(androidx.compose.ui.graphics.Color(0x52000000))
+                .background(androidx.compose.ui.graphics.Color(0x52000000).copy(alpha = 0x52 / 255f * prog.value))
                 .clickable(interactionSource = rememberMutableInteraction(),
-                    indication = null) { onClose() }
+                    indication = null) { requestClose() }
         )
         Column(
             Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .heightIn(max = this.maxHeight - 44.dp)
+                .onGloballyPositioned { sheetH = it.size.height }
+                .offset { androidx.compose.ui.unit.IntOffset(0, ((1f - prog.value) * sheetH).toInt()) }
                 .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                 .background(if (c.dark) androidx.compose.ui.graphics.Color(0xFF292929) else c.bgBase)
         ) {
@@ -348,7 +377,7 @@ private fun SourceItem(source: Source, numbered: Boolean, single: Boolean) {
     // ref AndroidSearchPanel .item:active -> opacity .65
     val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val pressed by src.collectIsPressedAsState()
-    Column(Modifier.fillMaxWidth().alpha(if (pressed) 0.65f else 1f).clickable(src, null) {
+    Column(Modifier.fillMaxWidth().alpha(DsTheme.pressAlpha(pressed, 0.65f)).clickable(src, null) {
         try {
             io.github.lijiahua1024.dsnative.SourceBrowserActivity.open(ctx, source.url, c.dark)
         } catch (_: Exception) {}
