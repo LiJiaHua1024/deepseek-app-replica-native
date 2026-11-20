@@ -348,7 +348,7 @@ private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean,
             // selection rows render as plain .select buttons — no active accent;
             // ref .item:active -> bg-skeleton
             .background(
-                if (pressed) c.bgSkeleton
+                if (pressed) DsTheme.pressTint(pressed, c.bgSkeleton)
                 else if (active && !selectionMode) c.sidebarNavItemActiveAccent
                 else androidx.compose.ui.graphics.Color.Transparent)
             .combinedClickable(pressSrc, null, onClick = onClick, onLongClick = onLongClick)

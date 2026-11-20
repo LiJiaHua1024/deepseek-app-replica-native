@@ -16,6 +16,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -240,7 +241,18 @@ fun AttachmentsPanel(
     onGallery: () -> Unit,
     onFiles: () -> Unit,
 ) {
-    if (!open) return
+    // ref AndroidAttachments.module.css: grid-template-rows 260ms cubic-bezier(0.2,0.8,0.2,1)
+    // + opacity 160ms ease-out — expand/collapse the panel instead of instant mount
+    val ease = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)
+    androidx.compose.animation.AnimatedVisibility(visible = open,
+        enter = androidx.compose.animation.expandVertically(
+            androidx.compose.animation.core.tween(260, easing = ease))
+            + androidx.compose.animation.fadeIn(
+                androidx.compose.animation.core.tween(160)),
+        exit = androidx.compose.animation.shrinkVertically(
+            androidx.compose.animation.core.tween(260, easing = ease))
+            + androidx.compose.animation.fadeOut(
+                androidx.compose.animation.core.tween(160))) {
     val c = DsTheme.colors
     val resolver = LocalContext.current.contentResolver
     Column(Modifier.fillMaxWidth()) {
@@ -301,6 +313,7 @@ fun AttachmentsPanel(
                 Strings.get("androidFiles"), onFiles)
         }
     }
+    }
 }
 
 @Composable
@@ -311,7 +324,7 @@ private fun AttachmentAction(modifier: Modifier, icon: Int, label: String, onCli
     val pressed by src.collectIsPressedAsState()
     Column(
         modifier.height(84.dp).clip(RoundedCornerShape(18.dp))
-            .background(c.labelPrimary.copy(alpha = if (pressed) 0.10f else 0.05f))
+            .background(c.labelPrimary.copy(alpha = DsTheme.pressAlpha(pressed, 0.10f, 0.05f)))
             .clickable(src, null, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -335,8 +348,22 @@ fun DraftAttachmentsRow(
     onPreview: (DraftAttachment) -> Unit,
     onSuggestion: (String) -> Unit,
 ) {
-    if (items.isEmpty()) return
     val c = DsTheme.colors
+    // ref .androidPreview/.quickSuggestions: grid-template-rows 0fr->1fr
+    // 300ms cubic-bezier(0.2,0,0,1)，内容 opacity 240ms + transform 300ms
+    androidx.compose.animation.AnimatedVisibility(
+        visible = items.isNotEmpty(),
+        enter = androidx.compose.animation.expandVertically(
+            androidx.compose.animation.core.tween(300,
+                easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)))
+            + androidx.compose.animation.fadeIn(
+                androidx.compose.animation.core.tween(240)),
+        exit = androidx.compose.animation.shrinkVertically(
+            androidx.compose.animation.core.tween(300,
+                easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)))
+            + androidx.compose.animation.fadeOut(
+                androidx.compose.animation.core.tween(240)),
+    ) {
     Column {
         // [data-android] .attachments：padding 9 9 0，gap 10，item 80x80 r16
         Row(
@@ -346,8 +373,21 @@ fun DraftAttachmentsRow(
             verticalAlignment = Alignment.Bottom,
         ) {
             items.forEach { item ->
+                // ref .attachment: android-attachment-enter 210ms linear 90ms
+                // (opacity 0->1, translateY(12px)->0, scale .98->1)
+                val chipEnter = remember(item.id) { androidx.compose.animation.core.Animatable(0f) }
+                LaunchedEffect(item.id) {
+                    chipEnter.animateTo(1f, androidx.compose.animation.core.tween(210, delayMillis = 90))
+                }
                 Box(
-                    Modifier.size(80.dp).clip(RoundedCornerShape(16.dp))
+                    Modifier.size(80.dp)
+                        .graphicsLayer {
+                            alpha = chipEnter.value
+                            translationY = 12.dp.toPx() * (1f - chipEnter.value)
+                            val s = 0.98f + 0.02f * chipEnter.value
+                            scaleX = s; scaleY = s
+                        }
+                        .clip(RoundedCornerShape(16.dp))
                         .background(c.bgSkeleton)
                         .border(1.dp, c.borderL2, RoundedCornerShape(16.dp))
                         .clickable { onPreview(item) },
@@ -410,6 +450,7 @@ fun DraftAttachmentsRow(
                 }
             }
         }
+    }
     }
 }
 
@@ -479,6 +520,14 @@ fun ImagePreviewDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false,
             decorFitsSystemWindows = false),
     ) {
+        // ref AndroidImageViewer.module.css: left/top/width/height 180ms ease-out —
+        // 缩略图位到全屏位的位移放大，近似为整体 fade+scale 入场
+        val viewerEnter = remember { androidx.compose.animation.core.Animatable(0f) }
+        LaunchedEffect(Unit) {
+            viewerEnter.animateTo(1f,
+                androidx.compose.animation.core.tween(180,
+                    easing = androidx.compose.animation.core.CubicBezierEasing(0f, 0f, 0.58f, 1f)))
+        }
         // ref preview is fully immersive: the WebView overlay hides both system
         // bars and sits under a black status scrim
         val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
@@ -508,7 +557,12 @@ fun ImagePreviewDialog(
                 w.decorView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fill() }
             }
         }
-        Box(Modifier.fillMaxSize().background(Color(0xFF111317))) {
+        Box(Modifier.fillMaxSize().background(Color(0xFF111317))
+            .graphicsLayer {
+                alpha = viewerEnter.value
+                val s = 0.96f + 0.04f * viewerEnter.value
+                scaleX = s; scaleY = s
+            }) {
             val bmp = thumbFor(item.localPath, 2048)
             if (bmp != null) {
                 // the content rect extends under the nav bar, so the centered

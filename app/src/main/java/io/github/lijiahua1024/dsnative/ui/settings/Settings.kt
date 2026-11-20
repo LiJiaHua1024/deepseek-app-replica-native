@@ -366,7 +366,7 @@ private fun SettingsRow(
     val pressed by src.collectIsPressedAsState()
     val pressBg = if (c.dark) Color(0xFF303030) else Color(0xFFEBEBEB)
     Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
-        .background(if (pressed) pressBg else Color.Transparent)
+        .background(if (pressed) DsTheme.pressTint(pressed, pressBg) else Color.Transparent)
         .clickable(src, null, onClick = onClick)
         .padding(start = 16.dp, end = 15.dp),
         verticalAlignment = Alignment.CenterVertically,
