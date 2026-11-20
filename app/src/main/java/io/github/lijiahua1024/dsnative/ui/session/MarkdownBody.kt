@@ -3,6 +3,7 @@ package io.github.lijiahua1024.dsnative.ui.session
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -265,9 +266,19 @@ private fun RenderBlock(
                         fontSize = 12.sp, lineHeight = 18.sp, color = c.labelPrimary,
                         modifier = Modifier.padding(start = 8.dp))
                     Spacer(Modifier.weight(1f))
+                    // ref CodeBlock .button:active -> interactive-bg-hover; tap copies the code
+                    val copySrc = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                    val copyPressed by copySrc.collectIsPressedAsState()
+                    val ctx = androidx.compose.ui.platform.LocalContext.current
                     Row(
                         Modifier.height(28.dp)
                             .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                            .background(if (copyPressed) c.interactiveBgHover else androidx.compose.ui.graphics.Color.Transparent)
+                            .clickable(copySrc, null) {
+                                (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                                    as android.content.ClipboardManager)
+                                    .setPrimaryClip(android.content.ClipData.newPlainText("code", literal))
+                            }
                             .padding(horizontal = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {

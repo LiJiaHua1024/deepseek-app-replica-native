@@ -9,6 +9,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -302,8 +303,13 @@ private fun SettingsRow(
     arrow: Boolean = true,
     onClick: () -> Unit = {},
 ) {
+    // ref button.row:active/a.row:active -> background: var(--settings-button)
+    val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by src.collectIsPressedAsState()
+    val pressBg = if (c.dark) Color(0xFF303030) else Color(0xFFEBEBEB)
     Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
-        .clickable(onClick = onClick)
+        .background(if (pressed) pressBg else Color.Transparent)
+        .clickable(src, null, onClick = onClick)
         .padding(start = 16.dp, end = 15.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)) {

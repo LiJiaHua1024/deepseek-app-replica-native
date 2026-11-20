@@ -13,6 +13,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -341,7 +345,10 @@ private fun rememberMutableInteraction(): androidx.compose.foundation.interactio
 private fun SourceItem(source: Source, numbered: Boolean, single: Boolean) {
     val c = DsTheme.colors
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    Column(Modifier.fillMaxWidth().clickable {
+    // ref AndroidSearchPanel .item:active -> opacity .65
+    val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by src.collectIsPressedAsState()
+    Column(Modifier.fillMaxWidth().alpha(if (pressed) 0.65f else 1f).clickable(src, null) {
         try {
             io.github.lijiahua1024.dsnative.SourceBrowserActivity.open(ctx, source.url, c.dark)
         } catch (_: Exception) {}

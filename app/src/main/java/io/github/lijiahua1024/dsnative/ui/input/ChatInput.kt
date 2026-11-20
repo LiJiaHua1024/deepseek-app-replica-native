@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -258,15 +259,24 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
             Spacer(Modifier.width(10.dp))
             TogglePill(Strings.get("search"), search, { settings.setSearch(!search) }, R.drawable.ic_globe)
             Spacer(Modifier.weight(1f))
+            // ref IconButton/VoiceButton :active -> interactive-bg-hover
+            val attSrc = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+            val attPressed by attSrc.collectIsPressedAsState()
             Icon(painterResource(if (showAttachments) R.drawable.ic_close_circle else R.drawable.ic_add_circle),
                 Strings.get(if (showAttachments) "close" else "uploadFile"),
                 tint = c.labelPrimary,
                 modifier = Modifier.align(Alignment.CenterVertically).size(44.dp).padding(9.5.dp)
-                    .clickable { showAttachments = !showAttachments })
+                    .clip(CircleShape)
+                    .background(if (attPressed) c.interactiveBgHover else Color.Transparent)
+                    .clickable(attSrc, null) { showAttachments = !showAttachments })
+            val voiceSrc = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+            val voicePressed by voiceSrc.collectIsPressedAsState()
             Icon(painterResource(R.drawable.ic_voice_circle), Strings.get("voiceInput"),
                 tint = c.labelPrimary,
                 modifier = Modifier.align(Alignment.CenterVertically).size(44.dp).padding(9.5.dp)
-                    .clickable {
+                    .clip(CircleShape)
+                    .background(if (voicePressed) c.interactiveBgHover else Color.Transparent)
+                    .clickable(voiceSrc, null) {
                         VoiceInput.cancel()
                         VoiceInput.enabled.value = !VoiceInput.enabled.value
                     })
@@ -337,11 +347,18 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
 @Composable
 private fun TogglePill(label: String, on: Boolean, onClick: () -> Unit, icon: Int) {
     val c = DsTheme.colors
+    // ref [data-android] .toggle:active -> transform: scale(.96), 100ms
+    val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by src.collectIsPressedAsState()
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        if (pressed) 0.96f else 1f,
+        androidx.compose.animation.core.tween(100), label = "togglePress")
     Row(
-        Modifier.height(32.dp).clip(RoundedCornerShape(18.dp))
+        Modifier.height(32.dp).graphicsLayer { scaleX = scale; scaleY = scale }
+            .clip(RoundedCornerShape(18.dp))
             .background(if (on) c.buttonGhostActiveFill else androidx.compose.ui.graphics.Color.Transparent)
             .border(1.dp, if (on) c.buttonGhostActiveBorder else c.borderL2, RoundedCornerShape(18.dp))
-            .clickable(onClick = onClick)
+            .clickable(src, null, onClick = onClick)
             .padding(horizontal = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

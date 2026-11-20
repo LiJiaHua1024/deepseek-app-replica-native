@@ -15,6 +15,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -305,10 +306,13 @@ fun AttachmentsPanel(
 @Composable
 private fun AttachmentAction(modifier: Modifier, icon: Int, label: String, onClick: () -> Unit) {
     val c = DsTheme.colors
+    // ref AndroidAttachments .action:active -> color-mix(currentColor 10%)
+    val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by src.collectIsPressedAsState()
     Column(
         modifier.height(84.dp).clip(RoundedCornerShape(18.dp))
-            .background(c.labelPrimary.copy(alpha = 0.05f))
-            .clickable(onClick = onClick),
+            .background(c.labelPrimary.copy(alpha = if (pressed) 0.10f else 0.05f))
+            .clickable(src, null, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {

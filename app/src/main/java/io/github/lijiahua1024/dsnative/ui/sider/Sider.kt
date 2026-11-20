@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -338,12 +339,18 @@ private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean,
     Box {
     // [data-android] .item: h48, padding-inline 7/4, r12, font 16;
     // active: bg nav-item-active-accent + color brand-primary-invert
+    val pressSrc = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by pressSrc.collectIsPressedAsState()
     Row(
         Modifier.fillMaxWidth().height(48.dp)
             .clip(RoundedCornerShape(12.dp))
-            // selection rows render as plain .select buttons — no active accent
-            .background(if (active && !selectionMode) c.sidebarNavItemActiveAccent else androidx.compose.ui.graphics.Color.Transparent)
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            // selection rows render as plain .select buttons — no active accent;
+            // ref .item:active -> bg-skeleton
+            .background(
+                if (pressed) c.bgSkeleton
+                else if (active && !selectionMode) c.sidebarNavItemActiveAccent
+                else androidx.compose.ui.graphics.Color.Transparent)
+            .combinedClickable(pressSrc, null, onClick = onClick, onLongClick = onLongClick)
             .padding(start = 7.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
