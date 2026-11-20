@@ -550,12 +550,15 @@ const scenes = {
   },
   async 'chat.toast'(evaluate) {
     await chatShort(evaluate)
+    // mock TTS otherwise returns valid PCM — force a failure so the toast shows
+    await fetch('http://127.0.0.1:8321/__set_tts_fail?code=500')
     await evaluate(`(() => {
       const btns = [...document.querySelectorAll('[aria-label="朗读"],[aria-label="Read aloud"]')];
       const b = btns[btns.length - 1];
       b && b.click(); })()`)
     await until('toast', async () => evaluate(
       `[...document.querySelectorAll('div')].some(e => /朗读失败|Failed to read/.test(e.textContent||''))`), 15000)
+    await fetch('http://127.0.0.1:8321/__set_tts_fail?code=0')
     await delay(300)
   },
   async 'chat.md'(evaluate) {

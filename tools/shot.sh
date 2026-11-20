@@ -54,7 +54,13 @@ trap '[ -n "$UIMODE" ] && $ADB shell cmd uimode night no >/dev/null 2>&1 || true
 if [ "$APP" = native ]; then
   # Debug-only runtime override -> mock backend (default APK points at
   # https://api.deepseek.com; the receiver persists this for the scene run).
+  # pm clear leaves the package stopped and broadcasts to stopped apps are
+  # dropped unreliably — launch first, then broadcast to the running app.
+  # The receiver persists the override, so the verify call uses the mock.
+  $ADB shell am start -n "$PKG/.MainActivity" >/dev/null 2>&1 || true
+  sleep 1
   $ADB shell am broadcast -a "$PKG.DEBUG_API_ORIGIN" --es origin "http://10.0.2.2:8321" >/dev/null 2>&1 || true
+  sleep 0.5
 fi
 
 if [ "$APP" = ref ]; then

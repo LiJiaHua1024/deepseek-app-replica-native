@@ -147,6 +147,7 @@ function searchReply(res) {
 }
 
 let globalDelayMs = 0;
+let globalTtsFailCode = 0;
 // Record mode: RECORD_FILE=/path.jsonl appends one JSON line per request with
 // method/path, header names+values (verbatim) and the raw body for later
 // field-by-field request-equivalence comparison (tools/reqcompare.py).
@@ -169,6 +170,14 @@ const server = http.createServer((req, res) => {
   const setMatch = /^\/__set_delay\?ms=(\d+)/.exec(req.url || '');
   if (setMatch) {
     globalDelayMs = Number(setMatch[1]);
+    res.writeHead(200, { 'content-type': 'text/plain' }).end('ok');
+    return;
+  }
+  // runtime TTS failure toggle for the chat.toast scene (both apps must
+  // surface the same 朗读失败 toast on a failed read-aloud request)
+  const ttsFailMatch = /^\/__set_tts_fail\?code=(\d+)/.exec(req.url || '');
+  if (ttsFailMatch) {
+    globalTtsFailCode = Number(ttsFailMatch[1]);
     res.writeHead(200, { 'content-type': 'text/plain' }).end('ok');
     return;
   }
@@ -225,6 +234,7 @@ function handle(req, res) {
     // TTS stub: ~3s of 24 kHz 16-bit mono PCM sine, chunked like a stream.
     req.resume();
     if (key !== TEST_KEY) return send(res, 401, { error: { message: 'Invalid API key' } });
+    if (globalTtsFailCode) return send(res, globalTtsFailCode, { error: { message: 'tts unavailable' } });
     const rate = 24000, seconds = 3, total = rate * seconds;
     res.writeHead(200, { 'Content-Type': 'application/octet-stream' });
     let sent = 0;

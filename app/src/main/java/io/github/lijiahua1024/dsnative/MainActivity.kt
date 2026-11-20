@@ -60,12 +60,18 @@ class MainActivity : ComponentActivity() {
         if (BuildConfig.DEBUG) {
             val filter = IntentFilter("$packageName.DEBUG_INPUT")
             val vfilter = IntentFilter("$packageName.DEBUG_VOICE")
+            // 与 DEBUG_API_ORIGIN 清单 receiver 相同动作，运行时注册一份：
+            // 本模拟器对 manifest receiver 的投递不稳定（pm clear 后常丢）。
+            val apiOriginReceiver = DebugApiOriginReceiver()
+            val ofilter = IntentFilter("$packageName.DEBUG_API_ORIGIN")
             if (Build.VERSION.SDK_INT >= 33) {
                 registerReceiver(debugInput, filter, RECEIVER_EXPORTED)
                 registerReceiver(debugVoice, vfilter, RECEIVER_EXPORTED)
+                registerReceiver(apiOriginReceiver, ofilter, RECEIVER_EXPORTED)
             } else {
                 registerReceiver(debugInput, filter)
                 registerReceiver(debugVoice, vfilter)
+                registerReceiver(apiOriginReceiver, ofilter)
             }
         }
         setContent {

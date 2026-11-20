@@ -164,7 +164,11 @@ EOF
     wait_text "继续生成|Continue" 15; sleep 0.4 ;;
   chat.toast)
     enter_key; send_msg "refused"; wait_text "换个话题" 40; sleep 0.5
-    tap_node "朗读|Read aloud"; wait_text "朗读失败|Failed to read" 15; sleep 0.2 ;;
+    # mock TTS otherwise returns valid PCM — force a failure so the toast shows
+    curl -s "http://127.0.0.1:8321/__set_tts_fail?code=500" >/dev/null
+    tap_node "朗读|Read aloud"; wait_text "朗读失败|Failed to read" 15
+    curl -s "http://127.0.0.1:8321/__set_tts_fail?code=0" >/dev/null
+    sleep 0.2 ;;
   chat.md)   enter_key; send_msg "md";    wait_text "项一" 40; sleep 0.5 ;;
   chat.code) enter_key; send_msg "code";  wait_text "println|kotlin" 40; sleep 0.5 ;;
   chat.math) enter_key; send_msg "math";  wait_text "行内公式" 40; sleep 0.7 ;;
