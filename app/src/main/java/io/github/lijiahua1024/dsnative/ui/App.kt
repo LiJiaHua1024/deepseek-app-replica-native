@@ -57,6 +57,9 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
     var nav by remember { mutableStateOf<NavState>(NavState.Chat) }
 
     DsTheme(colors) {
+        // ref base/Modal .overlay has backdrop-filter: blur(2px), but
+        // RenderEffect is a no-op on this emulator's GPU path, so the
+        // backdrop relies on the dim overlay only (see decisions.md).
         if (apiKey == null) {
             Box(Modifier.fillMaxSize().background(DsTheme.colors.bgBase)) {
                 ApiKeyScreen(settings)

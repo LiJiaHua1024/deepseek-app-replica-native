@@ -544,7 +544,7 @@
   "status": "residual",
   "blurred_ssim": 0.9768,
   "color_mad": 1.603,
-  "attempts": 5,
+  "attempts": 6,
   "commit": "ceac381",
   "notes": "",
   "worst_rects": [
@@ -577,7 +577,8 @@
    "content offset +3px top pad",
    "scrim 0.36/0.60 alpha"
   ],
-  "note": "sider.delmodal shot: Popup-based Modal replacing AlertDialog; reached via long-press menu (Popup made focusable so uiautomator sees it). adj_ssim 0.9768/mad 1.60 after 5 rounds; remaining diff is CJK glyph rasterization in title/body/button text + ref's 2px backdrop blur"
+  "note": "sider.delmodal shot: Popup-based Modal replacing AlertDialog; reached via long-press menu (Popup made focusable so uiautomator sees it). adj_ssim 0.9768/mad 1.60 after 5 rounds; remaining diff is CJK glyph rasterization in title/body/button text + ref's 2px backdrop blur",
+  "备注": "retry2: backdrop blur unreachable — RenderEffect no-op on emulator GPU; dim matches."
  },
  {
   "id": "comp.Button",
@@ -650,7 +651,7 @@
   "status": "residual",
   "blurred_ssim": 0.9768,
   "color_mad": 1.603,
-  "attempts": 5,
+  "attempts": 6,
   "commit": "ceac381",
   "notes": "",
   "worst_rects": [
@@ -683,7 +684,8 @@
    "content offset +3px top pad",
    "scrim 0.36/0.60 alpha"
   ],
-  "note": "sider.delmodal shot: Popup-based Modal replacing AlertDialog; reached via long-press menu (Popup made focusable so uiautomator sees it). adj_ssim 0.9768/mad 1.60 after 5 rounds; remaining diff is CJK glyph rasterization in title/body/button text + ref's 2px backdrop blur"
+  "note": "sider.delmodal shot: Popup-based Modal replacing AlertDialog; reached via long-press menu (Popup made focusable so uiautomator sees it). adj_ssim 0.9768/mad 1.60 after 5 rounds; remaining diff is CJK glyph rasterization in title/body/button text + ref's 2px backdrop blur",
+  "备注": "retry2: backdrop blur unreachable — RenderEffect no-op on emulator GPU; dim matches."
  },
  {
   "id": "comp.Modal",
@@ -693,7 +695,7 @@
   "status": "residual",
   "blurred_ssim": 0.9768,
   "color_mad": 1.603,
-  "attempts": 5,
+  "attempts": 6,
   "commit": "ceac381",
   "notes": "",
   "worst_rects": [
@@ -726,7 +728,8 @@
    "content offset +3px top pad",
    "scrim 0.36/0.60 alpha"
   ],
-  "note": "sider.delmodal shot: Popup-based Modal replacing AlertDialog; reached via long-press menu (Popup made focusable so uiautomator sees it). adj_ssim 0.9768/mad 1.60 after 5 rounds; remaining diff is CJK glyph rasterization in title/body/button text + ref's 2px backdrop blur"
+  "note": "sider.delmodal shot: Popup-based Modal replacing AlertDialog; reached via long-press menu (Popup made focusable so uiautomator sees it). adj_ssim 0.9768/mad 1.60 after 5 rounds; remaining diff is CJK glyph rasterization in title/body/button text + ref's 2px backdrop blur",
+  "备注": "retry2: backdrop blur unreachable — RenderEffect no-op on emulator GPU; dim matches."
  },
  {
   "id": "comp.Select.module",

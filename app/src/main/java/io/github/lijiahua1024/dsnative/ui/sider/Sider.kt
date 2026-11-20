@@ -267,6 +267,10 @@ private fun DsModalButton(text: String, variant: DsBtn, onClick: () -> Unit) {
 // card w380 max(100vw-32), padding 22/24, r24, bg-layer-2, inset borderInverted;
 // title 16/24 w500; body 14/22 secondary; footer end gap8 margin-top20
 // Popup, not Dialog: platform Dialog adds its own 0.6 dim behind (double dim).
+// ref .overlay backdrop-filter: blur(2px) — Popup windows can't blur what's
+// behind them, and RenderEffect is a no-op on this emulator's GPU path, so
+// the backdrop relies on the dim overlay only (see decisions.md).
+
 @Composable
 private fun DsModal(title: String, body: String?, onDismiss: () -> Unit,
                     buttons: @Composable RowScope.() -> Unit) {
