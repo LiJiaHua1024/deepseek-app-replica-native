@@ -224,7 +224,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
             }
         } else {
         // ref textarea: min-height 56px, padding-top 14.75px, padding-inline 17px
-        Box(Modifier.fillMaxWidth().height(61.dp).padding(start = 17.dp, end = 17.dp, top = 19.75.dp)) {
+        Box(Modifier.fillMaxWidth().height(56.dp).padding(start = 17.dp, end = 17.dp, top = 14.75.dp)) {
             BasicTextField(
                 value = text,
                 onValueChange = { text = it; chatStore.setDraft(activeId, it) },

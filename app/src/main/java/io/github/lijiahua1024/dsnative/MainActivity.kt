@@ -28,6 +28,8 @@ class MainActivity : ComponentActivity() {
         override fun onReceive(context: Context, intent: Intent) {
             // newchat=true：presscheck 每轮先开全新会话，避免同一会话累积重复问答
             if (intent.getBooleanExtra("newchat", false)) chatStore.newChat()
+            val greeting = intent.getIntExtra("greeting", -1)
+            if (greeting >= 0) io.github.lijiahua1024.dsnative.theme.Strings.GreetingDebug.index = greeting
             val text = intent.getStringExtra("text") ?: return
             val sessionId = intent.getStringExtra("session") ?: chatStore.activeId.value
             chatStore.setDraft(sessionId, text)

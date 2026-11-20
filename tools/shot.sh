@@ -61,6 +61,15 @@ if [ "$APP" = native ]; then
   sleep 1
   $ADB shell am broadcast -a "$PKG.DEBUG_API_ORIGIN" --es origin "http://10.0.2.2:8321" >/dev/null 2>&1 || true
   sleep 0.5
+  # greeting is Math.random() on ref — pin the index measured on each ref shot
+  # (welcome.dark=0, other greeting-visible scenes=1) before Welcome composes.
+  GREETING=-1
+  case "$SCENE_OUT" in
+    welcome.dark) GREETING=0 ;;
+    welcome*|voice*|attachments*) GREETING=1 ;;
+  esac
+  [ "$GREETING" -ge 0 ] && \
+    $ADB shell am broadcast -a "$PKG.DEBUG_INPUT" --ei greeting "$GREETING" >/dev/null 2>&1 || true
 fi
 
 if [ "$APP" = ref ]; then

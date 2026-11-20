@@ -239,14 +239,14 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
 @Composable
 fun Welcome(modifier: Modifier = Modifier) {
     val c = DsTheme.colors
-    val greeting = remember { Strings.androidWelcomeMessages.random() }
+    val greeting = remember { Strings.welcomeGreeting() }
     // ref .greeting: margin auto 0 + translateY(-2.7px)
     Column(modifier.fillMaxSize().offset(y = (-2.7).dp), verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(painterResource(R.drawable.whale), null, tint = c.brandPrimary,
             modifier = Modifier.size(42.dp))
         Spacer(Modifier.height(15.dp))
-        Text(greeting, fontSize = 20.sp, lineHeight = 28.sp, fontWeight = FontWeight.SemiBold,
+        Text(greeting, fontSize = 20.sp, lineHeight = 28.sp, fontWeight = FontWeight.Medium,
             color = c.labelPrimary)
     }
 }

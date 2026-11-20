@@ -28,6 +28,15 @@ object Strings {
         "欢迎回来，想从哪里开始？",
     )
 
+    // debug builds: shot drivers pin the greeting so captures are deterministic
+    // (ref picks via Math.random(), which is unreproducible across runs).
+    object GreetingDebug {
+        @Volatile var index: Int = -1
+    }
+
+    fun welcomeGreeting(): String =
+        androidWelcomeMessages.getOrElse(GreetingDebug.index) { androidWelcomeMessages.random() }
+
     fun get(key: String, vararg params: Pair<String, Any>): String {
         var s = when (key) {
             "androidMessageHint" -> pick("发消息", "Message")
