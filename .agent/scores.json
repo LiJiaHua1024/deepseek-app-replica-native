@@ -1,0 +1,1992 @@
+{
+  "thresholds": {
+    "blurred_ssim": 0.98,
+    "color_mad": 4.0
+  },
+  "noise_adjusted": true,
+  "scenes": {
+    "apikey.dark": {
+      "blurred_ssim": 0.9896,
+      "color_mad": 0.679,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9896,
+      "adj_mad": 0.679,
+      "worst": [
+        {
+          "x": 0,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9266
+        },
+        {
+          "x": 293,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9369
+        },
+        {
+          "x": 586,
+          "y": 879,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9453
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "apikey.default": {
+      "blurred_ssim": 0.9908,
+      "color_mad": 0.574,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9908,
+      "adj_mad": 0.574,
+      "worst": [
+        {
+          "x": 0,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9294
+        },
+        {
+          "x": 293,
+          "y": 879,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9301
+        },
+        {
+          "x": 293,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9482
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "apikey.invalid": {
+      "blurred_ssim": 0.9849,
+      "color_mad": 0.874,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9849,
+      "adj_mad": 0.874,
+      "worst": [
+        {
+          "x": 293,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.909
+        },
+        {
+          "x": 293,
+          "y": 879,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9187
+        },
+        {
+          "x": 586,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.952
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "apikey.light": {
+      "blurred_ssim": 0.9908,
+      "color_mad": 0.574,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9908,
+      "adj_mad": 0.574,
+      "worst": [
+        {
+          "x": 0,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9294
+        },
+        {
+          "x": 293,
+          "y": 879,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9301
+        },
+        {
+          "x": 293,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9482
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "apikey": {
+      "blurred_ssim": 0.9908,
+      "color_mad": 0.574,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9908,
+      "adj_mad": 0.574,
+      "worst": [
+        {
+          "x": 0,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9294
+        },
+        {
+          "x": 293,
+          "y": 879,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9301
+        },
+        {
+          "x": 293,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9482
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "apikey.verifying": {
+      "blurred_ssim": 0.988,
+      "color_mad": 0.654,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.988,
+      "adj_mad": 0.654,
+      "worst": [
+        {
+          "x": 293,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9132
+        },
+        {
+          "x": 293,
+          "y": 879,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9254
+        },
+        {
+          "x": 0,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.952
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "attachments.default": {
+      "blurred_ssim": 0.9431,
+      "color_mad": 2.486,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9431,
+      "adj_mad": 2.486,
+      "worst": [
+        {
+          "x": 586,
+          "y": 1465,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.7536
+        },
+        {
+          "x": 293,
+          "y": 1465,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.796
+        },
+        {
+          "x": 0,
+          "y": 1465,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8536
+        }
+      ],
+      "pass": false,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.branch": {
+      "blurred_ssim": 0.9822,
+      "color_mad": 1.031,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9822,
+      "adj_mad": 1.031,
+      "worst": [
+        {
+          "x": 0,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9055
+        },
+        {
+          "x": 293,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9224
+        },
+        {
+          "x": 293,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9465
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.code": {
+      "blurred_ssim": 0.9849,
+      "color_mad": 0.82,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9849,
+      "adj_mad": 0.82,
+      "worst": [
+        {
+          "x": 0,
+          "y": 879,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9144
+        },
+        {
+          "x": 293,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.932
+        },
+        {
+          "x": 293,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9465
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.continue": {
+      "blurred_ssim": 0.9623,
+      "color_mad": 2.021,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9623,
+      "adj_mad": 2.021,
+      "worst": [
+        {
+          "x": 0,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8502
+        },
+        {
+          "x": 293,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8876
+        },
+        {
+          "x": 293,
+          "y": 879,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9067
+        }
+      ],
+      "pass": false,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.dark": {
+      "blurred_ssim": 0.9709,
+      "color_mad": 1.462,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9709,
+      "adj_mad": 1.462,
+      "worst": [
+        {
+          "x": 293,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.853
+        },
+        {
+          "x": 0,
+          "y": 1758,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8914
+        },
+        {
+          "x": 293,
+          "y": 1465,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9107
+        }
+      ],
+      "pass": false,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.default.dark": {
+      "blurred_ssim": 0.971,
+      "color_mad": 1.462,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.971,
+      "adj_mad": 1.462,
+      "worst": [
+        {
+          "x": 293,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.853
+        },
+        {
+          "x": 0,
+          "y": 1758,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8914
+        },
+        {
+          "x": 293,
+          "y": 1465,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9107
+        }
+      ],
+      "pass": false,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.default": {
+      "blurred_ssim": 0.9717,
+      "color_mad": 1.58,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9717,
+      "adj_mad": 1.58,
+      "worst": [
+        {
+          "x": 293,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8595
+        },
+        {
+          "x": 0,
+          "y": 1758,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9027
+        },
+        {
+          "x": 293,
+          "y": 1465,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9138
+        }
+      ],
+      "pass": false,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.edit": {
+      "blurred_ssim": 0.9812,
+      "color_mad": 1.143,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9812,
+      "adj_mad": 1.143,
+      "worst": [
+        {
+          "x": 0,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9235
+        },
+        {
+          "x": 0,
+          "y": 879,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9404
+        },
+        {
+          "x": 293,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9465
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.err_401": {
+      "blurred_ssim": 0.9814,
+      "color_mad": 0.97,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9814,
+      "adj_mad": 0.97,
+      "worst": [
+        {
+          "x": 0,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8446
+        },
+        {
+          "x": 586,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9161
+        },
+        {
+          "x": 879,
+          "y": 293,
+          "w": 201,
+          "h": 293,
+          "blurred_ssim": 0.9272
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.err_402": {
+      "blurred_ssim": 0.9865,
+      "color_mad": 0.756,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9865,
+      "adj_mad": 0.756,
+      "worst": [
+        {
+          "x": 0,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9242
+        },
+        {
+          "x": 586,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.94
+        },
+        {
+          "x": 293,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9465
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.err_429": {
+      "blurred_ssim": 0.9887,
+      "color_mad": 0.703,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9887,
+      "adj_mad": 0.703,
+      "worst": [
+        {
+          "x": 0,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9242
+        },
+        {
+          "x": 293,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9465
+        },
+        {
+          "x": 0,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9552
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.err_500": {
+      "blurred_ssim": 0.9891,
+      "color_mad": 0.691,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9891,
+      "adj_mad": 0.691,
+      "worst": [
+        {
+          "x": 0,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9241
+        },
+        {
+          "x": 293,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9465
+        },
+        {
+          "x": 0,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9552
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.files": {
+      "blurred_ssim": 0.9802,
+      "color_mad": 1.171,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9802,
+      "adj_mad": 1.171,
+      "worst": [
+        {
+          "x": 0,
+          "y": 879,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9152
+        },
+        {
+          "x": 586,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9333
+        },
+        {
+          "x": 293,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9465
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.interrupted": {
+      "blurred_ssim": 0.9607,
+      "color_mad": 2.165,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9607,
+      "adj_mad": 2.165,
+      "worst": [
+        {
+          "x": 0,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8502
+        },
+        {
+          "x": 293,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8876
+        },
+        {
+          "x": 879,
+          "y": 1465,
+          "w": 201,
+          "h": 293,
+          "blurred_ssim": 0.9027
+        }
+      ],
+      "pass": false,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.light": {
+      "blurred_ssim": 0.9717,
+      "color_mad": 1.58,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9717,
+      "adj_mad": 1.58,
+      "worst": [
+        {
+          "x": 293,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8595
+        },
+        {
+          "x": 0,
+          "y": 1758,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9027
+        },
+        {
+          "x": 293,
+          "y": 1465,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9138
+        }
+      ],
+      "pass": false,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.loading": {
+      "blurred_ssim": 0.9927,
+      "color_mad": 0.562,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9927,
+      "adj_mad": 0.562,
+      "worst": [
+        {
+          "x": 293,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9465
+        },
+        {
+          "x": 0,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9552
+        },
+        {
+          "x": 586,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9636
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.long": {
+      "blurred_ssim": 0.9841,
+      "color_mad": 1.718,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9841,
+      "adj_mad": 1.718,
+      "worst": [
+        {
+          "x": 0,
+          "y": 1758,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9027
+        },
+        {
+          "x": 293,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9465
+        },
+        {
+          "x": 293,
+          "y": 1758,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9499
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.math": {
+      "blurred_ssim": 0.9719,
+      "color_mad": 1.416,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9719,
+      "adj_mad": 1.416,
+      "worst": [
+        {
+          "x": 0,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.843
+        },
+        {
+          "x": 293,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.864
+        },
+        {
+          "x": 293,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8722
+        }
+      ],
+      "pass": false,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.md": {
+      "blurred_ssim": 0.9829,
+      "color_mad": 1.038,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9829,
+      "adj_mad": 1.038,
+      "worst": [
+        {
+          "x": 0,
+          "y": 879,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9152
+        },
+        {
+          "x": 0,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9326
+        },
+        {
+          "x": 293,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9465
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.menu": {
+      "blurred_ssim": 0.9812,
+      "color_mad": 1.232,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9812,
+      "adj_mad": 1.232,
+      "worst": [
+        {
+          "x": 0,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8894
+        },
+        {
+          "x": 586,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9461
+        },
+        {
+          "x": 293,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9465
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.mermaid": {
+      "blurred_ssim": 0.984,
+      "color_mad": 0.97,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.984,
+      "adj_mad": 0.97,
+      "worst": [
+        {
+          "x": 0,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9141
+        },
+        {
+          "x": 293,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9466
+        },
+        {
+          "x": 0,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9553
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.streaming": {
+      "blurred_ssim": 0.97,
+      "color_mad": 1.73,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.97,
+      "adj_mad": 1.73,
+      "worst": [
+        {
+          "x": 0,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8502
+        },
+        {
+          "x": 293,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8876
+        },
+        {
+          "x": 293,
+          "y": 879,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9067
+        }
+      ],
+      "pass": false,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.table": {
+      "blurred_ssim": 0.9834,
+      "color_mad": 0.907,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9834,
+      "adj_mad": 0.907,
+      "worst": [
+        {
+          "x": 0,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.906
+        },
+        {
+          "x": 0,
+          "y": 879,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.912
+        },
+        {
+          "x": 293,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9465
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.thinking": {
+      "blurred_ssim": 0.9699,
+      "color_mad": 1.655,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9699,
+      "adj_mad": 1.655,
+      "worst": [
+        {
+          "x": 293,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8572
+        },
+        {
+          "x": 0,
+          "y": 1758,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9027
+        },
+        {
+          "x": 293,
+          "y": 1465,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9138
+        }
+      ],
+      "pass": false,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "chat.toast": {
+      "blurred_ssim": 0.98,
+      "color_mad": 1.31,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.98,
+      "adj_mad": 1.31,
+      "worst": [
+        {
+          "x": 0,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8897
+        },
+        {
+          "x": 293,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9462
+        },
+        {
+          "x": 0,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9549
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "imageviewer.default": {
+      "blurred_ssim": 0.997,
+      "color_mad": 0.135,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.997,
+      "adj_mad": 0.135,
+      "worst": [
+        {
+          "x": 879,
+          "y": 2051,
+          "w": 201,
+          "h": 289,
+          "blurred_ssim": 0.9546
+        },
+        {
+          "x": 586,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9745
+        },
+        {
+          "x": 293,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9832
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "searchpanel.default": {
+      "blurred_ssim": 0.8799,
+      "color_mad": 4.464,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.8799,
+      "adj_mad": 4.464,
+      "worst": [
+        {
+          "x": 586,
+          "y": 1465,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.7128
+        },
+        {
+          "x": 293,
+          "y": 1465,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.7501
+        },
+        {
+          "x": 293,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.7657
+        }
+      ],
+      "pass": false,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "settings.account.default": {
+      "blurred_ssim": 0.9857,
+      "color_mad": 0.764,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9857,
+      "adj_mad": 0.764,
+      "worst": [
+        {
+          "x": 293,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8141
+        },
+        {
+          "x": 0,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8623
+        },
+        {
+          "x": 586,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9458
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "settings.agreements.default": {
+      "blurred_ssim": 0.9995,
+      "color_mad": 0.102,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9995,
+      "adj_mad": 0.102,
+      "worst": [
+        {
+          "x": 0,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9954
+        },
+        {
+          "x": 293,
+          "y": 0,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9958
+        },
+        {
+          "x": 293,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9977
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "settings.data.default": {
+      "blurred_ssim": 0.9885,
+      "color_mad": 0.442,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9885,
+      "adj_mad": 0.442,
+      "worst": [
+        {
+          "x": 293,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8997
+        },
+        {
+          "x": 586,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9192
+        },
+        {
+          "x": 0,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9228
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "settings.export.default": {
+      "blurred_ssim": 0.9948,
+      "color_mad": 0.231,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9948,
+      "adj_mad": 0.231,
+      "worst": [
+        {
+          "x": 0,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8691
+        },
+        {
+          "x": 293,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9929
+        },
+        {
+          "x": 293,
+          "y": 0,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9947
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "settings.font.default": {
+      "blurred_ssim": 0.9755,
+      "color_mad": 1.361,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9755,
+      "adj_mad": 1.361,
+      "worst": [
+        {
+          "x": 293,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8734
+        },
+        {
+          "x": 0,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.887
+        },
+        {
+          "x": 879,
+          "y": 2051,
+          "w": 201,
+          "h": 289,
+          "blurred_ssim": 0.9209
+        }
+      ],
+      "pass": false,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "settings.personalization.default": {
+      "blurred_ssim": 0.9862,
+      "color_mad": 0.858,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9862,
+      "adj_mad": 0.858,
+      "worst": [
+        {
+          "x": 293,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8222
+        },
+        {
+          "x": 0,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.887
+        },
+        {
+          "x": 586,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9139
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "settings.root.dark": {
+      "blurred_ssim": 0.9804,
+      "color_mad": 0.955,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9804,
+      "adj_mad": 0.955,
+      "worst": [
+        {
+          "x": 586,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.89
+        },
+        {
+          "x": 0,
+          "y": 1758,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9222
+        },
+        {
+          "x": 0,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9422
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "settings.root.light": {
+      "blurred_ssim": 0.9827,
+      "color_mad": 0.891,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9827,
+      "adj_mad": 0.891,
+      "worst": [
+        {
+          "x": 586,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8978
+        },
+        {
+          "x": 0,
+          "y": 1758,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9246
+        },
+        {
+          "x": 0,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9461
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "settings.root": {
+      "blurred_ssim": 0.9822,
+      "color_mad": 0.913,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9822,
+      "adj_mad": 0.913,
+      "worst": [
+        {
+          "x": 586,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8978
+        },
+        {
+          "x": 0,
+          "y": 1758,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9258
+        },
+        {
+          "x": 0,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9479
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "sider.dark": {
+      "blurred_ssim": 0.9853,
+      "color_mad": 0.667,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9853,
+      "adj_mad": 0.667,
+      "worst": [
+        {
+          "x": 879,
+          "y": 0,
+          "w": 201,
+          "h": 293,
+          "blurred_ssim": 0.8794
+        },
+        {
+          "x": 0,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9182
+        },
+        {
+          "x": 586,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9411
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "sider.delmodal": {
+      "blurred_ssim": 0.977,
+      "color_mad": 1.597,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.977,
+      "adj_mad": 1.597,
+      "worst": [
+        {
+          "x": 586,
+          "y": 879,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8755
+        },
+        {
+          "x": 293,
+          "y": 879,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9186
+        },
+        {
+          "x": 879,
+          "y": 879,
+          "w": 201,
+          "h": 293,
+          "blurred_ssim": 0.9406
+        }
+      ],
+      "pass": false,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "sider.empty": {
+      "blurred_ssim": 0.9922,
+      "color_mad": 1.04,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9922,
+      "adj_mad": 1.04,
+      "worst": [
+        {
+          "x": 0,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9274
+        },
+        {
+          "x": 879,
+          "y": 0,
+          "w": 201,
+          "h": 293,
+          "blurred_ssim": 0.9424
+        },
+        {
+          "x": 879,
+          "y": 2051,
+          "w": 201,
+          "h": 289,
+          "blurred_ssim": 0.9453
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "sider.light": {
+      "blurred_ssim": 0.9892,
+      "color_mad": 1.116,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9892,
+      "adj_mad": 1.116,
+      "worst": [
+        {
+          "x": 879,
+          "y": 0,
+          "w": 201,
+          "h": 293,
+          "blurred_ssim": 0.9419
+        },
+        {
+          "x": 0,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9491
+        },
+        {
+          "x": 586,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9604
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "sider.longpress": {
+      "blurred_ssim": 0.9837,
+      "color_mad": 1.341,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9837,
+      "adj_mad": 1.341,
+      "worst": [
+        {
+          "x": 586,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9116
+        },
+        {
+          "x": 879,
+          "y": 586,
+          "w": 201,
+          "h": 293,
+          "blurred_ssim": 0.9131
+        },
+        {
+          "x": 879,
+          "y": 0,
+          "w": 201,
+          "h": 293,
+          "blurred_ssim": 0.9419
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "sider.multiselect": {
+      "blurred_ssim": 0.9806,
+      "color_mad": 1.398,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9806,
+      "adj_mad": 1.398,
+      "worst": [
+        {
+          "x": 0,
+          "y": 0,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8817
+        },
+        {
+          "x": 586,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9071
+        },
+        {
+          "x": 0,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9126
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "sider.search": {
+      "blurred_ssim": 0.9857,
+      "color_mad": 1.116,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9857,
+      "adj_mad": 1.116,
+      "worst": [
+        {
+          "x": 0,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8193
+        },
+        {
+          "x": 879,
+          "y": 0,
+          "w": 201,
+          "h": 293,
+          "blurred_ssim": 0.8867
+        },
+        {
+          "x": 879,
+          "y": 1172,
+          "w": 201,
+          "h": 293,
+          "blurred_ssim": 0.9227
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "sider.sessions": {
+      "blurred_ssim": 0.9892,
+      "color_mad": 1.116,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9892,
+      "adj_mad": 1.116,
+      "worst": [
+        {
+          "x": 879,
+          "y": 0,
+          "w": 201,
+          "h": 293,
+          "blurred_ssim": 0.9419
+        },
+        {
+          "x": 0,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9491
+        },
+        {
+          "x": 586,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9604
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "voice.default": {
+      "blurred_ssim": 0.9973,
+      "color_mad": 3.446,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9973,
+      "adj_mad": 3.446,
+      "worst": [
+        {
+          "x": 586,
+          "y": 1758,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.98
+        },
+        {
+          "x": 293,
+          "y": 1758,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.984
+        },
+        {
+          "x": 879,
+          "y": 0,
+          "w": 201,
+          "h": 293,
+          "blurred_ssim": 0.9906
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "welcome.dark": {
+      "blurred_ssim": 0.992,
+      "color_mad": 0.425,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.992,
+      "adj_mad": 0.425,
+      "worst": [
+        {
+          "x": 293,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9338
+        },
+        {
+          "x": 586,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9362
+        },
+        {
+          "x": 879,
+          "y": 2051,
+          "w": 201,
+          "h": 289,
+          "blurred_ssim": 0.9434
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "welcome.default": {
+      "blurred_ssim": 0.9841,
+      "color_mad": 0.855,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9841,
+      "adj_mad": 0.855,
+      "worst": [
+        {
+          "x": 0,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.8677
+        },
+        {
+          "x": 879,
+          "y": 0,
+          "w": 201,
+          "h": 293,
+          "blurred_ssim": 0.9111
+        },
+        {
+          "x": 0,
+          "y": 1758,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9259
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "welcome.keyboard": {
+      "blurred_ssim": 0.983,
+      "color_mad": 0.943,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.983,
+      "adj_mad": 0.943,
+      "worst": [
+        {
+          "x": 0,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8179
+        },
+        {
+          "x": 879,
+          "y": 0,
+          "w": 201,
+          "h": 293,
+          "blurred_ssim": 0.9111
+        },
+        {
+          "x": 293,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9313
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    },
+    "welcome.light": {
+      "blurred_ssim": 0.9841,
+      "color_mad": 0.855,
+      "noise_ssim_loss": 0.0,
+      "noise_mad": 0.0,
+      "adj_ssim": 0.9841,
+      "adj_mad": 0.855,
+      "worst": [
+        {
+          "x": 0,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.8677
+        },
+        {
+          "x": 879,
+          "y": 0,
+          "w": 201,
+          "h": 293,
+          "blurred_ssim": 0.9111
+        },
+        {
+          "x": 0,
+          "y": 1758,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9259
+        }
+      ],
+      "pass": true,
+      "thresholds": {
+        "blurred_ssim": 0.98,
+        "color_mad": 4.0
+      }
+    }
+  },
+  "mean_blurred_ssim": 0.9807,
+  "mean_color_mad": 1.155,
+  "all_pass": false
+}

@@ -80,3 +80,4 @@ retry searchpanel cluster: letterSpacing 0.10sp on Sources.kt texts 0.8599->0.87
 retry chat.* cluster: WebView KaTeX display math 0.9665->0.9717 default; all chat scenes re-shot, still residual (glyph AA jitter)
 retry settings.font.default: slider geometry+pads 0.9634->0.9755/1.361 residual (text AA rows)
 retry attachments cluster: checkmark stroke fixed; 0.9431/2.486 residual (live photo thumbnails)
+final segment: residual retries complete (34/34). Gesture grid 90.7% best <95% (ref Chromium pointermove-hold, boundary cells coin-flip). scores.json: 55 scenes, 13 fail (all residual), mean 0.9807/1.155. Build+lint+tests pass; APK installs; mock round-trip verified; shuf-10 re-shot 10/10 pass. selfcheck.md + FINAL.md written. Criteria partially unmet: screen-state done + mean>=0.985 + gesture>=95%.
