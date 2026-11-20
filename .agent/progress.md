@@ -79,3 +79,4 @@
 retry searchpanel cluster: letterSpacing 0.10sp on Sources.kt texts 0.8599->0.8799/4.464, still residual (Chromium vs Minikin AA)
 retry chat.* cluster: WebView KaTeX display math 0.9665->0.9717 default; all chat scenes re-shot, still residual (glyph AA jitter)
 retry settings.font.default: slider geometry+pads 0.9634->0.9755/1.361 residual (text AA rows)
+retry attachments cluster: checkmark stroke fixed; 0.9431/2.486 residual (live photo thumbnails)
