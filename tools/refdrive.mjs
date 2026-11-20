@@ -578,6 +578,13 @@ const scenes = {
     await until('table done', async () => /alpha/.test(await replyText(evaluate)), 40000)
     await delay(400)
   },
+  async 'chat.mermaid'(evaluate) {
+    await enterKey(evaluate); await sendMessage(evaluate, 'mermaid')
+    await until('mermaid svg', async () => evaluate(
+      `(() => { const s = document.querySelector('.md-mermaid-diagram svg');
+         return !!(s && s.getBoundingClientRect().width > 40) })()`), 40000)
+    await delay(2500)
+  },
   async 'chat.long'(evaluate) {
     await enterKey(evaluate)
     await sendMessage(evaluate, 'long')

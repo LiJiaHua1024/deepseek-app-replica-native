@@ -178,7 +178,7 @@ private fun bottomMargin(n: Node, isLast: Boolean): Int = when (n) {
 }
 
 @Composable
-fun MarkdownBody(text: String, modifier: Modifier = Modifier) {
+fun MarkdownBody(text: String, modifier: Modifier = Modifier, streaming: Boolean = false) {
     val c = DsTheme.colors
     val baseUriHandler = LocalUriHandler.current
     val linkCtx = androidx.compose.ui.platform.LocalContext.current
@@ -207,7 +207,7 @@ fun MarkdownBody(text: String, modifier: Modifier = Modifier) {
                 if (prev != null) {
                     Spacer(Modifier.height(maxOf(bottomMargin(prev, false), topMargin(node)).dp))
                 }
-                RenderBlock(node, c, uriHandler)
+                RenderBlock(node, c, uriHandler, streaming)
                 prev = node
                 node = node.next
             }
@@ -220,6 +220,7 @@ private fun RenderBlock(
     node: Node,
     c: io.github.lijiahua1024.dsnative.theme.DsColors,
     uriHandler: androidx.compose.ui.platform.UriHandler,
+    streaming: Boolean = false,
 ) {
     when (node) {
         is Paragraph -> RenderParagraph(inlineText(node, c, uriHandler), c)
@@ -240,6 +241,17 @@ private fun RenderBlock(
                 else -> (node as IndentedCodeBlock).literal ?: ""
             }
             val lang = (node as? FencedCodeBlock)?.info ?: ""
+            if (lang.trim().lowercase() == "mermaid") {
+                MermaidCodeBlock(literal, streaming, c) { code ->
+                    Text(
+                        highlightCode(code, c),
+                        fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 22.sp,
+                        style = cssLeading,
+                        modifier = Modifier.fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                    )
+                }
+            } else
             Column(
                 Modifier.fillMaxWidth()
                     .background(c.markdownCodeBlock, androidx.compose.foundation.shape.RoundedCornerShape(12.dp)),
@@ -282,7 +294,7 @@ private fun RenderBlock(
                 Box(Modifier.width(2.dp).fillMaxHeight().background(c.labelCaption))
                 Column(Modifier.padding(start = 14.dp)) {
                     var ch = node.firstChild
-                    while (ch != null) { RenderBlock(ch, c, uriHandler); ch = ch.next }
+                    while (ch != null) { RenderBlock(ch, c, uriHandler, streaming); ch = ch.next }
                 }
             }
         }
@@ -298,7 +310,7 @@ private fun RenderBlock(
                             }
                             Column(Modifier.weight(1f)) {
                                 var ch = item.firstChild
-                                while (ch != null) { RenderBlock(ch, c, uriHandler); ch = ch.next }
+                                while (ch != null) { RenderBlock(ch, c, uriHandler, streaming); ch = ch.next }
                             }
                         }
                     }
@@ -317,7 +329,7 @@ private fun RenderBlock(
                                 style = cssLeading, modifier = Modifier.width(16.dp))
                             Column(Modifier.weight(1f)) {
                                 var ch = item.firstChild
-                                while (ch != null) { RenderBlock(ch, c, uriHandler); ch = ch.next }
+                                while (ch != null) { RenderBlock(ch, c, uriHandler, streaming); ch = ch.next }
                             }
                         }
                         i++
@@ -336,7 +348,7 @@ private fun RenderBlock(
         }
         else -> {
             var ch = node.firstChild
-            while (ch != null) { RenderBlock(ch, c, uriHandler); ch = ch.next }
+            while (ch != null) { RenderBlock(ch, c, uriHandler, streaming); ch = ch.next }
         }
     }
 }

@@ -547,7 +547,8 @@ fun AssistantView(msg: Message.Assistant, session: Session, chatStore: ChatStore
             when (block) {
                 is ReplyBlock.Thinking -> ThinkingBlock(block, msg).also { prevWasStep = true }
                 is ReplyBlock.Text -> MarkdownBody(block.text,
-                    Modifier.padding(top = if (prevWasStep) 5.dp else 0.dp))
+                    Modifier.padding(top = if (prevWasStep) 5.dp else 0.dp),
+                    streaming = msg.status == ReplyStatus.STREAMING)
                     .also { prevWasStep = false }
                 is ReplyBlock.Tool -> toolStep(block, msg.blocks, sources)?.let { (stepSources, done) ->
                     SearchStepRow(stepSources, done, openSources)

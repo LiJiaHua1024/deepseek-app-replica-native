@@ -169,6 +169,7 @@ EOF
   chat.code) enter_key; send_msg "code";  wait_text "println|kotlin" 40; sleep 0.5 ;;
   chat.math) enter_key; send_msg "math";  wait_text "行内公式" 40; sleep 0.7 ;;
   chat.table) enter_key; send_msg "table"; wait_text "alpha" 40; sleep 0.5 ;;
+  chat.mermaid) enter_key; send_msg "mermaid"; wait_text "流程图" 40; sleep 8 ;;
   chat.long|chat_long)
     enter_key; send_msg "long"
     # 问候 appears as the header title once message_delta lands (stream end)

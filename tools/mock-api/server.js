@@ -238,7 +238,7 @@ function handle(req, res) {
         for (let i = users.length - 1; i >= 0; i--) {
           const c = users[i].content;
           const text = (Array.isArray(c) ? c.find((p) => p && p.text)?.text : c) || '';
-          const m = /^(thinking|long|slow|interrupted|401|402|429|500|refused|hold|search|md|code|math|table)$/i.exec(String(text).trim());
+          const m = /^(thinking|long|slow|interrupted|401|402|429|500|refused|hold|search|md|code|math|table|mermaid)$/i.exec(String(text).trim());
           if (m) { scenario = m[1].toLowerCase(); break; }
         }
       } catch (e) {}
@@ -263,6 +263,8 @@ function handle(req, res) {
           return blockReply({ text: '行内公式 $a^2+b^2=c^2$ 与：\n\n$$\\int_0^1 x^2\\,dx = \\frac{1}{3}$$' })(res);
         case 'table':
           return blockReply({ text: '| 名称 | 值 |\n| --- | --- |\n| alpha | 1 |\n| beta | 2 |' })(res);
+        case 'mermaid':
+          return blockReply({ text: '这是一个流程图：\n\n```mermaid\ngraph LR\n    A[开始] --> B{判断}\n    B -->|是| C[结束]\n    B -->|否| D[重试]\n    D --> A\n```' })(res);
         default: return blockReply({ text: REPLY })(res);
       }
     });

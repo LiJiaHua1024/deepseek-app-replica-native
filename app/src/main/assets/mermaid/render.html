@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body { margin: 0; padding: 0; background: transparent; }
+  /* ref .md-mermaid-diagram: padding 16px, svg centered */
+  #d { padding: 16px; text-align: center; }
+  #d svg { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+</style>
+<script src="mermaid.min.js"></script>
+</head>
+<body>
+<div id="d"></div>
+<script>
+  var seq = 0;
+  function doRender(code, dark) {
+    try {
+      mermaid.initialize({
+        theme: dark ? 'dark' : 'default',
+        securityLevel: 'strict',
+        startOnLoad: false,
+        suppressErrorRendering: true
+      });
+      mermaid.render('mmd' + (seq++), String(code)).then(function (r) {
+        var el = document.getElementById('d');
+        el.innerHTML = r.svg;
+        Android.onDone(el.offsetHeight);
+      }).catch(function (e) {
+        Android.onError('' + (e && e.message || e));
+      });
+    } catch (e) {
+      Android.onError('' + (e && e.message || e));
+    }
+  }
+  // Defer past first layout: mermaid measures labels via the DOM and a
+  // zero-size viewport (before the Compose view has height) yields an empty
+  // diagram, so wait for two animation frames before rendering.
+  function render(code, dark) {
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { doRender(code, dark) });
+    });
+  }
+</script>
+</body>
+</html>

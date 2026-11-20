@@ -137,3 +137,12 @@ Methods tried: spec-metric rebuild, Popup window, flex/weight restructuring,
 ink-position measurement loop (5 rounds), color/AA analysis.
 Worst rects: (293,1465,293,293)=0.6923, (586,1465,293,293)=0.6944,
 (586,2051,293,289)=0.7259.
+- comp.MermaidDiagram (2026-11-20): no JVM mermaid renderer exists, so the diagram
+  runs inside an embedded WebView that loads a vendored copy of the reference's own
+  mermaid 11.10.1 (app/src/main/assets/mermaid/). Two hard-won details: the WebView
+  must have a non-zero viewport while mermaid measures labels (a 1dp placeholder
+  height produced an empty 16px SVG, verified via webview_devtools CDP), and render
+  is deferred two rAFs past first layout for the same reason. Streaming re-renders
+  each new literal; a failed render keeps the last good svg (ref prefix-retry) and
+  only a post-stream failure shows 渲染失败. CSS px == dp confirmed empirically
+  (innerWidth 318 vs view dp width).

@@ -1336,12 +1336,13 @@
   "path": "src/components/markdown/MermaidDiagram.tsx",
   "type": "interaction",
   "reach": "chat scenes",
-  "status": "todo",
-  "blurred_ssim": null,
-  "color_mad": null,
-  "attempts": 0,
+  "status": "done",
+  "blurred_ssim": 0.984,
+  "color_mad": 0.97,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "",
+  "note": "pass via chat.mermaid: embedded WebView runs vendored mermaid 11.10.1 (same bundle as ref node_modules) rendering identical SVG; 图表/代码 switch + copy match ref CodeBlock; bounds: 图表/代码 button centers within ~1-3px (ref CDP getBoundingClientRect x2.75+128 vs native uiautomator); stream retry keeps last good diagram, final failure -> 渲染失败"
  },
  {
   "id": "comp.highlight",
