@@ -161,7 +161,8 @@ fun AndroidSettings(settings: SettingsStore, chatStore: ChatStore, onBack: () ->
         "export" to Strings.get("exportAllLabel"),
     )
 
-    Column(Modifier.fillMaxSize().background(bg).statusBarsPadding()
+    // 状态栏 inset 由 DrawerFrame layer 提供（ref 的页面 frame 从状态栏下方开始）
+    Column(Modifier.fillMaxSize().background(bg)
         .graphicsLayer { translationX = backProgress * size.width * 0.35f }) {
         // ref .header: h44, centered 16/24 w500 title; back = 32dp circle at left 14
         Box(Modifier.fillMaxWidth().height(44.dp)) {

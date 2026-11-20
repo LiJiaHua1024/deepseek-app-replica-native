@@ -55,7 +55,8 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
     var deletingSel by remember { mutableStateOf<Set<String>?>(null) }
 
     // ref [data-android] .mobile: padding 12px 24px 16px 16px (CSS px == dp here)
-    Column(Modifier.fillMaxSize().statusBarsPadding().imePadding().padding(start = 16.dp, end = 24.dp, top = 12.dp, bottom = 16.dp)) {
+    // top pad: ref 12css+row 高相抵后 native 行整体低 ~4-5px → 10.3dp
+    Column(Modifier.fillMaxSize().statusBarsPadding().imePadding().padding(start = 16.dp, end = 24.dp, top = 10.3.dp, bottom = 16.dp)) {
         if (selectionMode) {
             // .selectionHeader h48: label left + close IconButton right
             Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {

@@ -64,8 +64,7 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
     var bubbleMenu by remember { mutableStateOf<Triple<Message.User, androidx.compose.ui.geometry.Rect, () -> Unit>?>(null) }
     val rootCtx = LocalContext.current
 
-    // ref top inset = 128px@2.75dpr: gray status bar + ~17px gray filler
-    Column(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0xFF757575)).statusBarsPadding()) {
+    // 状态栏深灰带由 DrawerFrame 在 layer 之上统一绘制（ref 的状态栏是窗口级底色）
     Column(Modifier.fillMaxSize().background(c.bgBase)) {
     // ref anchors the disclaimer to the bottom overlapping the composer's
     // bottom margin zone; the composer card bottom sits --android-composer-bottom
@@ -228,7 +227,6 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
                 }
             }
         }
-    }
     }
     }
     }
@@ -633,7 +631,8 @@ fun AssistantView(msg: Message.Assistant, session: Session, chatStore: ChatStore
         if (msg.status == ReplyStatus.DONE || msg.status == ReplyStatus.STOPPED) {
             // 6px main-content padding-bottom + 12px .bottom padding-top；
             // ref .bottom { left:-6px }——整行向左偏 6css px
-            Row(Modifier.fillMaxWidth().offset(x = (-8).dp).padding(top = 16.5.dp, bottom = 10.dp),
+            // 列总高差 ~10dp（底对齐下整体下移 28px）：补在 .bottom 顶部（实测 18.5 对齐最佳）
+            Row(Modifier.fillMaxWidth().offset(x = (-8).dp).padding(top = 18.5.dp, bottom = 10.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 BranchSwitcher(session, msg, chatStore)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp),

@@ -161,7 +161,9 @@ for e in $ENTRIES; do
     sessionitem)   run sessionitem  sider.sessions       "[...document.querySelectorAll('a,li,div')].filter(e=>/^(问候|你好)$/.test(e.textContent.trim())).pop()" "你好|问候" press s_session ;;
     chatinput-lp)  run chatinput-lp welcome.default      "document.querySelector('textarea')" "按住说话|[Hh]old to talk|Message or" long  s_home ;;
     usermsg-lp)    run usermsg-lp   chat.menu            "document.body" "^refused$" menu  s_usermsg ;;
-    sessionitem-lp) run sessionitem-lp sider.menu       "document.body" "你好|问候" menu  s_session ;;
+    # ref 与 native 都走真实长按：WebView contextmenu 在真实按压下同样触发，
+    # 且 :active 高亮同步出现（此前合成的 contextmenu 事件没有按压态）
+    sessionitem-lp) run sessionitem-lp sider.sessions   "[...document.querySelectorAll('a,li,div')].filter(e=>/^(问候|你好)$/.test(e.textContent.trim())&&e.getBoundingClientRect().height<70)[0]" "你好|问候" press s_session ;;
   esac
 done
 echo "presscheck done"

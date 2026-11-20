@@ -9,8 +9,14 @@ import androidx.compose.foundation.gestures.awaitHorizontalTouchSlopOrCancellati
 import androidx.compose.foundation.gestures.horizontalDrag
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -226,22 +232,32 @@ fun DrawerFrame(
         }
 
         Box(Modifier.fillMaxSize()) {
-            // Sider (behind), dimmed by (1-p)*0.207
+            // ref .frame: bg-base paints the FULL frame — the strip exposed above
+            // the shifted main layer (and around its rounded corner) must stay bgBase,
+            // not the dark window decor behind the composition.
             Box(
                 Modifier
-                    .width(with(density) { edgePx.toDp() })
                     .fillMaxSize()
-                    // ref [data-android] .mobile: background = --dsw-alias-bg-base
                     .background(DsTheme.colors.bgBase)
             ) {
-                siderContent { settleTo(0f) }
+                Box(Modifier.width(with(density) { edgePx.toDp() }).fillMaxSize()) {
+                    siderContent { settleTo(0f) }
+                }
             }
+            // ref 在 API≥30 上不是 edge-to-edge：状态栏区(≈128px)始终是窗口
+            // statusBarColor 画的深灰带，位于 WebView frame 之上；横贯整个顶部。
+            // native 用一条等高深色带模拟它，main layer 从它下方开始。
+            val statusTopPx = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+            Box(Modifier.fillMaxWidth().height(statusTopPx).background(Color(0xFF757575)))
             if (progress < 1f) {
                 Box(Modifier.fillMaxSize().graphicsLayer { alpha = 0.207f * (1f - progress) }.background(Color.Black))
             }
             // Main content layer
             // ref radius is 36px pre-scale; clip applies post-scale → use 34dp (~93.5px ≈ 36*0.9496*2.75)
             val radiusDp = (min(1f, progress * 6f) * 34f)
+            // ref frame 从状态栏下方开始：layer 自身就是 128..2340 的盒子，
+            // scale 绕 left-center 收缩后顶边落在 ~184px，与 ref 一致
+            Box(Modifier.fillMaxSize().padding(top = statusTopPx)) {
             Box(
                 Modifier
                     .fillMaxSize()
@@ -270,6 +286,7 @@ fun DrawerFrame(
                             detectTapGestures { settleTo(0f) }
                         })
                 }
+            }
             }
         }
     }
