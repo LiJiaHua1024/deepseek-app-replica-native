@@ -172,6 +172,13 @@ class MotionServer {
                     }
                     liveLog("win $sb\n")
                 }
+                "dumptrace" -> {
+                    val tr = io.github.lijiahua1024.dsnative.ui.DrawerGestureBus.trace
+                    liveLog("trace ${tr.joinToString(",") { "${it.first}:${it.second}:${it.third}" }}\n")
+                }
+                "pv" -> {
+                    liveLog("pv ${io.github.lijiahua1024.dsnative.ui.DrawerGestureBus.progressProbe?.invoke()}\n")
+                }
                 "sleep" -> Thread.sleep(p[1].toLong())
             }
         }

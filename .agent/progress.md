@@ -118,3 +118,10 @@ final segment: residual retries complete (34/34). Gesture grid 90.7% best <95% (
 - 修 canScrollVertically = !freePan || startedOpen (对角关抽屉取消, 与 ref 目标元素规则一致)。
 - 网格结果: 75/75 = 100% (ref CDP 基线同步修复后也为规格一致) — drawer 5×5×3 达标。
 - 发现副效应: 点 sider 会话行会改 freePan (消息列表非空→false) — DisposableEffect 重启瞬间 handler=null 会丢事件, 但 DOWN 重试已覆盖。
+
+## 段9（跟手比 + fling 达标）
+- DrawerGestureBus 增 progressProbe + trace (t,x,progress 逐点记录); MotionServer 增 pv/dumptrace/win 命令。
+- tools/followfling.sh (native) + tools/reffling.mjs (ref CDP, pointermove 采样 --drawer-progress)。
+- 跟手比: 37 采样点 max |Δprogress|=0.0195, mean 0.0192 — ≤5% 达标 (同位置插值比较)。
+- fling {500,1500,3000,6000}px/s: 端态双端一致 (500→closed, 其余→open); 释放位置 max Δprogress=0.0236 ≤5%; 进度公式两端逐字相同 (1.031*(h-slop)/edge), 残差为采样对齐噪声。
+- 抽屉网格 75/75=100%。gesture 手感项全部达标。

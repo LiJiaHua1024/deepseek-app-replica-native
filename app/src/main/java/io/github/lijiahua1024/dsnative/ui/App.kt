@@ -170,6 +170,10 @@ fun DrawerFrame(
             var cancelled = false
             val samples = java.util.ArrayDeque<Pair<Float, Long>>()
         }
+        DisposableEffect(Unit) {
+            DrawerGestureBus.progressProbe = { progress }
+            onDispose { DrawerGestureBus.progressProbe = null }
+        }
         DisposableEffect(edgePx, freePan) {
             val slopPx = 8f * density.density
             var g: Gesture? = null
@@ -205,6 +209,7 @@ fun DrawerFrame(
                 val distance = kotlin.math.sign(dx) * max(0f, horizontal - slopPx)
                 g.current = (g.start + (1.031f * distance) / edgePx).coerceIn(0f, 1f)
                 progress = g.current
+                DrawerGestureBus.trace.add(Triple(t, x, g.current))
                 android.util.Log.d("DsGesture", "MV x=$x t=$t cur=${g.current}")
             }
             DrawerGestureBus.handler = handler@{ ev ->
@@ -214,6 +219,7 @@ fun DrawerFrame(
                     if (ev.actionMasked == android.view.MotionEvent.ACTION_DOWN) {
                         cur = Gesture()
                         g = cur
+                        DrawerGestureBus.trace.clear()
                         cur.downX = ev.x; cur.downY = ev.y
                         cur.startedOpen = progress >= 0.999f
                         cur.samples.add(ev.x to ev.eventTime)
@@ -324,6 +330,8 @@ object DrawerGestureBus {
     var handler: ((android.view.MotionEvent) -> Unit)? = null
     @Volatile var lastDownAt = -1L
     @Volatile var lastDownX = -1f
+    @Volatile var progressProbe: (() -> Float)? = null
+    val trace = java.util.concurrent.CopyOnWriteArrayList<Triple<Long, Float, Float>>()
     fun dispatch(ev: android.view.MotionEvent) {
         if (ev.actionMasked == android.view.MotionEvent.ACTION_DOWN) {
             lastDownAt = ev.eventTime; lastDownX = ev.x
