@@ -147,7 +147,24 @@ function searchReply(res) {
 }
 
 let globalDelayMs = 0;
+// Record mode: RECORD_FILE=/path.jsonl appends one JSON line per request with
+// method/path, header names+values (verbatim) and the raw body for later
+// field-by-field request-equivalence comparison (tools/reqcompare.py).
+const RECORD_FILE = process.env.RECORD_FILE || '';
+const fs = require('fs');
+function record(req, body) {
+  if (!RECORD_FILE) return;
+  const headers = {};
+  for (const k of Object.keys(req.headers).sort()) headers[k] = req.headers[k];
+  fs.appendFileSync(RECORD_FILE, JSON.stringify({
+    ts: Date.now(), method: req.method, url: req.url,
+    headers, body: body.toString('latin1'),
+  }) + '\n');
+}
 const server = http.createServer((req, res) => {
+  const chunks = [];
+  req.on('data', (d) => chunks.push(d));
+  req.on('end', () => record(req, Buffer.concat(chunks)));
   // runtime delay toggle for capturing transient UI states (e.g. "verifying")
   const setMatch = /^\/__set_delay\?ms=(\d+)/.exec(req.url || '');
   if (setMatch) {
