@@ -24,6 +24,12 @@ import java.io.File
 //   flingseq x1 y1 x2 y2 steps duration_ms     — same, but UP lands <56ms after
 //                                              the last MOVE (ref fling window)
 //   sleep ms
+//   snap <name>                               — UiAutomation screenshot -> snap_<name>.png
+//   launch                                    — start MainActivity inside the
+//                                              instrumented process (am
+//                                              instrument leaves no app window
+//                                              otherwise, so injected events
+//                                              would land on another app)
 //
 // Run once for a batch:
 //   adb shell am instrument -w -e class \
@@ -51,6 +57,22 @@ class MotionServer {
         for (line in lines) {
             val p = line.trim().split(" ")
             when (p[0]) {
+                "launch" -> {
+                    val intent = inst.targetContext.packageManager
+                        .getLaunchIntentForPackage(inst.targetContext.packageName)!!
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    inst.startActivitySync(intent)
+                    liveLog("launch\n")
+                }
+                "snap" -> {
+                    val bmp = auto.takeScreenshot()
+                    if (bmp != null) {
+                        File(dir, "snap_${p[1]}.png").outputStream().use {
+                            bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+                        }
+                    }
+                    liveLog("snap ${p[1]} ${SystemClock.uptimeMillis()}\n")
+                }
                 "tap" -> {
                     val x = p[1].toFloat(); val y = p[2].toFloat()
                     downAt = SystemClock.uptimeMillis()

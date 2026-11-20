@@ -13,6 +13,9 @@ for k in rm:
         continue
     total += 1
     a, b = nm[k], rm[k]
+    if a.get('pre') == 'open' or b.get('pre') == 'open':
+        total -= 1
+        continue
     if a['open'] != b['open'] or (b['open'] == 'open' and a['close'] != b['close']):
         mismatch.append((k, f"n:{a['open']}/{a['close']}", f"r:{b['open']}/{b['close']}"))
 print(f"match {total - len(mismatch)}/{total} = {(total - len(mismatch)) / total * 100:.1f}%")

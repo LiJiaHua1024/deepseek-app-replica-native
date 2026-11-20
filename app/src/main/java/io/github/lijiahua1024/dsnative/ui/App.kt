@@ -184,12 +184,17 @@ fun DrawerFrame(
                 val horizontal = abs(dx)
                 if (g.start < 0f) {
                     val dy = abs(y - g.downY)
-                    if (!freePan && dy >= slopPx && dy > horizontal) {
+                    // ref canScrollVertically is per-target: free-pan only on
+                    // the welcome container. A gesture that starts with the
+                    // drawer already open always lands on the mask or the
+                    // sider — never on a free-pan target.
+                    val canScrollVertically = !freePan || g.startedOpen
+                    if (canScrollVertically && dy >= slopPx && dy > horizontal) {
                         // ref: gesture.current = null — up does nothing.
                         g.cancelled = true
                         return
                     }
-                    if (horizontal <= slopPx || (!freePan && horizontal < dy)) return
+                    if (horizontal <= slopPx || (canScrollVertically && horizontal < dy)) return
                     settleJob?.cancel()
                     g.start = progress // take over live position
                     if ((g.start <= 0.001f && dx < 0) || (g.start >= 0.999f && dx > 0)) {
@@ -200,6 +205,7 @@ fun DrawerFrame(
                 val distance = kotlin.math.sign(dx) * max(0f, horizontal - slopPx)
                 g.current = (g.start + (1.031f * distance) / edgePx).coerceIn(0f, 1f)
                 progress = g.current
+                android.util.Log.d("DsGesture", "MV x=$x t=$t cur=${g.current}")
             }
             DrawerGestureBus.handler = handler@{ ev ->
                 var cur = g
@@ -216,6 +222,7 @@ fun DrawerFrame(
                 when (ev.actionMasked) {
                     android.view.MotionEvent.ACTION_MOVE,
                     android.view.MotionEvent.ACTION_UP -> {
+                        android.util.Log.d("DsGesture", "ev a=${ev.actionMasked} t=${ev.eventTime} hist=${ev.historySize} h0=${if (ev.historySize>0) ev.getHistoricalEventTime(0) else -1} x=${ev.x}")
                         for (i in 0 until ev.historySize) {
                             evalMove(cur, ev.getHistoricalX(i), ev.getHistoricalY(i), ev.getHistoricalEventTime(i))
                             if (cur.cancelled) break
@@ -232,6 +239,7 @@ fun DrawerFrame(
                                 // ref 0.33 css px/ms → device px = 0.33 * density
                                 val flick = abs(velocity) >= 0.33f * density.density
                                 val open = if (cur.cancelled) cur.startedOpen else if (flick) velocity > 0 else cur.current >= 0.5f
+                                android.util.Log.d("DsGesture", "UP start=${cur.start} cur=${cur.current} vel=$velocity flick=$flick open=$open cancelled=${cur.cancelled} samples=${cur.samples.joinToString { "${it.first}@${it.second}" }} now=$now")
                                 settleTo(if (open) 1f else 0f)
                             }
                             g = null

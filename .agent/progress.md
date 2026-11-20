@@ -100,3 +100,13 @@ final segment: residual retries complete (34/34). Gesture grid 90.7% best <95% (
 - APK 已重装 app-debug（voice halo/chip enter/shimmer 含）。
 - 进行中: gesture_grid ref+native（shell gesturegrid）；此前 90.7%<95%。
 - 仍待: fling/follow-ratio, API 23/29/34/36 冒烟, shuf-10+FINAL, 34 residual 需 numeric gap+≥4方法。
+
+## 段7（手势网格深挖）
+- 发现: `am instrument` 结束会杀 app 进程; 运行时注入的事件打到前台窗口 → 旧 nativegrid 实际测的是 ref。
+- MotionServer 新增 launch/snap: instrumented 进程内启动 MainActivity + UiAutomation 截图 → tools/nativegrid.sh 单轮跑全网格。
+- tools/refgrid.mjs: CDP Input.dispatchTouchEvent (精确 timestamp) + drawerMask 地面真值; GRID_SCALE=0.3636 (css px 换算) — dx/dy 键保持 device px。
+- 关键发现: adb `input swipe` 的 eventTime 塌缩/UP 延迟 ~550ms → fling 窗口(<56ms)必空 → 旧网格噪声即由此。
+- ref 规格确认 (CDP 探针): velocity/flick/canScrollVertically 行为与源码一致; (100,200,*) closed。
+- 原生 bug 修复: canScrollVertically = !freePan || startedOpen — 抽屉开时从 mask/sider 起的对角滑动应取消 (ref: 仅 welcome 容器 free-pan)。
+- 网格 close-swipe 起点 x=850 (sider 内, 避开系统返回手势区)。
+- 进行中: natgrid3 重跑对比 (shell natgrid3)。
