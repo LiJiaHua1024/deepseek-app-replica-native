@@ -202,8 +202,14 @@ object VoiceInput {
 @Composable
 fun VoiceOverlay(canceling: Boolean, level: () -> Float) {
     val mode = VoiceInput.debugOverlayMode
+    // ref .overlay: opacity 160ms ease-out 淡入（visibility 0s 160ms 延迟退出）
+    val enter = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(Unit) {
+        enter.animateTo(1f, tween(160, easing = androidx.compose.animation.core.CubicBezierEasing(0f, 0f, 0.58f, 1f)))
+    }
     // ref .overlay: inset auto 0 var(--android-button-nav-inset)，即仅贴导航栏顶部
-    BoxWithConstraints(Modifier.fillMaxSize().navigationBarsPadding()) {
+    BoxWithConstraints(Modifier.fillMaxSize().navigationBarsPadding()
+        .graphicsLayer { alpha = enter.value }) {
         val h = (maxHeight * 0.46f).coerceAtMost(340.dp)
         val tint = if (canceling) Color(0xFFFF5757) else Color.White
         Box(

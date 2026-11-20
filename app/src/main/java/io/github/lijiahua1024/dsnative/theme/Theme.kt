@@ -192,6 +192,23 @@ object DsTheme {
         @androidx.compose.runtime.Composable get() = LocalDsColors.current
     val fontFamily: androidx.compose.ui.text.font.FontFamily
         @androidx.compose.runtime.Composable get() = LocalDsFontFamily.current
+
+    /** ref :active 按压着色非瞬时切换：背景/不透明度走
+     *  --ds-transition-duration(200ms) 淡入，松开同样淡出。 */
+    @androidx.compose.runtime.Composable
+    fun pressTint(pressed: Boolean, color: androidx.compose.ui.graphics.Color): androidx.compose.ui.graphics.Color =
+        androidx.compose.animation.animateColorAsState(
+            if (pressed) color else color.copy(alpha = 0f),
+            androidx.compose.animation.core.tween(200), label = "pressTint",
+        ).value
+
+    /** 透明度按压态（ref opacity 变化走同一 200ms 过渡） */
+    @androidx.compose.runtime.Composable
+    fun pressAlpha(pressed: Boolean, pressedAlpha: Float, restAlpha: Float = 1f): Float =
+        androidx.compose.animation.core.animateFloatAsState(
+            if (pressed) pressedAlpha else restAlpha,
+            androidx.compose.animation.core.tween(200), label = "pressAlpha",
+        ).value
 }
 
 // The ref WebView resolves `Roboto, 'Noto Sans CJK SC', sans-serif` to the

@@ -1,6 +1,7 @@
 package io.github.lijiahua1024.dsnative.ui.input
 
 import android.annotation.SuppressLint
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -307,19 +308,73 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                 tint = c.labelPrimary,
                 modifier = Modifier.align(Alignment.CenterVertically).size(44.dp).padding(9.5.dp)
                     .clip(CircleShape)
-                    .background(if (attPressed) c.interactiveBgHover else Color.Transparent)
+                    .background(DsTheme.pressTint(attPressed, c.interactiveBgHover))
                     .clickable(attSrc, null) { showAttachments = !showAttachments })
             val voiceSrc = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
             val voicePressed by voiceSrc.collectIsPressedAsState()
+            if (voiceStatus == VoiceInput.Status.RECORDING) {
+                // ref VoiceButton .recording: 26px 双层圆 —— halo(brand 20%，
+                // 150ms 0.6→1 展开后 1.8s ease-in-out 呼吸 1↔1.1) +
+                // core(brand 75%，200ms 延迟 140ms 展开) + 白色 mic glyph
+                // (100ms 延迟 260ms 淡入)；原 outline glyph 120ms 淡出
+                val haloEnter = remember { androidx.compose.animation.core.Animatable(0f) }
+                val coreEnter = remember { androidx.compose.animation.core.Animatable(0f) }
+                val glyphIn = remember { androidx.compose.animation.core.Animatable(0f) }
+                val easeOut = androidx.compose.animation.core.CubicBezierEasing(0f, 0f, 0.58f, 1f)
+                val breath = androidx.compose.animation.core.rememberInfiniteTransition(label = "haloBreath")
+                val haloS = breath.animateFloat(1f, 1.1f,
+                    androidx.compose.animation.core.infiniteRepeatable(
+                        androidx.compose.animation.core.tween(1800,
+                            easing = androidx.compose.animation.core.CubicBezierEasing(0.42f, 0f, 0.58f, 1f)),
+                        androidx.compose.animation.core.RepeatMode.Reverse,
+                        androidx.compose.animation.core.StartOffset(150)), label = "haloS")
+                LaunchedEffect(Unit) {
+                    haloEnter.animateTo(1f, androidx.compose.animation.core.tween(150, easing = easeOut))
+                }
+                LaunchedEffect(Unit) {
+                    coreEnter.animateTo(1f,
+                        androidx.compose.animation.core.tween(200, delayMillis = 140, easing = easeOut))
+                }
+                LaunchedEffect(Unit) {
+                    glyphIn.animateTo(1f,
+                        androidx.compose.animation.core.tween(100, delayMillis = 260, easing = easeOut))
+                }
+                Box(
+                    Modifier.align(Alignment.CenterVertically).size(44.dp).padding(9.5.dp)
+                        .clickable(voiceSrc, null) {
+                            VoiceInput.cancel()
+                            VoiceInput.enabled.value = !VoiceInput.enabled.value
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(Modifier.fillMaxSize()
+                        .graphicsLayer {
+                            val s = (0.6f + 0.4f * haloEnter.value) * haloS.value
+                            scaleX = s; scaleY = s; alpha = 0.2f * haloEnter.value
+                        }
+                        .clip(CircleShape).background(c.brandPrimary))
+                    Box(Modifier.fillMaxSize().padding(2.dp)
+                        .graphicsLayer {
+                            val s = 0.6f + 0.4f * coreEnter.value
+                            scaleX = s; scaleY = s; alpha = 0.75f * coreEnter.value
+                        }
+                        .clip(CircleShape).background(c.brandPrimary))
+                    Icon(painterResource(R.drawable.ic_voice_circle), Strings.get("voiceInput"),
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                            .graphicsLayer { alpha = glyphIn.value })
+                }
+            } else {
             Icon(painterResource(R.drawable.ic_voice_circle), Strings.get("voiceInput"),
                 tint = c.labelPrimary,
                 modifier = Modifier.align(Alignment.CenterVertically).size(44.dp).padding(9.5.dp)
                     .clip(CircleShape)
-                    .background(if (voicePressed) c.interactiveBgHover else Color.Transparent)
+                    .background(DsTheme.pressTint(voicePressed, c.interactiveBgHover))
                     .clickable(voiceSrc, null) {
                         VoiceInput.cancel()
                         VoiceInput.enabled.value = !VoiceInput.enabled.value
                     })
+            }
             if (canSend || isStreaming) {
                 Box(
                     Modifier.align(Alignment.CenterVertically)
