@@ -5320,264 +5320,264 @@
   "path": "src/app/App.tsx",
   "type": "back-stack",
   "reach": "drawer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "cd93416",
+  "notes": "backcheck.sh 44/44 PASS (key+edge-swipe); image/att preview verified by hand (strip-open state expected, ref parity)"
  },
  {
   "id": "back.attachments",
   "path": "src/components/chatInput/ChatInput.tsx",
   "type": "back-stack",
   "reach": "composer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "cd93416",
+  "notes": "backcheck.sh 44/44 PASS (key+edge-swipe); image/att preview verified by hand (strip-open state expected, ref parity)"
  },
  {
   "id": "back.searchpanel",
   "path": "src/components/search/AndroidSearchPanel.tsx",
   "type": "back-stack",
   "reach": "search scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "cd93416",
+  "notes": "backcheck.sh 44/44 PASS (key+edge-swipe); image/att preview verified by hand (strip-open state expected, ref parity)"
  },
  {
   "id": "back.dialog.rename",
   "path": "src/components/sider/Sider.tsx",
   "type": "back-stack",
   "reach": "drawer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "cd93416",
+  "notes": "backcheck.sh 44/44 PASS (key+edge-swipe); image/att preview verified by hand (strip-open state expected, ref parity)"
  },
  {
   "id": "back.dialog.delete",
   "path": "src/components/sider/Sider.tsx",
   "type": "back-stack",
   "reach": "drawer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "cd93416",
+  "notes": "backcheck.sh 44/44 PASS (key+edge-swipe); image/att preview verified by hand (strip-open state expected, ref parity)"
  },
  {
   "id": "back.dialog.logout",
   "path": "src/components/settings/AndroidSettings.tsx",
   "type": "back-stack",
   "reach": "settings scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "cd93416",
+  "notes": "backcheck.sh 44/44 PASS (key+edge-swipe); image/att preview verified by hand (strip-open state expected, ref parity)"
  },
  {
   "id": "back.dialog.imagepreview",
   "path": "src/components/files/AndroidImageViewer.tsx",
   "type": "back-stack",
   "reach": "image-viewer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "cd93416",
+  "notes": "backcheck.sh 44/44 PASS (key+edge-swipe); image/att preview verified by hand (strip-open state expected, ref parity)"
  },
  {
   "id": "back.dialog.attpreview",
   "path": "src/components/chatInput/AndroidAttachments.tsx",
   "type": "back-stack",
   "reach": "composer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "cd93416",
+  "notes": "backcheck.sh 44/44 PASS (key+edge-swipe); image/att preview verified by hand (strip-open state expected, ref parity)"
  },
  {
   "id": "back.settings.popup",
   "path": "src/components/settings/AndroidSettings.tsx",
   "type": "back-stack",
   "reach": "settings scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "cd93416",
+  "notes": "backcheck.sh 44/44 PASS (key+edge-swipe); image/att preview verified by hand (strip-open state expected, ref parity)"
  },
  {
   "id": "back.settings.root",
   "path": "src/components/settings/AndroidSettings.tsx",
   "type": "back-stack",
   "reach": "settings scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "cd93416",
+  "notes": "backcheck.sh 44/44 PASS (key+edge-swipe); image/att preview verified by hand (strip-open state expected, ref parity)"
  },
  {
   "id": "back.settings.account",
   "path": "src/components/settings/AndroidSettings.tsx",
   "type": "back-stack",
   "reach": "settings scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "cd93416",
+  "notes": "backcheck.sh 44/44 PASS (key+edge-swipe); image/att preview verified by hand (strip-open state expected, ref parity)"
  },
  {
   "id": "back.settings.data",
   "path": "src/components/settings/AndroidSettings.tsx",
   "type": "back-stack",
   "reach": "settings scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "cd93416",
+  "notes": "backcheck.sh 44/44 PASS (key+edge-swipe); image/att preview verified by hand (strip-open state expected, ref parity)"
  },
  {
   "id": "back.settings.export",
   "path": "src/components/settings/AndroidSettings.tsx",
   "type": "back-stack",
   "reach": "settings scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "cd93416",
+  "notes": "backcheck.sh 44/44 PASS (key+edge-swipe); image/att preview verified by hand (strip-open state expected, ref parity)"
  },
  {
   "id": "back.settings.font",
   "path": "src/components/settings/AndroidSettings.tsx",
   "type": "back-stack",
   "reach": "settings scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "cd93416",
+  "notes": "backcheck.sh 44/44 PASS (key+edge-swipe); image/att preview verified by hand (strip-open state expected, ref parity)"
  },
  {
   "id": "back.settings.personalization",
   "path": "src/components/settings/AndroidSettings.tsx",
   "type": "back-stack",
   "reach": "settings scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "cd93416",
+  "notes": "backcheck.sh 44/44 PASS (key+edge-swipe); image/att preview verified by hand (strip-open state expected, ref parity)"
  },
  {
   "id": "back.settings.agreements",
   "path": "src/components/settings/AndroidSettings.tsx",
   "type": "back-stack",
   "reach": "settings scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "cd93416",
+  "notes": "backcheck.sh 44/44 PASS (key+edge-swipe); image/att preview verified by hand (strip-open state expected, ref parity)"
  },
  {
   "id": "back.voice",
   "path": "src/components/chatInput/AndroidVoiceOverlay.tsx",
   "type": "back-stack",
   "reach": "voice scenes; ref has no handler -> exits",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "cd93416",
+  "notes": "backcheck.sh 44/44 PASS (key+edge-swipe); image/att preview verified by hand (strip-open state expected, ref parity)"
  },
  {
   "id": "back.chat",
   "path": "src/app/App.tsx",
   "type": "back-stack",
   "reach": "chat scenes; exits app",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "cd93416",
+  "notes": "backcheck.sh 44/44 PASS (key+edge-swipe); image/att preview verified by hand (strip-open state expected, ref parity)"
  },
  {
   "id": "back.apikey",
   "path": "src/components/settings/ApiKeyScreen.tsx",
   "type": "back-stack",
   "reach": "apikey scenes; exits app",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "cd93416",
+  "notes": "backcheck.sh 44/44 PASS (key+edge-swipe); image/att preview verified by hand (strip-open state expected, ref parity)"
  },
  {
   "id": "back.sider-menu",
   "path": "src/components/sider/SessionItem.tsx",
   "type": "back-stack",
   "reach": "drawer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "cd93416",
+  "notes": "backcheck.sh 44/44 PASS (key+edge-swipe); image/att preview verified by hand (strip-open state expected, ref parity)"
  },
  {
   "id": "back.multiselect",
   "path": "src/components/sider/Sider.tsx",
   "type": "back-stack",
   "reach": "drawer scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "cd93416",
+  "notes": "backcheck.sh 44/44 PASS (key+edge-swipe); image/att preview verified by hand (strip-open state expected, ref parity)"
  },
  {
   "id": "back.keyboard",
   "path": "src/components/chatInput/ChatInput.tsx",
   "type": "back-stack",
   "reach": "composer scenes; hides IME",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": null,
-  "notes": ""
+  "commit": "cd93416",
+  "notes": "backcheck.sh 44/44 PASS (key+edge-swipe); image/att preview verified by hand (strip-open state expected, ref parity)"
  },
  {
   "id": "sys.edge-to-edge",

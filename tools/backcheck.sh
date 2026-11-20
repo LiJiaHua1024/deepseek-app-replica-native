@@ -311,12 +311,13 @@ for e in t.iter('node'):
     m=re.match(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]',b)
     if not m: continue
     x1,y1,x2,y2=map(int,m.groups())
-    if e.get('clickable')=='true' and 40<x2-x1<260 and 600<y1<1400:
+    w,h=x2-x1,y2-y1
+    if e.get('clickable')=='true' and 150<w<340 and 150<h<340 and 0.6<w/h<1.5 and 700<y1<1400:
         print((x1+x2)//2,(y1+y2)//2); break
 EOF
 )
   [ -n "$c" ] && $ADB shell input tap $c; sleep 1
-  back $m; check back.dialog.imagepreview $m "$HOME_RE|上传文件|相册"
+  back $m; check back.dialog.imagepreview $m "$HOME_RE|上传文件|相册|Photos|Camera|Files"
 done
 # --- attpreview: draft attachment preview dialog -> back closes
 for m in key swipe; do
@@ -335,12 +336,13 @@ for e in t.iter('node'):
     m=re.match(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]',b)
     if not m: continue
     x1,y1,x2,y2=map(int,m.groups())
-    if e.get('clickable')=='true' and 40<x2-x1<260 and 600<y1<1400:
+    w,h=x2-x1,y2-y1
+    if e.get('clickable')=='true' and 150<w<340 and 150<h<340 and 0.6<w/h<1.5 and 700<y1<1400:
         print((x1+x2)//2,(y1+y2)//2); break
 EOF
 )
   [ -n "$c" ] && $ADB shell input tap $c; sleep 1
-  back $m; check back.dialog.attpreview $m "$HOME_RE|hold to talk"
+  back $m; check back.dialog.attpreview $m "$HOME_RE|hold to talk|Photos|Camera|Files"
 done
 # --- searchpanel: sources dialog -> back closes
 for m in key swipe; do
