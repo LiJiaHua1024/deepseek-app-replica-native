@@ -73,3 +73,4 @@
 - Done: comp.FileCard(.module,.module.css.d), comp.FileIcon, comp.MessageFile(.module,.module.css.d), store.retryUpload.
 - Remaining todo: MermaidDiagram, ReadingBars(.module), native.ImageSave, native.SourceBrowserActivity.
 20 16:52 segment: native.ImageSave done - MediaStore save + status pill verified E2E on emulator; remaining todo: MermaidDiagram, ReadingBars, SourceBrowserActivity
+20 00:5x segment: native.SourceBrowserActivity done - in-app WebView browser ported from ref, verified via agreements page

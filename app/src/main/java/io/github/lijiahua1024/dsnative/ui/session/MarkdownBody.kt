@@ -180,7 +180,24 @@ private fun bottomMargin(n: Node, isLast: Boolean): Int = when (n) {
 @Composable
 fun MarkdownBody(text: String, modifier: Modifier = Modifier) {
     val c = DsTheme.colors
-    val uriHandler = LocalUriHandler.current
+    val baseUriHandler = LocalUriHandler.current
+    val linkCtx = androidx.compose.ui.platform.LocalContext.current
+    val dark = c.dark
+    // ref Link.tsx: http/https ссылки открываются во встроенном браузере,
+    // остальные уходят наружу (target=_blank -> ACTION_VIEW).
+    val uriHandler = remember(baseUriHandler, linkCtx, dark) {
+        object : androidx.compose.ui.platform.UriHandler {
+            override fun openUri(uri: String) {
+                val sanitized = if (uri.matches(Regex("^[a-zA-Z][a-zA-Z0-9+.-]*:"))) uri
+                    else "https://$uri"
+                if (io.github.lijiahua1024.dsnative.SourceBrowserActivity.webUri(sanitized) != null) {
+                    io.github.lijiahua1024.dsnative.SourceBrowserActivity.open(linkCtx, sanitized, dark)
+                } else {
+                    try { baseUriHandler.openUri(uri) } catch (_: Exception) {}
+                }
+            }
+        }
+    }
     val doc = remember(text) { parser.parse(text) }
     SelectionContainer {
         Column(modifier) {

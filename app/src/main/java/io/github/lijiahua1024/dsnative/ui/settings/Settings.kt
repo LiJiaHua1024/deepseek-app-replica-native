@@ -149,7 +149,8 @@ fun AndroidSettings(settings: SettingsStore, chatStore: ChatStore, onBack: () ->
             when (page) {
                 "root" -> SettingsRootPage(c, card, muted,
                     onPage = { page = it },
-                    onHelp = { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://static.deepseek.com/faq/index.html"))) },
+                    onHelp = { io.github.lijiahua1024.dsnative.SourceBrowserActivity.open(
+                        ctx, "https://static.deepseek.com/faq/index.html", c.dark, "") },
                     onLogout = { confirmLogout = true },
                     themePref = themePref, localePref = localePref)
                 "account" -> AccountPage(c, card, muted, settings)
@@ -397,7 +398,8 @@ private fun DataPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Co
 private fun AgreementsPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Color, muted: Color) {
     val ctx = LocalContext.current
     val policies = "https://cdn.deepseek.com/policies/zh-CN"
-    val open = { url: String -> ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+    val open = { url: String ->
+        io.github.lijiahua1024.dsnative.SourceBrowserActivity.open(ctx, url, c.dark) }
     SettingsGroup(null, card, muted) {
         SettingsRow(c, muted, Strings.get("agreementTerms")) { open("$policies/deepseek-terms-of-use.html") }
         SettingsRow(c, muted, Strings.get("agreementPrivacy")) { open("$policies/deepseek-privacy-policy.html") }

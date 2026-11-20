@@ -343,8 +343,7 @@ private fun SourceItem(source: Source, numbered: Boolean, single: Boolean) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     Column(Modifier.fillMaxWidth().clickable {
         try {
-            ctx.startActivity(android.content.Intent(
-                android.content.Intent.ACTION_VIEW, android.net.Uri.parse(source.url)))
+            io.github.lijiahua1024.dsnative.SourceBrowserActivity.open(ctx, source.url, c.dark)
         } catch (_: Exception) {}
     }) {
         Row(Modifier.fillMaxWidth().height(20.dp), verticalAlignment = Alignment.CenterVertically) {

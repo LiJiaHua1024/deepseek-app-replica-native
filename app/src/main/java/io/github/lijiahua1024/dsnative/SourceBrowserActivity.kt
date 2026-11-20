@@ -1,0 +1,229 @@
+package io.github.lijiahua1024.dsnative
+
+import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Path
+import android.net.Uri
+import android.os.Bundle
+import android.text.TextUtils
+import android.view.Gravity
+import android.view.View
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import io.github.lijiahua1024.dsnative.theme.Strings
+
+// Порт SourceBrowserActivity из webview-референса: отдельный WebView
+// держит внешние страницы вне основного JS-контекста приложения.
+class SourceBrowserActivity : Activity() {
+    private var page: WebView? = null
+    private var root: LinearLayout? = null
+
+    companion object {
+        fun webUri(value: String?): Uri? {
+            if (value == null) return null
+            val uri = Uri.parse(value)
+            val scheme = uri.scheme
+            val host = uri.host
+            if (host.isNullOrEmpty() || scheme == null ||
+                !("https".equals(scheme, true) || "http".equals(scheme, true))
+            ) {
+                return null
+            }
+            return uri
+        }
+
+        fun open(context: Context, url: String, dark: Boolean, browserLabel: String? = null) {
+            val uri = webUri(url) ?: return
+            context.startActivity(
+                Intent(context, SourceBrowserActivity::class.java)
+                    .setData(uri)
+                    .putExtra("dark", dark)
+                    .putExtra("closeLabel", Strings.get("close"))
+                    .putExtra("browserLabel", browserLabel ?: Strings.get("openInBrowser")),
+            )
+        }
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    override fun onCreate(state: Bundle?) {
+        super.onCreate(state)
+        val initial = webUri(intent.dataString)
+        if (initial == null) {
+            finish()
+            return
+        }
+        val dark = intent.getBooleanExtra("dark", false)
+        val background = Color.parseColor(if (dark) "#0F0F0F" else "#FFFFFF")
+        val foreground = Color.parseColor(if (dark) "#F8F8F8" else "#111111")
+
+        val rootLayout = LinearLayout(this)
+        rootLayout.orientation = LinearLayout.VERTICAL
+        rootLayout.setBackgroundColor(background)
+        root = rootLayout
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { view, insets ->
+            val safe = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars()
+                    or WindowInsetsCompat.Type.displayCutout()
+                    or WindowInsetsCompat.Type.ime(),
+            )
+            view.setPadding(safe.left, safe.top, safe.right, safe.bottom)
+            WindowInsetsCompat.CONSUMED
+        }
+
+        val toolbar = FrameLayout(this)
+        toolbar.setBackgroundColor(background)
+        rootLayout.addView(toolbar, LinearLayout.LayoutParams(-1, dp(52f)))
+
+        val title = TextView(this)
+        title.setTextColor(foreground)
+        title.textSize = 16f
+        title.gravity = Gravity.CENTER
+        title.setSingleLine(true)
+        title.ellipsize = TextUtils.TruncateAt.END
+        val titleLayout = FrameLayout.LayoutParams(-1, -1)
+        titleLayout.setMargins(dp(56f), 0, dp(56f), 0)
+        toolbar.addView(title, titleLayout)
+
+        val close = ToolbarIcon(this, false, foreground)
+        close.contentDescription = intent.getStringExtra("closeLabel")
+        close.setOnClickListener { finish() }
+        toolbar.addView(close, FrameLayout.LayoutParams(dp(48f), -1, Gravity.START))
+
+        val browserLabel = intent.getStringExtra("browserLabel")
+        if (!browserLabel.isNullOrEmpty()) {
+            val external = ToolbarIcon(this, true, foreground)
+            external.contentDescription = browserLabel
+            external.setOnClickListener {
+                val current = webUri(page?.url) ?: return@setOnClickListener
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, current))
+                } catch (_: ActivityNotFoundException) {
+                    // Устройство без браузера.
+                }
+            }
+            toolbar.addView(external, FrameLayout.LayoutParams(dp(48f), -1, Gravity.END))
+        }
+
+        val divider = View(this)
+        divider.setBackgroundColor(Color.parseColor(if (dark) "#373737" else "#E5E5E5"))
+        rootLayout.addView(divider, LinearLayout.LayoutParams(-1, dp(1f)))
+
+        val web = WebView(this)
+        web.setBackgroundColor(Color.WHITE)
+        val settings = web.settings
+        settings.javaScriptEnabled = true
+        settings.domStorageEnabled = true
+        settings.allowFileAccess = false
+        settings.allowContentAccess = false
+        settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+        settings.textZoom = 100
+        web.webChromeClient = object : WebChromeClient() {
+            override fun onReceivedTitle(view: WebView, pageTitle: String) {
+                title.text = pageTitle
+            }
+        }
+        web.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                return webUri(request.url.toString()) == null
+            }
+        }
+        page = web
+        rootLayout.addView(web, LinearLayout.LayoutParams(-1, 0, 1f))
+        setContentView(rootLayout)
+
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !dark
+            isAppearanceLightNavigationBars = !dark
+        }
+        window.isNavigationBarContrastEnforced = false
+
+        val history = if (state == null) null else web.restoreState(state)
+        if (history == null) {
+            web.loadUrl(initial.toString())
+        } else {
+            title.text = history.currentItem?.title
+        }
+    }
+
+    override fun onSaveInstanceState(state: Bundle) {
+        page?.saveState(state)
+        super.onSaveInstanceState(state)
+    }
+
+    private fun goBack() {
+        val web = page
+        if (web != null && web.canGoBack()) web.goBack() else finish()
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        goBack()
+    }
+
+    override fun onDestroy() {
+        page?.let { web ->
+            root?.removeView(web)
+            web.destroy()
+            page = null
+        }
+        super.onDestroy()
+    }
+
+    private fun dp(value: Float): Int =
+        Math.round(value * resources.displayMetrics.density)
+
+    private class ToolbarIcon(context: Context, private val external: Boolean, color: Int) :
+        View(context) {
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.color = color
+            style = Paint.Style.STROKE
+            strokeWidth = 1.8f
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+        }
+
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            val density = resources.displayMetrics.density
+            canvas.save()
+            canvas.translate(width / 2f + (if (external) 2 else -2) * density, height / 2f)
+            canvas.scale(density, density)
+            if (external) {
+                val outline = Path()
+                outline.moveTo(-2f, -7f)
+                outline.lineTo(-5f, -7f)
+                outline.quadTo(-7f, -7f, -7f, -5f)
+                outline.lineTo(-7f, 5f)
+                outline.quadTo(-7f, 7f, -5f, 7f)
+                outline.lineTo(5f, 7f)
+                outline.quadTo(7f, 7f, 7f, 5f)
+                outline.lineTo(7f, 2f)
+                canvas.drawPath(outline, paint)
+                canvas.drawLine(0f, 0f, 8f, -8f, paint)
+                canvas.drawLine(2f, -8f, 8f, -8f, paint)
+                canvas.drawLine(8f, -8f, 8f, -2f, paint)
+            } else {
+                canvas.drawLine(-6f, -6f, 6f, 6f, paint)
+                canvas.drawLine(6f, -6f, -6f, 6f, paint)
+            }
+            canvas.restore()
+        }
+    }
+}

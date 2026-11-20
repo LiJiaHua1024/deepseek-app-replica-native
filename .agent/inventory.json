@@ -5554,12 +5554,12 @@
   "path": "android/app/src/main/java/io/github/lijiahua1024/dsreplica/SourceBrowserActivity.java",
   "type": "interaction",
   "reach": "native feature check",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "Kotlin port of ref SourceBrowserActivity verified E2E 2026-11-20: settings>协议>用户协议 -> in-app WebView activity (toolbar 52dp, close X left, centered page title, external icon right, 1dp divider); close returns to settings. Markdown links + source items + policy rows routed via open(); plain anchors (account rows, data caption, top_up) stay ACTION_VIEW per ref."
  },
  {
   "id": "native.SystemBars",
