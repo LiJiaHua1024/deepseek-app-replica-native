@@ -22,7 +22,9 @@ android {
     buildTypes {
         debug {
             // Fake backend on the host machine, reachable from the emulator.
-            buildConfigField("String", "API_ORIGIN", "\"http://10.0.2.2:8321\"")
+            // Override for a real-API debug build: ./gradlew -PapiOrigin=https://api.deepseek.com assembleDebug
+            buildConfigField("String", "API_ORIGIN",
+                "\"${project.findProperty("apiOrigin") ?: "http://10.0.2.2:8321"}\"")
         }
         release {
             buildConfigField("String", "API_ORIGIN", "\"https://api.deepseek.com\"")

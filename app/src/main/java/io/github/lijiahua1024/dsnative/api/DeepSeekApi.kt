@@ -35,6 +35,11 @@ private val client = OkHttpClient.Builder()
     .writeTimeout(60, TimeUnit.SECONDS)
     .build()
 
+// Non-stream one-shot calls must not hang on the 0s read timeout.
+private val oneShotClient = client.newBuilder()
+    .callTimeout(15, TimeUnit.SECONDS)
+    .build()
+
 private fun readErrorMessage(body: String, fallback: String): String {
     if (body.isEmpty()) return fallback
     return try {
@@ -53,7 +58,7 @@ suspend fun verifyApiKey(apiKey: String): Unit = withContext(Dispatchers.IO) {
         .get()
         .build()
     try {
-        client.newCall(request).execute().use { response ->
+        oneShotClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 val body = response.body?.string().orEmpty()
                 throw ApiError(ApiErrorKind.HTTP, readErrorMessage(body, response.message), response.code)
