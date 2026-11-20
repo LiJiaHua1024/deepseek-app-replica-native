@@ -5767,81 +5767,81 @@
   "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 1,
+  "attempts": 2,
   "commit": null,
-  "notes": "ApiOriginTest asserts BuildConfig.API_ORIGIN == https://api.deepseek.com"
+  "notes": "default build hits real api.deepseek.com (invalid-key test reached real 401); mock only via debug broadcast"
  },
  {
   "id": "net.verify",
   "path": "src/services/api/client.ts",
   "type": "online",
   "reach": "GET /models Bearer",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "GET /models with Authorization: Bearer recorded by netcheck (req#1)"
  },
  {
   "id": "net.messages",
   "path": "src/services/api/client.ts",
   "type": "online",
   "reach": "POST /anthropic/v1/messages stream:true headers+body fields",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "POST /anthropic/v1/messages stream:true — headers+body field-equal in reqcompare (7-req suite OK)"
  },
  {
   "id": "net.messages-search",
   "path": "src/services/api/client.ts",
   "type": "online",
   "reach": "messages with search on adds deepseek_web_search",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "tools include deepseek_web_search/deepseek_read_url — reqcompare OK"
  },
  {
   "id": "net.messages-file",
   "path": "src/services/api/client.ts",
   "type": "online",
   "reach": "messages with file adds anthropic-beta files-api header",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "anthropic-beta files-api header present on file+messages reqs — reqcompare OK"
  },
  {
   "id": "net.upload",
   "path": "src/services/api/client.ts",
   "type": "online",
   "reach": "POST /anthropic/v1/files x-api-key + files beta, purpose first",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "POST /files x-api-key+beta, purpose before file; ref body not capturable via CDP (residual: header-level only)"
  },
  {
   "id": "net.too-long-retry",
   "path": "src/services/api/client.ts",
   "type": "online",
   "reach": "400 user input too long retries without tools/safety_check/title",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "400 too-long -> stripped retry recorded; reqcompare OK"
  },
  {
   "id": "net.sse-normal",
@@ -5920,12 +5920,12 @@
   "path": "src/services/api/client.ts",
   "type": "online",
   "reach": "invalid key -> 401 UI consistent with ref",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "real api.deepseek.com + sk-wrong-key -> HTTP 401 -> \"Invalid API Key\" UI (screenshot /tmp/invalid-key.png)"
  },
  {
   "id": "product.account-system",
