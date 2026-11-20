@@ -81,3 +81,14 @@ retry chat.* cluster: WebView KaTeX display math 0.9665->0.9717 default; all cha
 retry settings.font.default: slider geometry+pads 0.9634->0.9755/1.361 residual (text AA rows)
 retry attachments cluster: checkmark stroke fixed; 0.9431/2.486 residual (live photo thumbnails)
 final segment: residual retries complete (34/34). Gesture grid 90.7% best <95% (ref Chromium pointermove-hold, boundary cells coin-flip). scores.json: 55 scenes, 13 fail (all residual), mean 0.9807/1.155. Build+lint+tests pass; APK installs; mock round-trip verified; shuf-10 re-shot 10/10 pass. selfcheck.md + FINAL.md written. Criteria partially unmet: screen-state done + mean>=0.985 + gesture>=95%.
+
+## 第三轮 segment — P0 fixes + 基线
+- P0-1 发送"未知错误": 根因=debug 包烘焙 10.0.2.2 → ApiOrigin(SharedPreferences 覆盖, 默认真实 api.deepseek.com, 仅 debug 广播可覆盖) 已提交; 真机验证=needs-device.
+- P0-2 返回栈: PredictiveBackHandler(drawer+settings 分层) + enableOnBackInvokedCallback; 模拟器验证 keyevent 与 edge-swipe 均逐级返回不退出 (drawer→关, data→root, root→home).
+- P0-3 状态栏: 移除 statusBarColor/navigationBarColor 覆盖, 主题驱动 icon appearance; settings.root.dark 双端无深色带.
+- P0-4 按下态: 8 处 :active 已移植 (SiderRow/TogglePill/SettingsRow/SourceItem/CodeBlock复制/AttachmentAction/双composer图标); material3 IconButton 自带 ripple.
+- P0-5 语音: ApiOrigin 修复后 voice 场景通过(0.9973); 真机确认=needs-device.
+- P0-6 最近照片条: 媒体权限(分版本 once/session)已移植; 模拟器 attachments.default 显示照片行(0.9499 residual).
+- 工具: shot.sh 先启动再广播(pm clear 后 manifest receiver 收不到); MainActivity 运行时注册 DEBUG_API_ORIGIN; mock +/__set_tts_fail; MediaStore 推图.
+- 基线(selfcheck.md): inventory 497 条 77 unfinished(press/trans); compare 55 场景 18 fail, mean 0.9755/3.223.
+- 新增回归待查: settings.font ref shot 夹带外观弹窗(已重拍); settings.personalization/root.dark 较二轮下滑.
