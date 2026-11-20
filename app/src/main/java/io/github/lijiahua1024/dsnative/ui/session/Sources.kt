@@ -352,12 +352,13 @@ private fun SourceItem(source: Source, numbered: Boolean, single: Boolean) {
             // ref .meta: siteName/date flex-shrink, .number { margin-left: auto }
             Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                 Text(source.siteName, fontSize = 14.sp, lineHeight = 20.sp,
+                    letterSpacing = 0.10.sp,
                     color = c.labelPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false))
                 val date = formatSourceDate(source.publishedAt)
                 if (date.isNotEmpty()) {
                     Spacer(Modifier.width(10.36.dp))
-                    Text(date, fontSize = 14.sp, lineHeight = 20.sp, color = c.labelTertiary,
+                    Text(date, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.10.sp, color = c.labelTertiary,
                         maxLines = 1)
                 }
             }
@@ -376,12 +377,12 @@ private fun SourceItem(source: Source, numbered: Boolean, single: Boolean) {
             }
         }
         source.title?.let {
-            Text(it, fontSize = 17.sp, lineHeight = 26.sp, color = c.labelPrimary,
+            Text(it, fontSize = 17.sp, lineHeight = 26.sp, letterSpacing = 0.10.sp, color = c.labelPrimary,
                 maxLines = 2, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 12.dp))
         }
         source.snippet?.let {
-            Text(it, fontSize = 15.sp, lineHeight = 23.sp, color = c.labelTertiary,
+            Text(it, fontSize = 15.sp, lineHeight = 23.sp, letterSpacing = 0.10.sp, color = c.labelTertiary,
                 maxLines = if (single) 4 else 2, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 5.dp))
         }

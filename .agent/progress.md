@@ -76,3 +76,4 @@
 20 00:5x segment: native.SourceBrowserActivity done - in-app WebView browser ported from ref, verified via agreements page
 20 01:0x segment: comp.ReadingBars{,.module} done - TTS read-aloud with animated bars verified E2E; mock /v1/tools/tts added (3s sine PCM)
 20 01:1x segment: comp.MermaidDiagram done - embedded WebView + vendored mermaid 11.10.1 (ref's own bundle) renders identical SVG; 图表/代码 switch, copy, loading/empty/fail states ported; stream prefix-retry keeps last good diagram. chat.mermaid scene added (mock scenario 'mermaid'); 0.984/0.97 PASS; bounds via ref-CDP vs uiautomator <=3px centers. TODO LIST EMPTY.
+retry searchpanel cluster: letterSpacing 0.10sp on Sources.kt texts 0.8599->0.8799/4.464, still residual (Chromium vs Minikin AA)

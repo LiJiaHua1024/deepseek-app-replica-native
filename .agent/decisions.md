@@ -146,3 +146,4 @@ Worst rects: (293,1465,293,293)=0.6923, (586,1465,293,293)=0.6944,
   each new literal; a failed render keeps the last good svg (ref prefix-retry) and
   only a post-stream failure shows 渲染失败. CSS px == dp confirmed empirically
   (innerWidth 318 vs view dp width).
+letterSpacing retry (searchpanel): ref CJK text advances ~0.4 device px/char wider than Compose default; Compose letterSpacing 0.10sp recovers most drift (0.860->0.880); residual = per-glyph AA/positioning difference between Chromium and Minikin rasterizers
