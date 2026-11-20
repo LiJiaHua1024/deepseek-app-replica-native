@@ -156,6 +156,11 @@ EOF
   chat.branch)
     enter_key; send_msg "refused"; wait_text "换个话题" 40; sleep 0.5
     tap_node "重新生成|Regenerate"; sleep 1; wait_text "2 / 2|1 / 2" 60; sleep 0.4 ;;
+  chat.continue)
+    enter_key; send_msg "hold"
+    wait_text "hello mock" 40; sleep 1
+    tap_node "停止生成|Stop"; sleep 0.5
+    wait_text "继续生成|Continue" 15; sleep 0.4 ;;
   chat.toast)
     enter_key; send_msg "refused"; wait_text "换个话题" 40; sleep 0.5
     tap_node "朗读|Read aloud"; wait_text "朗读失败|Failed to read" 15; sleep 0.2 ;;

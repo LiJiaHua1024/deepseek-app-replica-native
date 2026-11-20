@@ -13,6 +13,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -404,6 +406,45 @@ class ChatStore(
         is Message.Assistant -> "assistant"
     }
 
+    /** ref canContinueReply：被停止或到输出上限的回复可续写。 */
+    fun canContinueReply(reply: Message.Assistant): Boolean {
+        if (!reply.prefix || reply.stopReason == "refusal" || reply.stopReason == "tool_use" ||
+            reply.blocks.any { block ->
+                when (block) {
+                    is ReplyBlock.Text -> block.isTemplate
+                    is ReplyBlock.Tool -> {
+                        val t = (block.payload["type"] as? JsonPrimitive)?.content
+                        t == "server_tool_use" || t == "web_search_tool_result" ||
+                            t == "web_fetch_tool_result"
+                    }
+                    else -> false
+                }
+            }) {
+            return false
+        }
+        return reply.status == ReplyStatus.STOPPED ||
+            (reply.status == ReplyStatus.DONE && reply.stopReason == "max_tokens")
+    }
+
+    /** ref continueReply：继续最后一条未完成的回答，新流内容追加在原块之后。 */
+    fun continueReply(sessionId: String, messageId: String) {
+        if (_importingHistory.value || streamJobs.containsKey(sessionId)) return
+        val session = _sessionCache.value[sessionId] ?: return
+        val path = visibleMessages(session)
+        val question = path.getOrNull(path.size - 2) as? Message.User ?: return
+        val previous = path.lastOrNull() as? Message.Assistant ?: return
+        if (previous.id != messageId || !canContinueReply(previous)) return
+        val reply = previous.copy(status = ReplyStatus.PENDING, stopReason = null, error = null)
+        updateReply(sessionId, reply)
+        scope.launch {
+            updateSession(sessionId) { it.copy(updatedAt = System.currentTimeMillis()) }
+            persist(sessionId)
+        }
+        streamJobs[sessionId] = scope.launch(Dispatchers.IO) {
+            streamReply(sessionId, reply, path.subList(0, path.size - 2), question, previous)
+        }
+    }
+
     /** 编辑一条 user 消息并重新生成其回答（产生新版本分支）。 */
     fun editMessage(sessionId: String, messageId: String, newContent: String) {
         if (_importingHistory.value || streamJobs.containsKey(sessionId)) return
@@ -504,6 +545,7 @@ class ChatStore(
         history: List<Message>,
         question: Message.User,
         latestReminder: String,
+        prefix: Message.Assistant? = null,
     ): JSONArray {
         val messages = JSONArray()
         var previousReminder: String? = null
@@ -530,6 +572,20 @@ class ChatStore(
         }
         appendReminder(latestReminder)
         messages.put(toUserParam(question))
+        // ref：续写时末尾带上前一条 assistant 作为 prefill；无有效正文则不发空 Prefill
+        if (prefix != null && prefix.prefix) {
+            val assistant = toAssistantParam(prefix)
+            val content = assistant.optJSONArray("content")
+            var usable = false
+            if (content != null) {
+                var i = 0
+                while (i < content.length()) {
+                    if (content.getJSONObject(i).optString("text").isNotBlank()) { usable = true; break }
+                    i++
+                }
+            }
+            if (usable) messages.put(assistant)
+        }
         return messages
     }
 
@@ -550,6 +606,7 @@ class ChatStore(
         initial: Message.Assistant,
         history: List<Message>,
         question: Message.User,
+        prefix: Message.Assistant? = null,
     ) {
         var reply = initial
         if (_sessionCache.value[sessionId]?.title.isNullOrEmpty()) {
@@ -562,7 +619,7 @@ class ChatStore(
             val reminder = latestReminder()
             reply = reply.copy(latestReminder = reminder)
             updateReply(sessionId, reply)
-            val messages = toRequestMessages(history, question, reminder)
+            val messages = toRequestMessages(history, question, reminder, prefix)
             val tools = JSONArray().put(
                 JSONObject().put("type", "deepseek_read_url").put("name", "deepseek_read_url")
             )
@@ -651,6 +708,11 @@ class ChatStore(
                     settleReply(reply, ReplyStatus.ERROR, ReplyError(e.kind.name.lowercase(), e.message ?: "", e.status))
             }
         } catch (e: Exception) {
+            // 用户按停止取消 socket：抛出的 SocketException 应记为 stopped 而非错误
+            if (!currentCoroutineContext().isActive) {
+                reply = settleReply(reply, ReplyStatus.STOPPED)
+                throw kotlinx.coroutines.CancellationException("stopped").initCause(e)
+            }
             reply = settleReply(reply, ReplyStatus.ERROR, ReplyError("protocol", e.message ?: e.toString()))
         } finally {
             titleSessions.remove(sessionId)

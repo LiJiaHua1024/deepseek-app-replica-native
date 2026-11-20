@@ -55,3 +55,11 @@
 - voice.default DONE 0.9973/3.446. Native overlay bisected via DEBUG_VOICE mode broadcast: offscreen DstIn saveLayer killed QEMU -> per-bar alpha; fakeRecorder guard on ranchu skips real capture (guest audio capture also fatal); broadcast replaces input swipe (sustained stream fatal); composer card alpha hoisted before shadow/border; overlay bottom = nav inset only; animations frozen via ANIMATOR_DURATION_SCALE=0 read in-composition. Ref side: DeepSeekAndroid proxy stub + CSS animation freeze.
 - attachments.default -> residual 0.9533/2.7 after 5 rounds (worst: thumbs band y1465-1758). Methods in decisions.md. Next: imageviewer.default.
 - imageviewer.default done 0.997/0.135 (aa3d494): immersive dialog MATCH_PARENT + insets compensation; next = next todo
+
+## Segment N — continueReply + quick data entries
+- Implemented `ChatStore.continueReply` + `canContinueReply` (ref parity: STOPPED or DONE+max_tokens, no refusal/tool blocks) and the 继续生成 pill button on the last assistant row (outlined 32px pill, margin-left:auto).
+- streamReply gained optional `prefix` param → appended as assistant prefill (ref toAssistantParam).
+- Fixed stop→ERROR bug: OkHttp cancel produced SocketException → generic catch settled ERROR; now checks `currentCoroutineContext().isActive` → settles STOPPED + rethrows CancellationException.
+- Added chat.continue scene to both drivers (ref needs fetchHoldBytes+injectStreamReplay since hold streams can't pass the fetch proxy). Scene score 0.9623 — same glyph-rasterization class as residual chat.* scenes.
+- store.continueReply/replaceHistory, native.CaptureProvider/NativeRecorder → done (functional equivalence).
+- Re-measured all 9 residual screen-states on current build: scores unchanged (0.9533–0.9712) — no regression.

@@ -98,10 +98,12 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
         } else {
             LazyColumn(state = listState, modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(bottom = 20.5.dp)) {
-                items(visible, key = { it.id }) { msg ->
-                    when (msg) {
+                items(visible.size, key = { visible[it].id }) { index ->
+                    when (val msg = visible[index]) {
                         is Message.User -> session?.let { UserBubble(msg, it, chatStore) }
-                        is Message.Assistant -> session?.let { AssistantView(msg, it, chatStore, onOpenSettings) }
+                        is Message.Assistant -> session?.let {
+                            AssistantView(msg, it, chatStore, index == visible.size - 1, onOpenSettings)
+                        }
                     }
                 }
             }
@@ -399,7 +401,7 @@ fun WaitingDots() {
 }
 
 @Composable
-fun AssistantView(msg: Message.Assistant, session: Session, chatStore: ChatStore, onOpenSettings: () -> Unit = {}) {
+fun AssistantView(msg: Message.Assistant, session: Session, chatStore: ChatStore, isLast: Boolean = false, onOpenSettings: () -> Unit = {}) {
     val c = DsTheme.colors
     val ctx = LocalContext.current
     val sessionId = session.id
@@ -473,7 +475,7 @@ fun AssistantView(msg: Message.Assistant, session: Session, chatStore: ChatStore
         }
         if (msg.status == ReplyStatus.DONE || msg.status == ReplyStatus.STOPPED) {
             // 6px main-content padding-bottom + 12px .bottom padding-top
-            Row(Modifier.padding(top = 18.dp, bottom = 10.dp),
+            Row(Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 10.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 BranchSwitcher(session, msg, chatStore)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -505,6 +507,23 @@ fun AssistantView(msg: Message.Assistant, session: Session, chatStore: ChatStore
                 IconButton({ chatStore.regenerateReply(sessionId, msg.id) }, modifier = Modifier.size(32.dp)) {
                     Icon(painterResource(R.drawable.ic_refresh), Strings.get("regenerate"), tint = c.labelTertiary, modifier = Modifier.size(16.dp))
                 }
+                }
+                // ref .continueButton：outlined s（h32 pill 1px l2 border 14/22 w400），margin-left:auto
+                if (isLast && chatStore.canContinueReply(msg)) {
+                    Spacer(Modifier.weight(1f))
+                    Row(
+                        Modifier.height(32.dp).widthIn(min = 58.dp)
+                            .clip(RoundedCornerShape(50))
+                            .border(1.dp, c.borderL2, RoundedCornerShape(50))
+                            .clickable { chatStore.continueReply(sessionId, msg.id) }
+                            .padding(horizontal = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        Text(Strings.get("continueGenerating"), fontSize = 14.sp,
+                            lineHeight = 22.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.W400,
+                            color = c.labelPrimary)
+                    }
                 }
             }
         }

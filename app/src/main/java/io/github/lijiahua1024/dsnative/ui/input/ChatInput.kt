@@ -248,7 +248,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                 ) {
                     Icon(
                         painterResource(if (isStreaming) R.drawable.ic_stop else R.drawable.ic_send),
-                        null,
+                        Strings.get(if (isStreaming) "stopGenerating" else "send"),
                         tint = androidx.compose.ui.graphics.Color.White,
                         modifier = Modifier.size(16.dp),
                     )

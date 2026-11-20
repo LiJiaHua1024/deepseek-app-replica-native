@@ -534,6 +534,20 @@ const scenes = {
     await until('switcher', async () => evaluate(`!!document.querySelector('[aria-label*="版本"],[aria-label*="ersion"]')`), 60000)
     await delay(500)
   },
+  async 'chat.continue'(evaluate) {
+    await enterKey(evaluate)
+    const sse = await fetchHoldBytes()
+    await evaluate(injectStreamReplay(sse.toString('base64')))
+    await sendMessage(evaluate, 'hold')
+    await until('frozen mid-stream', async () => /hello mock/.test(await replyText(evaluate)), 30000)
+    await delay(800)
+    await evaluate(`(() => {
+      const b = document.querySelector('[aria-label="停止生成"],[aria-label="Stop"]');
+      b && b.click(); })()`)
+    await until('continue button', async () => evaluate(
+      `[...document.querySelectorAll('button')].some(b => /继续生成|Continue/.test(b.textContent||''))`), 15000)
+    await delay(500)
+  },
   async 'chat.toast'(evaluate) {
     await chatShort(evaluate)
     await evaluate(`(() => {

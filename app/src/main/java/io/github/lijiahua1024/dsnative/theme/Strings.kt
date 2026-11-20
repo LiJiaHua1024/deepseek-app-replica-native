@@ -66,6 +66,7 @@ object Strings {
             "copied" -> pick("已复制", "Copied")
             "copyFailed" -> pick("复制失败，请长按或选中文本后复制", "Copy failed")
             "send" -> pick("发送", "Send")
+            "stopGenerating" -> pick("停止生成", "Stop")
             "editMessage" -> pick("编辑消息", "Edit message")
             "androidEditMessage" -> pick("修改", "Edit")
             "regenerate" -> pick("重新生成", "Regenerate")
