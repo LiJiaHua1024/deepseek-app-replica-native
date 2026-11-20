@@ -149,7 +149,8 @@ private fun hasFile(body: JSONObject): Boolean {
     return false
 }
 
-class StreamSession(val call: okhttp3.Call, private val reader: java.io.BufferedReader) {
+/** WHATWG SSE 行解析（参照 ref sse.ts）。internal 以便单元测试直接喂样本。 */
+internal class SseReader(private val reader: java.io.BufferedReader) {
     private var data = StringBuilder()
     private var hasData = false
     private var eventType = ""
@@ -185,6 +186,11 @@ class StreamSession(val call: okhttp3.Call, private val reader: java.io.Buffered
             }
         }
     }
+}
+
+class StreamSession(val call: okhttp3.Call, reader: java.io.BufferedReader) {
+    private val sse = SseReader(reader)
+    fun nextEvent(): Pair<String, String>? = sse.nextEvent()
 
     fun close() {
         call.cancel()
