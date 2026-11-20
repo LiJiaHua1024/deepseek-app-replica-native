@@ -21,10 +21,10 @@ android {
 
     buildTypes {
         debug {
-            // Fake backend on the host machine, reachable from the emulator.
-            // Override for a real-API debug build: ./gradlew -PapiOrigin=https://api.deepseek.com assembleDebug
+            // 默认包地址 = 参照物真实地址；mock 仅经 adb 广播运行时覆盖
+            // (DEBUG_API_ORIGIN, DebugApiOriginReceiver) 或 -PapiOrigin 构建覆盖。
             buildConfigField("String", "API_ORIGIN",
-                "\"${project.findProperty("apiOrigin") ?: "http://10.0.2.2:8321"}\"")
+                "\"${project.findProperty("apiOrigin") ?: "https://api.deepseek.com"}\"")
         }
         release {
             buildConfigField("String", "API_ORIGIN", "\"https://api.deepseek.com\"")
@@ -62,7 +62,7 @@ android {
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.core:core-ktx:1.15.0")
-    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.activity:activity-compose:1.10.1")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")

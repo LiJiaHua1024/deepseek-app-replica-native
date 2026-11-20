@@ -51,6 +51,12 @@ if [ -n "$UIMODE" ]; then
 fi
 trap '[ -n "$UIMODE" ] && $ADB shell cmd uimode night no >/dev/null 2>&1 || true' EXIT
 
+if [ "$APP" = native ]; then
+  # Debug-only runtime override -> mock backend (default APK points at
+  # https://api.deepseek.com; the receiver persists this for the scene run).
+  $ADB shell am broadcast -a "$PKG.DEBUG_API_ORIGIN" --es origin "http://10.0.2.2:8321" >/dev/null 2>&1 || true
+fi
+
 if [ "$APP" = ref ]; then
   # node driver connects via webview_devtools CDP, installs the fetch proxy to
   # the mock backend, drives the scene, and captures at the right moment.
