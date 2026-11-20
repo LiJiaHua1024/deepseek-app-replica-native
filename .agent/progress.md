@@ -74,3 +74,4 @@
 - Remaining todo: MermaidDiagram, ReadingBars(.module), native.ImageSave, native.SourceBrowserActivity.
 20 16:52 segment: native.ImageSave done - MediaStore save + status pill verified E2E on emulator; remaining todo: MermaidDiagram, ReadingBars, SourceBrowserActivity
 20 00:5x segment: native.SourceBrowserActivity done - in-app WebView browser ported from ref, verified via agreements page
+20 01:0x segment: comp.ReadingBars{,.module} done - TTS read-aloud with animated bars verified E2E; mock /v1/tools/tts added (3s sine PCM)

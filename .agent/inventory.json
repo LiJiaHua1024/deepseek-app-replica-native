@@ -1562,24 +1562,24 @@
   "path": "src/components/messages/ReadingBars.module.css",
   "type": "interaction",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "ReadAloud port verified E2E 2026-11-20: tap 朗读 -> POST /v1/tools/tts (Bearer, pcm,24kHz) -> ReadingBars render brand-blue while playing (4 bars, x=1/5/9/13, wave phases 0/-1.2/-0.8/-0.4s), loading sweep gaussian; stream end -> back to 朗读 icon + idle. stop() on send/regenerate/session-switch. Mock /v1/tools/tts streams 3s sine PCM."
  },
  {
   "id": "comp.ReadingBars",
   "path": "src/components/messages/ReadingBars.tsx",
   "type": "interaction",
   "reach": "chat scenes",
-  "status": "todo",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 0,
+  "attempts": 1,
   "commit": null,
-  "notes": ""
+  "notes": "ReadAloud port verified E2E 2026-11-20: tap 朗读 -> POST /v1/tools/tts (Bearer, pcm,24kHz) -> ReadingBars render brand-blue while playing (4 bars, x=1/5/9/13, wave phases 0/-1.2/-0.8/-0.4s), loading sweep gaussian; stream end -> back to 朗读 icon + idle. stop() on send/regenerate/session-switch. Mock /v1/tools/tts streams 3s sine PCM."
  },
  {
   "id": "comp.ReplyArea.module",

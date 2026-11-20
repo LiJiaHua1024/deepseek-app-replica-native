@@ -204,6 +204,26 @@ function handle(req, res) {
       ? send(res, 200, { text: '语音输入测试' })
       : send(res, 401, { error: { message: 'Invalid API key' } });
   }
+  if (req.method === 'POST' && /\/tools\/tts$/.test(req.url)) {
+    // TTS stub: ~3s of 24 kHz 16-bit mono PCM sine, chunked like a stream.
+    req.resume();
+    if (key !== TEST_KEY) return send(res, 401, { error: { message: 'Invalid API key' } });
+    const rate = 24000, seconds = 3, total = rate * seconds;
+    res.writeHead(200, { 'Content-Type': 'application/octet-stream' });
+    let sent = 0;
+    const timer = setInterval(() => {
+      const n = Math.min(4800, total - sent);
+      if (n <= 0) { clearInterval(timer); res.end(); return; }
+      const buf = Buffer.alloc(n * 2);
+      for (let i = 0; i < n; i++) {
+        buf.writeInt16LE(Math.round(Math.sin((sent + i) / rate * 2 * Math.PI * 440) * 12000), i * 2);
+      }
+      sent += n;
+      res.write(buf);
+    }, 50);
+    res.on('close', () => clearInterval(timer));
+    return;
+  }
   if (req.method === 'POST' && req.url.endsWith('/messages')) {
     let body = '';
     req.on('data', (d) => (body += d));

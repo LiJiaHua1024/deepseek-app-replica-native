@@ -621,21 +621,28 @@ fun AssistantView(msg: Message.Assistant, session: Session, chatStore: ChatStore
                 }, modifier = Modifier.size(32.dp)) {
                     Icon(painterResource(R.drawable.ic_copy), Strings.get("copy"), tint = c.labelTertiary, modifier = Modifier.size(16.dp))
                 }
-                IconButton({
-                    // ref ReadAloudButton: POST {TOOLS_BASE_URL}/tts, fails -> error toast
-                    scope.launch {
-                        try {
-                            val body = "{}".toRequestBody("application/json".toMediaType())
-                            val resp = OkHttpClient().newCall(Request.Builder()
-                                .url(io.github.lijiahua1024.dsnative.api.API_ORIGIN + "/tts")
-                                .post(body).build()).execute()
-                            if (!resp.isSuccessful) throw java.io.IOException("tts " + resp.code)
-                        } catch (e: Exception) {
-                            DsToast.show(Strings.get("ttsFailed"))
+                run {
+                    // ref ReadAloudButton + ReadingBars: loading/playing 竖条动画,
+                    // повторный тап по читаемой = стоп (stopReadAloud).
+                    val readId by io.github.lijiahua1024.dsnative.data.ReadAloud.messageId.collectAsState()
+                    val readStatus by io.github.lijiahua1024.dsnative.data.ReadAloud.status.collectAsState()
+                    val reading = readId == msg.id && readStatus !=
+                        io.github.lijiahua1024.dsnative.data.ReadAloud.Status.IDLE
+                    IconButton({
+                        io.github.lijiahua1024.dsnative.data.ReadAloud.toggle(
+                            scope, msg.id, replyText(msg),
+                            chatStore.settings.apiKey.value ?: "",
+                            chatStore.settings.ttsVoice.value,
+                        ) { key -> DsToast.show(Strings.get(key)) }
+                    }, modifier = Modifier.size(32.dp)) {
+                        if (reading) {
+                            ReadingBars(readStatus ==
+                                io.github.lijiahua1024.dsnative.data.ReadAloud.Status.PLAYING)
+                        } else {
+                            Icon(painterResource(R.drawable.ic_speaker), Strings.get("ttsPlay"),
+                                tint = c.labelTertiary, modifier = Modifier.size(16.dp))
                         }
                     }
-                }, modifier = Modifier.size(32.dp)) {
-                    Icon(painterResource(R.drawable.ic_speaker), Strings.get("ttsPlay"), tint = c.labelTertiary, modifier = Modifier.size(16.dp))
                 }
                 IconButton({ chatStore.regenerateReply(sessionId, msg.id) }, modifier = Modifier.size(32.dp)) {
                     Icon(painterResource(R.drawable.ic_refresh), Strings.get("regenerate"), tint = c.labelTertiary, modifier = Modifier.size(16.dp))

@@ -163,7 +163,7 @@ private val json = Json {
 
 class ChatStore(
     private val context: Context,
-    private val settings: SettingsStore,
+    val settings: SettingsStore,
     private val scope: CoroutineScope,
 ) {
     private val chatDir = File(context.filesDir, "chat").apply { mkdirs() }
@@ -254,10 +254,12 @@ class ChatStore(
     fun sessionSnapshot(id: String): Session? = _sessionCache.value[id]
 
     fun newChat() {
+        ReadAloud.stop()
         _activeId.value = null
     }
 
     fun selectSession(id: String) {
+        ReadAloud.stop()
         _activeId.value = id
     }
 
@@ -330,6 +332,7 @@ class ChatStore(
     /** 提交草稿；null 目标表示新建会话。返回是否成功发出。 */
     fun sendMessage(targetSessionId: String?): Boolean {
         if (_importingHistory.value || !_ready.value) return false
+        ReadAloud.stop()
         val text = draft(targetSessionId).trim()
         val atts = draftAttachments(targetSessionId)
         if (text.isEmpty() && atts.isEmpty()) return false
@@ -388,6 +391,7 @@ class ChatStore(
     /** 重新生成当前路径上最后一条回答。 */
     fun regenerateReply(sessionId: String, messageId: String? = null) {
         if (_importingHistory.value || streamJobs.containsKey(sessionId)) return
+        ReadAloud.stop()
         val session = _sessionCache.value[sessionId] ?: return
         val path = visibleMessages(session)
         val index = if (messageId == null) path.size - 1 else path.indexOfFirst { it.id == messageId }
