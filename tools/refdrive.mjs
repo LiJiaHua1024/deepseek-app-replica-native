@@ -360,7 +360,18 @@ const scenes = {
   },
   async 'welcome.default'(evaluate) {
     await enterKey(evaluate)
-    await delay(400)
+    // previous scenes may leave the drawer open — click the scrim to close
+    await evaluate(`(() => {
+      const f = document.querySelector('.frame');
+      if (!f || f.getAttribute('data-drawer-open') !== 'true') return false;
+      const w = [...document.querySelectorAll('div')].find(e => {
+        const s = getComputedStyle(e); const r = e.getBoundingClientRect();
+        return s.position === 'fixed' && r.width >= innerWidth - 1 && r.height >= innerHeight - 1
+          && parseFloat(s.backgroundColor.match(/[\\d.]+(?=\\))/)?.[0] ?? 1) > 0;
+      });
+      if (w) { w.click(); return true }
+      return false })()`)
+    await delay(500)
   },
   async 'welcome.keyboard'(evaluate) {
     await enterKey(evaluate)
@@ -603,6 +614,46 @@ const scenes = {
     // wait for stream end — the mock's message_delta sets the header title 问候
     await until('stream done (title)', async () => /问候/.test(await evaluate(bodyText)), 60000)
     await delay(800)
+  },
+  // Request-equivalence recording: pm-clear the app first so key entry does a
+  // real GET /models verify (enterKey's bridge fast-path would skip it).
+  // Records: /models, /messages, /messages+search tools, /files+/messages w/file,
+  // /messages 400 too-long + stripped retry — one line each in RECORD_FILE.
+  async 'net.record'(evaluate) {
+    await until('password input', () => evaluate(vis(passwordInput)), 20000)
+    await evaluate(setInput(passwordInput, KEY))
+    await evaluate(`(() => {
+      const b = [...document.querySelectorAll('button')].find(b => /确定|Confirm|OK/i.test(b.textContent));
+      if (b) { b.click(); return true } return false })()`)
+    await until('welcome composer', () => evaluate(vis('textarea')), 20000)
+    await delay(400)
+    await sendMessage(evaluate, '你好')
+    await until('reply done', async () => /结束/.test(await replyText(evaluate)), 40000)
+    // search toggle ON -> tools carries deepseek_web_search
+    const toggled = await evaluate(`(() => {
+      const b = document.querySelector('button[aria-label="智能搜索"], button[aria-label="Search"]');
+      if (b && b.getAttribute('aria-pressed') !== 'true') { b.click(); return true }
+      return b ? 'already' : false })()`)
+    if (!toggled) throw new Error('search pill not found')
+    await delay(300)
+    await sendMessage(evaluate, 'search')
+    await until('search reply', async () => /个网页|pages?/i.test(await replyText(evaluate)), 40000)
+    // file attach + send -> POST /files then /messages with file block
+    await evaluate(`(() => {
+      const input = document.querySelector('input[type=file]');
+      const dt = new DataTransfer();
+      dt.items.add(new File(['parity test document\\n'], 'parity_note.txt', { type: 'text/plain' }));
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      return true })()`)
+    await until('draft chip', () => evaluate(
+      `document.querySelectorAll('[class*=attachment]').length > 0`), 10000)
+    await sendMessage(evaluate, 'refused')
+    await until('file reply', async () => /换个话题/.test(await replyText(evaluate)), 40000)
+    // too-long: extended body -> 400, auto retry stripped
+    await sendMessage(evaluate, 'toolong')
+    await until('toolong reply', async () => /结束/.test(await replyText(evaluate)), 40000)
+    await delay(400)
   },
   async 'searchpanel.default'(evaluate) {
     await enterKey(evaluate)

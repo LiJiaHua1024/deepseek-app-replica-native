@@ -177,7 +177,15 @@ fun AndroidSettings(settings: SettingsStore, chatStore: ChatStore, onBack: () ->
                 fontWeight = FontWeight.Medium, color = c.labelPrimary,
                 modifier = Modifier.align(Alignment.Center))
         }
+        // ref .page-enter 235ms cubic-bezier(0.2,0.72,0.25,1): translateX 100% -> 0
+        val pageAnim = remember { androidx.compose.animation.core.Animatable(1f) }
+        val pageEase = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.72f, 0.25f, 1f)
+        LaunchedEffect(page) {
+            pageAnim.snapTo(0f)
+            pageAnim.animateTo(1f, androidx.compose.animation.core.tween(235, easing = pageEase))
+        }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
+            .graphicsLayer { translationX = (1f - pageAnim.value) * size.width }
             .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 36.dp)) {
             when (page) {
                 "root" -> SettingsRootPage(c, card, muted,
@@ -648,7 +656,10 @@ private fun ChoicePopup(
     onDismiss: () -> Unit,
 ) {
     var next by remember { mutableStateOf(selected) }
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f))
+    // ref .overlay-enter 170ms ease-out: dim fades in
+    val ov = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(Unit) { ov.animateTo(1f, androidx.compose.animation.core.tween(170)) }
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f * ov.value))
         .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
             indication = null) { onDismiss() },
         contentAlignment = Alignment.Center) {
@@ -709,11 +720,22 @@ private fun VoiceSheet(
         "stella" to (Strings.get("settingsTtsVoiceStella") to Strings.get("settingsTtsVoiceStellaDesc")),
         "tide" to (Strings.get("settingsTtsVoiceTide") to Strings.get("settingsTtsVoiceTideDesc")))
     val now = tones.firstOrNull { it.first == tone } ?: tones[0]
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f))
+    // ref .overlay-enter 170ms + .sheet-enter 220ms cubic-bezier(0.2,0.72,0.25,1)
+    val ov = remember { androidx.compose.animation.core.Animatable(0f) }
+    val sheet = remember { androidx.compose.animation.core.Animatable(0f) }
+    val sheetEase = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.72f, 0.25f, 1f)
+    LaunchedEffect(Unit) {
+        ov.animateTo(1f, androidx.compose.animation.core.tween(170))
+    }
+    LaunchedEffect(Unit) {
+        sheet.animateTo(1f, androidx.compose.animation.core.tween(220, easing = sheetEase))
+    }
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f * ov.value))
         .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
             indication = null) { onDismiss() },
         contentAlignment = Alignment.BottomCenter) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(0.7f)
+            .graphicsLayer { translationY = (1f - sheet.value) * size.height }
             .clip(RoundedCornerShape(topStart = 21.dp, topEnd = 21.dp)).background(card)
             .clickable(enabled = false) {}) {
             Box(Modifier.fillMaxWidth().height(56.dp), contentAlignment = Alignment.Center) {

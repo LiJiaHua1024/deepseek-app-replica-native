@@ -26,8 +26,16 @@ shot() { if ! $ADB exec-out screencap -p > "$1" 2>/dev/null || [ ! -s "$1" ]; th
 mock() { curl -s -o /dev/null http://localhost:8321/models || setsid nohup ~/tools/node22/bin/node "$REPO/tools/mock-api/server.js" >/tmp/mock.log 2>&1 & sleep 0.6; }
 
 # --- native helpers -------------------------------------------------------
+# a press that lands on 拍照/相册/文件 launches an external activity which then
+# owns the top task — kill camera-ish packages so the app actually comes forward
+kill_foreground_blockers() {
+  for p in $($ADB shell pm list packages 2>/dev/null | tr -d '\r' | sed 's/^package://' | grep -i 'camera\|documentsui\|photopicker\|gallery'); do
+    $ADB shell am force-stop "$p" >/dev/null 2>&1
+  done
+}
 nlaunch() { for i in 1 2 3; do $ADB shell am start -n "$NPKG/.MainActivity" >/dev/null 2>&1 && return 0; sleep 3; done; return 1; }
 nkey() {
+  kill_foreground_blockers
   $ADB shell am force-stop $NPKG >/dev/null 2>&1; sleep 0.8
   nlaunch; sleep 2
   if wait_node "输入 API Key|Enter API Key" 8; then :; else return 0; fi
@@ -91,10 +99,13 @@ hold_at() { # cx cy holdms out.png
   sleep 1.0
 }
 
-press_native() { # regex holdms out.png — same real-input hold as ref
+press_native() { # regex holdms out.png — MotionServer hold; UP lands off-target
+  # so press rows that launch intents (camera/gallery/docs) don't fire on release.
   local re="$1" ms="$2" out="$3" c
   c=$(find_node "$re" || find_row "$re") || { echo "NO NODE /$re/" >&2; return 1; }
-  hold_at $(echo $c | awk '{print $1, $2}') "$ms" "$out"
+  local mode=press; [ "$ms" -ge 700 ] && mode=long
+  local p; p=$(bash "$REPO/tools/press.sh" $c "$mode" "_pc.png") || return 1
+  cp "$p" "$out"
 }
 
 ref_scene() { # scene sel — drives ref app into state, prints element coords
@@ -136,7 +147,11 @@ run() { # id refscene refsel natregex mode native_setup
 
 # native state builders ----------------------------------------------------
 s_home()    { nkey; }
-s_attach()  { nkey; tap_node "uploadFile|上传文件|Upload|上传" >/dev/null; wait_node "相册|Gallery|Photos|Camera|拍照" 8; sleep 0.8; }
+s_attach()  { nkey; tap_node "uploadFile|上传文件|Upload|上传" >/dev/null
+  # first run may raise the runtime media-permission dialog before the sheet
+  local g; g=$(find_node "允许|ALLOW|Allow|while using" || true)
+  [ -n "$g" ] && { $ADB shell input tap $g; sleep 1.2; }
+  wait_node "相册|Gallery|Photos|Camera|拍照" 8; sleep 0.8; }
 s_code()    { nkey; nsend "code"; wait_node "println|复制|Copy" 40; sleep 0.6; }
 s_search()  { nkey; nsend "search"; wait_node "个网页|pages" 40; sleep 0.6; tap_node "个网页|pages$" >/dev/null; wait_node "Technical Report|Search results|搜索结果" 10; sleep 0.6; }
 s_sett()    { nkey; nsettings; }

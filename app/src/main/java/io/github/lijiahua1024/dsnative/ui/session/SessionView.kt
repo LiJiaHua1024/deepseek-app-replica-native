@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -264,9 +265,14 @@ fun DsToastHost() {
     if (text != null) {
         // ref [data-android] .toast: top 50% translateY(-50%) of its container,
         // whose measured centre lands ~31 device px below the screen centre
+        // ref Toast.module enter 0.2s ease-in-out: opacity 0->1 + translateY(-8px)
+        val enter = remember { androidx.compose.animation.core.Animatable(0f) }
+        LaunchedEffect(text) { enter.animateTo(1f, androidx.compose.animation.core.tween(200)) }
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(text!!, fontSize = 14.sp, lineHeight = 22.sp, color = Color(0xFFF7F9FC),
-                modifier = Modifier.offset(y = 11.3.dp).clip(RoundedCornerShape(16.dp))
+                modifier = Modifier.offset(y = 11.3.dp)
+                    .graphicsLayer { alpha = enter.value; translationY = -8.dp.toPx() * (1f - enter.value) }
+                    .clip(RoundedCornerShape(16.dp))
                     .background(Color(0xDB202020))
                     .padding(horizontal = 18.dp, vertical = 12.dp))
         }

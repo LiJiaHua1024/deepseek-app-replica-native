@@ -15,8 +15,10 @@ DIR=/sdcard/Android/data/io.github.lijiahua1024.dsnative/files
 
 $ADB shell mkdir -p $DIR >/dev/null 2>&1 || true
 $ADB shell rm -f $DIR/inject.cmd $DIR/inject.log >/dev/null 2>&1 || true
-# hold pointer down for HOLD+1200ms so the screenshot window sits inside it
-$ADB shell "printf 'down %s %s\nsleep %s\nup %s %s\n' $X $Y $((HOLD+1200)) $X $Y > $DIR/inject.cmd"
+# hold pointer down for HOLD+1200ms so the screenshot window sits inside it;
+# the trailing move+up off-target cancels the tap so rows that launch intents
+# (相机/相册/文件, voice mode) don't fire on release.
+$ADB shell "printf 'down %s %s\nsleep %s\nmove %s %s\nup %s %s\n' $X $Y $((HOLD+1200)) $X $((Y-80)) $X $((Y-80)) > $DIR/inject.cmd"
 $ADB shell am instrument -w -e class $CLS#serve $RUNNER >/dev/null 2>&1 &
 INSTR_PID=$!
 # wait for the live "down" marker before capturing the pressed frame

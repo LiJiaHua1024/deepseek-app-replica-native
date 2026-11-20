@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import io.github.lijiahua1024.dsnative.data.ChatStore
 import io.github.lijiahua1024.dsnative.data.SettingsStore
 import io.github.lijiahua1024.dsnative.theme.DsTheme
+import kotlinx.coroutines.launch
 import io.github.lijiahua1024.dsnative.ui.sider.Sider
 import io.github.lijiahua1024.dsnative.ui.session.SessionView
 import io.github.lijiahua1024.dsnative.ui.settings.AndroidSettings
@@ -122,21 +123,35 @@ fun DrawerFrame(
         val edgePx = with(density) { min(widthPx - 68.4.dp.toPx(), 380.dp.toPx()) }
         var progress by remember { mutableStateOf(0f) }
         var settling by remember { mutableStateOf(false) }
+        // ref --drawer-transition: 150ms cubic-bezier(0.18,0.23,0.32,1) on
+        // transform+opacity — release/settle animates, drag tracks directly.
+        val settleScope = rememberCoroutineScope()
+        val settleEasing = androidx.compose.animation.core.CubicBezierEasing(0.18f, 0.23f, 0.32f, 1f)
+        var settleJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+
+        fun settleTo(target: Float) {
+            val t = target.coerceIn(0f, 1f)
+            val start = progress
+            settleJob?.cancel()
+            if (kotlin.math.abs(t - start) < 0.001f) { progress = t; return }
+            settleJob = settleScope.launch {
+                androidx.compose.animation.core.animate(
+                    initialValue = start, targetValue = t,
+                    animationSpec = androidx.compose.animation.core.tween(150, easing = settleEasing),
+                ) { v, _ -> progress = v }
+            }
+        }
 
         // 返回手势关闭打开的抽屉（ref: sider open -> closeMobileSider）。
         // PredictiveBackHandler：手势进度直接驱动抽屉位移，取消则弹回。
         androidx.activity.compose.PredictiveBackHandler(enabled = progress >= 0.999f) { flow ->
             try {
                 flow.collect { ev -> progress = (1f - ev.progress).coerceIn(0f, 1f) }
-                progress = 0f
+                settleTo(0f)
             } catch (e: kotlinx.coroutines.CancellationException) {
-                progress = 1f
+                settleTo(1f)
                 throw e
             }
-        }
-
-        fun settleTo(target: Float) {
-            progress = target.coerceIn(0f, 1f)
         }
 
         LaunchedEffect(progress) { /* progress is the single source of truth */ }
@@ -175,6 +190,7 @@ fun DrawerFrame(
                         return
                     }
                     if (horizontal <= slopPx || (!freePan && horizontal < dy)) return
+                    settleJob?.cancel()
                     g.start = progress // take over live position
                     if ((g.start <= 0.001f && dx < 0) || (g.start >= 0.999f && dx > 0)) {
                         g.start = -1f
