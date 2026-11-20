@@ -481,7 +481,7 @@ private fun FontPanel(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: C
     // ref .fontPanel: bottom sheet card, r18 top, padding 12 24 36; follow-system switch + labels + slider
     Column(Modifier.fillMaxWidth().navigationBarsPadding()
         .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)).background(card)
-        .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 29.dp)) {
+        .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 36.dp)) {
         Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 44.dp)
             .padding(start = 3.dp, end = 3.dp),
             verticalAlignment = Alignment.CenterVertically) {
@@ -498,7 +498,7 @@ private fun FontPanel(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: C
         // ref range input: thin track, left light gray / right dark, round gray thumb
         val enabled = fontSize != null
         androidx.compose.foundation.Canvas(
-            Modifier.fillMaxWidth().padding(top = 12.dp).height(17.dp)
+            Modifier.fillMaxWidth().padding(top = 5.dp).height(17.dp)
                 .alpha(if (enabled) 1f else 0.5f)
                 .pointerInput(enabled) {
                     if (!enabled) return@pointerInput
@@ -512,15 +512,16 @@ private fun FontPanel(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: C
                         settings.setFontSize((ch.position.x / size.width * 6f + 0.5f).toInt().coerceIn(0, 6))
                     }
                 }) {
-            val th = 7.dp.toPx(); val cy = size.height / 2; val tr = th / 2
-            val tx = (size.width * ((fontSize ?: 3) / 6f)).coerceIn(7.dp.toPx(), size.width - 7.dp.toPx())
+            val th = 8.dp.toPx(); val cy = size.height / 2; val tr = th / 2
+            val tx = (size.width * ((fontSize ?: 3) / 6f)).coerceIn(5.5.dp.toPx(), size.width - 5.5.dp.toPx())
             drawRoundRect(Color(0xFF3B3B3B), topLeft = androidx.compose.ui.geometry.Offset(0f, cy - th / 2),
                 size = androidx.compose.ui.geometry.Size(size.width, th),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(tr))
             drawRoundRect(Color(0xFFAAAAAA), topLeft = androidx.compose.ui.geometry.Offset(0f, cy - th / 2),
                 size = androidx.compose.ui.geometry.Size(tx, th),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(tr))
-            drawCircle(Color(0xFF9E9E9E), radius = 10.dp.toPx(),
+            // WebKit <input type=range>: ~10.5dp #AAAAAA thumb, same gray as the filled track
+            drawCircle(Color(0xFFAAAAAA), radius = 5.5.dp.toPx(),
                 center = androidx.compose.ui.geometry.Offset(tx, cy))
         }
     }

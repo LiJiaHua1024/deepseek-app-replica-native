@@ -431,11 +431,11 @@
   "type": "screen-state",
   "reach": "shot settings.font.default",
   "status": "residual",
-  "blurred_ssim": 0.9634,
-  "color_mad": 2.204,
-  "attempts": 0,
+  "blurred_ssim": 0.9755,
+  "color_mad": 1.361,
+  "attempts": 1,
   "commit": null,
-  "notes": "best 0.9634/2.204; worst rect y2051-2340 bottom panel ~0.81; tried: dp margin sweeps on all paddings, canvas slider sizing, thumb/track radius. Sub-pixel glyph+track rendering differs from WebView range input."
+  "notes": "best 0.9634/2.204; worst rect y2051-2340 bottom panel ~0.81; tried: dp margin sweeps on all paddings, canvas slider sizing, thumb/track radius. Sub-pixel glyph+track rendering differs from WebView range input. | retry: WebKit range slider measured — track 8dp, thumb 5.5dp #AAA, sheet padB 36dp, canvas top 5dp; 0.9634->0.9755; left = text AA"
  },
  {
   "id": "settings.personalization.default",
