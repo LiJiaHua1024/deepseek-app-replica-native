@@ -47,6 +47,7 @@ import kotlin.math.roundToInt
 @Composable
 fun App(settings: SettingsStore, chatStore: ChatStore) {
     val themePref by settings.themePreference.collectAsState()
+    io.github.lijiahua1024.dsnative.theme.Strings.locale = settings.localePreference.collectAsState().value
     val dark = when (themePref) {
         io.github.lijiahua1024.dsnative.data.ThemePreference.LIGHT -> false
         io.github.lijiahua1024.dsnative.data.ThemePreference.DARK -> true

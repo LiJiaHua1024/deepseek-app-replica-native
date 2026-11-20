@@ -25,6 +25,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -58,6 +59,10 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
     val streaming by chatStore.streaming.collectAsState()
     val listState = rememberLazyListState()
     var sourcesPanel by remember { mutableStateOf<List<Source>?>(null) }
+    // (msg, 气泡 boundsInWindow, edit 回调) —— 参照物菜单在页内 DOM，Popup 窗口
+    // 会把强制对比度的黑色导航栏区域刷白，必须用窗口内 overlay
+    var bubbleMenu by remember { mutableStateOf<Triple<Message.User, androidx.compose.ui.geometry.Rect, () -> Unit>?>(null) }
+    val rootCtx = LocalContext.current
 
     // ref top inset = 128px@2.75dpr: gray status bar + ~17px gray filler
     Column(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0xFF757575)).statusBarsPadding()) {
@@ -104,7 +109,7 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
                 contentPadding = PaddingValues(bottom = 20.5.dp)) {
                 items(visible.size, key = { visible[it].id }) { index ->
                     when (val msg = visible[index]) {
-                        is Message.User -> session?.let { UserBubble(msg, it, chatStore) }
+                        is Message.User -> session?.let { UserBubble(msg, it, chatStore) { m, r, e -> bubbleMenu = Triple(m, r, e) } }
                         is Message.Assistant -> session?.let {
                             AssistantView(msg, it, chatStore, index == visible.size - 1, onOpenSettings)
                         }
@@ -189,6 +194,41 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
             )
         }
     }
+    bubbleMenu?.let { (bmsg, rect, onEdit) ->
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        var overlayPos by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+        val winW = with(density) {
+            androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp.toPx()
+        }
+        val endPad = with(density) { (winW - rect.right - 22f).coerceAtLeast(0f).toDp() }
+        val topPad = with(density) { (rect.top - overlayPos.y + 97f).coerceAtLeast(0f).toDp() }
+        Box(Modifier.fillMaxSize()
+            .onGloballyPositioned { overlayPos = it.localToRoot(androidx.compose.ui.geometry.Offset.Zero) }) {
+            Box(Modifier.fillMaxSize().clickable(
+                indication = null,
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { bubbleMenu = null })
+            // ref .menu: min-width 124px, padding 4px, r12, menu bg + 层叠阴影
+            androidx.compose.material3.Surface(
+                color = c.menu, shape = RoundedCornerShape(12.dp),
+                // ref .menu: box-shadow 0 12px 32px rgba(0,0,0,.08) + 0 0 1px .2
+                shadowElevation = 16.dp,
+                modifier = Modifier.align(Alignment.TopEnd)
+                    .padding(end = endPad).offset(y = topPad).width(124.dp),
+            ) {
+                Column(Modifier.padding(4.dp)) {
+                    MenuOption(Strings.get("copy"), R.drawable.ic_copy, c.labelPrimary) {
+                        val cb = rootCtx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        cb.setPrimaryClip(android.content.ClipData.newPlainText("msg", bmsg.content))
+                        DsToast.show(Strings.get("copied"))
+                        bubbleMenu = null
+                    }
+                    MenuOption(Strings.get("androidEditMessage"), R.drawable.ic_edit, c.labelPrimary) {
+                        onEdit(); bubbleMenu = null
+                    }
+                }
+            }
+        }
+    }
     }
     }
     }
@@ -266,12 +306,13 @@ fun BranchSwitcher(session: Session, msg: Message, chatStore: ChatStore) {
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
-fun UserBubble(msg: Message.User, session: Session, chatStore: ChatStore) {
+fun UserBubble(msg: Message.User, session: Session, chatStore: ChatStore,
+               onMenu: (Message.User, androidx.compose.ui.geometry.Rect, () -> Unit) -> Unit = { _, _, _ -> }) {
     val c = DsTheme.colors
     val ctx = LocalContext.current
     var editing by remember { mutableStateOf(false) }
     var draft by remember { mutableStateOf(msg.content) }
-    var menuOpen by remember { mutableStateOf(false) }
+    var bubbleRect by remember { mutableStateOf(androidx.compose.ui.geometry.Rect.Zero) }
     Column(Modifier.fillMaxWidth().padding(top = 22.dp)) {
         // ref .files: wrap 行右对齐 gap 10px mb 8px；混排文档时缩略图 64px
         if (msg.files.isNotEmpty()) {
@@ -314,37 +355,17 @@ fun UserBubble(msg: Message.User, session: Session, chatStore: ChatStore) {
         } else {
             Box(Modifier.fillMaxWidth().padding(start = 48.dp, end = 16.dp)) {
                 Box(Modifier.align(Alignment.TopEnd)
+                    .onGloballyPositioned { val p = it.localToRoot(androidx.compose.ui.geometry.Offset.Zero); bubbleRect = androidx.compose.ui.geometry.Rect(p.x, p.y, p.x + it.size.width, p.y + it.size.height) }
                     .clip(RoundedCornerShape(22.dp, 22.dp, 4.dp, 22.dp))
                     .background(c.bubble)
                     .combinedClickable(
+                        // ref .bubble 无 :active 变色：长按/点按都不显示 ripple
+                        indication = null,
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                         onClick = { editing = true; draft = msg.content },
-                        onLongClick = { menuOpen = true })
+                        onLongClick = { onMenu(msg, bubbleRect) { editing = true; draft = msg.content } })
                     .padding(horizontal = 16.dp, vertical = 10.dp)) {
                     Text(msg.content, fontSize = 16.sp, lineHeight = 24.sp, color = c.labelPrimary)
-                }
-                if (menuOpen) {
-                    // ref Menu: anchored at bubble top-right, aligned start with -5px;
-                    // for right-side bubbles it clamps to viewport right edge (-8css px).
-                    // top = first text line bottom + 4px ~= bubble top + 40css px = 110dp-px
-                    androidx.compose.ui.window.Popup(
-                        alignment = Alignment.TopEnd,
-                        offset = androidx.compose.ui.unit.IntOffset(22, 97),
-                        onDismissRequest = { menuOpen = false }) {
-                        // ref .menu: min-width 124px, padding 4px, r12, menu bg
-                        Column(Modifier.defaultMinSize(minWidth = 124.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(c.menu).padding(4.dp)) {
-                            MenuOption(Strings.get("copy"), R.drawable.ic_copy, c.labelPrimary) {
-                                val cb = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                cb.setPrimaryClip(android.content.ClipData.newPlainText("msg", msg.content))
-                                DsToast.show(Strings.get("copied"))
-                                menuOpen = false
-                            }
-                            MenuOption(Strings.get("androidEditMessage"), R.drawable.ic_edit, c.labelPrimary) {
-                                editing = true; draft = msg.content; menuOpen = false
-                            }
-                        }
-                    }
                 }
             }
             BranchSwitcher(session, msg, chatStore)
@@ -471,8 +492,10 @@ private fun MessageFileView(
 
 @Composable
 private fun MenuOption(label: String, icon: Int, tint: Color, onClick: () -> Unit) {
+    // ref .option: padding 8/10 + font 14/24 —— CSS line-box 恒为 24px；
+    // Compose 单行 Text 高度只有 ~21sp，必须显式 40dp 行高，否则第二项上移 ~9px
     Row(Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick)
-        .padding(horizontal = 10.dp, vertical = 8.dp),
+        .height(40.dp).padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Icon(painterResource(icon), null, tint = tint, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(8.dp))
@@ -608,8 +631,9 @@ fun AssistantView(msg: Message.Assistant, session: Session, chatStore: ChatStore
             else -> {}
         }
         if (msg.status == ReplyStatus.DONE || msg.status == ReplyStatus.STOPPED) {
-            // 6px main-content padding-bottom + 12px .bottom padding-top
-            Row(Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 10.dp),
+            // 6px main-content padding-bottom + 12px .bottom padding-top；
+            // ref .bottom { left:-6px }——整行向左偏 6css px
+            Row(Modifier.fillMaxWidth().offset(x = (-8).dp).padding(top = 16.5.dp, bottom = 10.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 BranchSwitcher(session, msg, chatStore)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp),

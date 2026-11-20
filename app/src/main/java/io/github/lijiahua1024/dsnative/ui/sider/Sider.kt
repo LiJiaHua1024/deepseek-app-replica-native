@@ -412,7 +412,7 @@ private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean,
 private fun SiderMenuOption(icon: Int, label: String, color: androidx.compose.ui.graphics.Color, onSelect: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable(onClick = onSelect)
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+            .height(40.dp).padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(painterResource(icon), null, tint = color, modifier = Modifier.size(16.dp))

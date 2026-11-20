@@ -7,7 +7,11 @@ import io.github.lijiahua1024.dsnative.data.LocalePreference
  * en-US fallback for the subset the app renders.
  */
 object Strings {
-    var locale: LocalePreference = LocalePreference.SYSTEM
+    // mutableStateOf：切语言时所有 Strings.get 调用点自动重组
+    var locale: LocalePreference
+        get() = _locale.value
+        set(v) { _locale.value = v }
+    private val _locale = androidx.compose.runtime.mutableStateOf(LocalePreference.SYSTEM)
 
     private fun isZh(): Boolean = when (locale) {
         LocalePreference.ZH_CN -> true

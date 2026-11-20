@@ -310,6 +310,11 @@ async function chatDone(evaluate, text) {
 // 'refused' scenario: one-line reply so the tested feature fills the frame
 async function chatShort(evaluate) {
   await enterKey(evaluate)
+  // 每轮开启新对话：避免同一会话累积多条 refused 问答导致截图漂移
+  await evaluate(`(() => {
+    const b = document.querySelector('button[aria-label="开启新对话"], button[aria-label="New chat"]');
+    if (b) { b.click(); return true } return false })()`)
+  await delay(600)
   await sendMessage(evaluate, 'refused')
   await until('short reply done', async () => /换个话题/.test(await replyText(evaluate)), 40000)
   await delay(400)
@@ -460,6 +465,10 @@ const scenes = {
     console.error('DUMP:', dump)
   },
   async 'chat.default'(evaluate) { return chatDone(evaluate, '你好') },
+  async 'sider.menu'(evaluate) {
+    await openDrawer(evaluate)
+    await dispatchTouchOnSession(evaluate, 900)
+  },
   async chat_done(evaluate) { return chatDone(evaluate, '你好') },
   async chat_thinking(evaluate) {
     await enterKey(evaluate)
@@ -851,6 +860,22 @@ const main = async () => {
     const fn = scenes[scene] ?? scenes[`${scene}.default`]
     if (!fn) throw new Error(`unknown scene ${scene}`)
     await fn(evaluate, (...a) => session.call(...a))
+    if (process.env.PRESS_SEL) {
+      const r = await evaluate(`(() => { const el = ${process.env.PRESS_SEL}; if (!el) return null; const b = el.getBoundingClientRect(); return {x:b.left+b.width/2, y:b.top+b.height/2} })()`)
+      if (r) {
+        const o = webViewOrigin()
+        const dpr = await evaluate('devicePixelRatio')
+        console.log('PRESSXY', Math.round(r.x * dpr + o.x), Math.round(r.y * dpr + o.y))
+      } else console.log('PRESSXY none')
+    }
+    if (process.env.PRESS_RECT) {
+      const r = await evaluate(`(() => { const el = ${process.env.PRESS_RECT}; if (!el) return null; const b = el.getBoundingClientRect(); return {l:b.left,t:b.top,r:b.right,b:b.bottom} })()`)
+      if (r) {
+        const o = webViewOrigin()
+        const dpr = await evaluate('devicePixelRatio')
+        console.log('PRESSRECT', Math.round(r.l*dpr+o.x), Math.round(r.t*dpr+o.y), Math.round(r.r*dpr+o.x), Math.round(r.b*dpr+o.y))
+      } else console.log('PRESSRECT none')
+    }
     await delay(600)
     screencap(out)
     console.log(`ref scene ${scene} -> ${out}`)

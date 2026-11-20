@@ -26,7 +26,7 @@ from scipy.ndimage import gaussian_filter, uniform_filter
 
 REPO = Path(__file__).resolve().parent.parent
 STATUS_BAR_PX = 88   # top mask (system status bar @440dpi)
-NAV_BAR_PX = 64      # bottom mask (gesture pill area)
+NAV_BAR_PX = 96      # bottom mask (gesture pill + blur bleed of ref's enforced-contrast band)
 TILE = 293           # worst-rect tile size (~grid 4x8 on 1080x2340)
 
 THRESH_SSIM = 0.98

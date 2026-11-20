@@ -13,8 +13,8 @@ RUNNER=$TEST_PKG/androidx.test.runner.AndroidJUnitRunner
 CLS=io.github.lijiahua1024.dsnative.MotionServer
 DIR=/sdcard/Android/data/io.github.lijiahua1024.dsnative/files
 
-$ADB shell mkdir -p $DIR >/dev/null 2>&1
-$ADB shell rm -f $DIR/inject.cmd $DIR/inject.log >/dev/null 2>&1
+$ADB shell mkdir -p $DIR >/dev/null 2>&1 || true
+$ADB shell rm -f $DIR/inject.cmd $DIR/inject.log >/dev/null 2>&1 || true
 # hold pointer down for HOLD+1200ms so the screenshot window sits inside it
 $ADB shell "printf 'down %s %s\nsleep %s\nup %s %s\n' $X $Y $((HOLD+1200)) $X $Y > $DIR/inject.cmd"
 $ADB shell am instrument -w -e class $CLS#serve $RUNNER >/dev/null 2>&1 &
@@ -25,6 +25,8 @@ for i in $(seq 1 60); do
   sleep 0.05
 done
 sleep "$(awk "BEGIN{print $HOLD/1000}")"
-$ADB exec-out screencap -p > "$OUT/$NAME.png"
+if ! $ADB exec-out screencap -p > "$OUT/$NAME.png" 2>/dev/null || [ ! -s "$OUT/$NAME.png" ]; then
+  $ADB shell screencap -p /sdcard/_press.png >/dev/null 2>&1 && $ADB pull /sdcard/_press.png "$OUT/$NAME.png" >/dev/null 2>&1
+fi
 wait $INSTR_PID || true
 echo "$OUT/$NAME.png"

@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
@@ -57,6 +58,8 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     val drafts by chatStore.drafts.collectAsState()
     var text by remember(activeId) { mutableStateOf(drafts[activeId ?: ""] ?: "") }
     var focused by remember { mutableStateOf(false) }
+    var focusAt by remember { mutableStateOf(0L) }
+    val holdScope = androidx.compose.runtime.rememberCoroutineScope()
     val thinking by settings.thinking.collectAsState()
     val search by settings.search.collectAsState()
     val isStreaming = activeId != null && streaming.contains(activeId)
@@ -155,7 +158,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
 
     // ref --android-composer-bottom: 27px gesture nav, 11px with keyboard
     val keyboardOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
-    Column(Modifier.fillMaxWidth().imePadding().padding(bottom = if (keyboardOpen) 27.7.dp else 52.dp)) {
+    Column(Modifier.fillMaxWidth().imePadding().padding(bottom = if (keyboardOpen) 27.7.dp else 50.5.dp)) {
     Column(
         Modifier.fillMaxWidth()
             .padding(start = 12.dp, end = 12.dp)
@@ -220,7 +223,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
             }
         } else {
         // ref textarea: min-height 56px, padding-top 14.75px, padding-inline 17px
-        Box(Modifier.fillMaxWidth().height(56.dp).padding(start = 17.dp, end = 17.dp, top = 14.75.dp)) {
+        Box(Modifier.fillMaxWidth().height(61.dp).padding(start = 17.dp, end = 17.dp, top = 19.75.dp)) {
             BasicTextField(
                 value = text,
                 onValueChange = { text = it; chatStore.setDraft(activeId, it) },
@@ -244,7 +247,44 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
-                    .onFocusChanged { focused = it.isFocused },
+                    .onFocusChanged {
+                        focused = it.isFocused
+                        if (it.isFocused) focusAt = android.os.SystemClock.uptimeMillis()
+                    }
+                    // ref hold.delayed: pointerdown on empty unfocused field arms a
+                    // 380ms timer; holding past it starts voice, |dy|>12 cancels,
+                    // drag up >=72px while recording enters cancel state,
+                    // release finishes (transcribe+send)
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            // armed when the field was unfocused before this press (focus
+                            // landing <300ms ago was caused by this very down)
+                            val arm = text.isEmpty() &&
+                                (!focused || android.os.SystemClock.uptimeMillis() - focusAt < 300)
+                            if (!arm) return@awaitEachGesture
+                            val startY = down.position.y
+                            var started = false
+                            // ref setTimeout(start, 380)：子协程计时，松开/位移>12 时取消
+                            val timer = holdScope.launch {
+                                kotlinx.coroutines.delay(380)
+                                    tryStartVoice(); started = true
+                            }
+                            while (true) {
+                                val ev = awaitPointerEvent()
+                                val ch = ev.changes.firstOrNull() ?: break
+                                if (started && VoiceInput.status.value == VoiceInput.Status.RECORDING) {
+                                    VoiceInput.canceling.value = startY - ch.position.y >= 72.dp.toPx()
+                                }
+                                if (!ch.pressed) break
+                                if (!started && kotlin.math.abs(startY - ch.position.y) > 12.dp.toPx()) break
+                            }
+                            if (!started) timer.cancel()
+                            if (started) {
+                                if (VoiceInput.canceling.value) VoiceInput.cancel() else VoiceInput.finish()
+                            }
+                        }
+                    },
             )
         }
         }
@@ -301,6 +341,8 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                 }
             }
         }
+        // ref composer 底部留白：卡片内衬在 chips 行下方
+        Spacer(Modifier.height(2.5.dp))
     }
     // ref AndroidAttachments：卡片外、composer 列内展开的面板
     AttachmentsPanel(

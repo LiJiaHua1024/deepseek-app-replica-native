@@ -26,6 +26,8 @@ class MainActivity : ComponentActivity() {
     // input text` cannot deliver (it throws NPE for unmappable characters).
     private val debugInput = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            // newchat=true：presscheck 每轮先开全新会话，避免同一会话累积重复问答
+            if (intent.getBooleanExtra("newchat", false)) chatStore.newChat()
             val text = intent.getStringExtra("text") ?: return
             val sessionId = intent.getStringExtra("session") ?: chatStore.activeId.value
             chatStore.setDraft(sessionId, text)
