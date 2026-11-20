@@ -13,7 +13,28 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
+/** 默认包（debug 和 release）的 API 地址 = 参照物真实地址。 */
 const val API_ORIGIN: String = BuildConfig.API_ORIGIN
+
+/** Debug 包的运行时覆盖（adb 注入）；release 恒为 API_ORIGIN。 */
+object ApiOrigin {
+    private var prefs: android.content.SharedPreferences? = null
+
+    fun init(context: android.content.Context) {
+        if (!BuildConfig.DEBUG) return
+        prefs = context.applicationContext
+            .getSharedPreferences("debug_api", android.content.Context.MODE_PRIVATE)
+    }
+
+    fun setOverride(origin: String) {
+        prefs?.edit()?.putString("origin", origin)?.apply()
+    }
+
+    fun get(): String =
+        if (BuildConfig.DEBUG) prefs?.getString("origin", null) ?: API_ORIGIN
+        else API_ORIGIN
+}
+
 const val MODEL = "deepseek-flash"
 const val MAX_OUTPUT_TOKENS = 393_216
 const val SYSTEM_PROMPT = "该助手为DeepSeek，由深度求索公司创造。"
@@ -53,7 +74,7 @@ private fun readErrorMessage(body: String, fallback: String): String {
 /** GET /models 校验 API Key（不产生费用） */
 suspend fun verifyApiKey(apiKey: String): Unit = withContext(Dispatchers.IO) {
     val request = Request.Builder()
-        .url("$API_ORIGIN/models")
+        .url("${ApiOrigin.get()}/models")
         .header("Authorization", "Bearer $apiKey")
         .get()
         .build()
@@ -88,8 +109,10 @@ suspend fun uploadFile(
         file.asRequestBody((mimeType.ifEmpty { "application/octet-stream" }).toMediaType()),
     )
     val request = Request.Builder()
-        .url("$API_ORIGIN/anthropic/v1/files")
+        .url("${ApiOrigin.get()}/anthropic/v1/files")
         .header("x-api-key", apiKey)
+        // ref anthropicHeaders(beta=true)：Files API 必带
+        .header("anthropic-beta", FILES_BETA)
         .post(multipart.build())
         .build()
     val response = try {
@@ -108,6 +131,22 @@ suspend fun uploadFile(
             throw ApiError(ApiErrorKind.PROTOCOL, "missing file id")
         }
     }
+}
+
+/** Anthropic 兼容 Files API 及 file_id 引用图片时必传（ref FILES_BETA）。 */
+const val FILES_BETA = "files-api-2025-04-14"
+
+/** ref hasFile：messages 里出现 image/document block 时 messages 请求也带 beta 头。 */
+private fun hasFile(body: JSONObject): Boolean {
+    val messages = body.optJSONArray("messages") ?: return false
+    for (i in 0 until messages.length()) {
+        val content = messages.optJSONObject(i)?.optJSONArray("content") ?: continue
+        for (j in 0 until content.length()) {
+            val type = content.optJSONObject(j)?.optString("type")
+            if (type == "image" || type == "document") return true
+        }
+    }
+    return false
 }
 
 class StreamSession(val call: okhttp3.Call, private val reader: java.io.BufferedReader) {
@@ -160,8 +199,9 @@ suspend fun openMessageStream(apiKey: String, body: JSONObject): StreamSession =
     val json = JSONObject(body.toString())
     json.put("stream", true)
     val request = Request.Builder()
-        .url("$API_ORIGIN/anthropic/v1/messages")
+        .url("${ApiOrigin.get()}/anthropic/v1/messages")
         .header("x-api-key", apiKey)
+        .apply { if (hasFile(json)) header("anthropic-beta", FILES_BETA) }
         .header("Content-Type", "application/json")
         .header("Accept", "text/event-stream")
         .post(json.toString().toRequestBody("application/json".toMediaType()))

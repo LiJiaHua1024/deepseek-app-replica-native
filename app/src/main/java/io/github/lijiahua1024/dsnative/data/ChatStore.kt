@@ -708,7 +708,20 @@ class ChatStore(
             if (titleSessions.contains(sessionId)) {
                 body.put("title", JSONObject().put("enabled", true))
             }
-            val stream = openMessageStream(settings.apiKey.value ?: "", body)
+            val key = settings.apiKey.value ?: ""
+            var stream = try {
+                openMessageStream(key, body)
+            } catch (e: ApiError) {
+                // ref streamMessage：扩展模式在生成前拒绝长输入时，退回基础 Messages API。
+                val tooLong = e.kind == ApiErrorKind.HTTP && e.status == 400 &&
+                    Regex("user input too long, \\d+ tokens exceeds max 32768 tokens",
+                        RegexOption.IGNORE_CASE).containsMatchIn(e.message ?: "")
+                if (tooLong && (body.has("tools") || body.has("safety_check") || body.has("title"))) {
+                    val basic = JSONObject(body.toString())
+                    basic.remove("tools"); basic.remove("safety_check"); basic.remove("title")
+                    openMessageStream(key, basic)
+                } else throw e
+            }
             activeStreams[sessionId] = stream
             try {
                 val blockIndexes = mutableMapOf<Int, Int>()

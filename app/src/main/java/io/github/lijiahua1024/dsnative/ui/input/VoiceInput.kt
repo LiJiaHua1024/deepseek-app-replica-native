@@ -38,7 +38,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.lijiahua1024.dsnative.api.API_ORIGIN
+import io.github.lijiahua1024.dsnative.api.ApiOrigin
 import io.github.lijiahua1024.dsnative.theme.Strings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -185,7 +185,7 @@ object VoiceInput {
                 file.asRequestBody("audio/wav".toMediaType()))
             .build()
         val req = Request.Builder()
-            .url("$API_ORIGIN/v1/tools/asr")
+            .url("${ApiOrigin.get()}/v1/tools/asr")
             .header("Authorization", "Bearer $key")
             .post(body)
             .build()

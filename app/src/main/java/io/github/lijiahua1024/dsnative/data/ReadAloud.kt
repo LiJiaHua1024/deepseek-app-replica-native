@@ -5,7 +5,7 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import android.os.Build
-import io.github.lijiahua1024.dsnative.api.API_ORIGIN
+import io.github.lijiahua1024.dsnative.api.ApiOrigin
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -71,7 +71,7 @@ object ReadAloud {
                     ).toRequestBody("application/json".toMediaType())
                 val resp = client.newCall(
                     Request.Builder()
-                        .url("$API_ORIGIN/v1/tools/tts")
+                        .url("${ApiOrigin.get()}/v1/tools/tts")
                         .header("Authorization", "Bearer $apiKey")
                         .post(body)
                         .build(),
