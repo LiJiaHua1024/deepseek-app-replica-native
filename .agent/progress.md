@@ -92,3 +92,11 @@ final segment: residual retries complete (34/34). Gesture grid 90.7% best <95% (
 - 工具: shot.sh 先启动再广播(pm clear 后 manifest receiver 收不到); MainActivity 运行时注册 DEBUG_API_ORIGIN; mock +/__set_tts_fail; MediaStore 推图.
 - 基线(selfcheck.md): inventory 497 条 77 unfinished(press/trans); compare 55 场景 18 fail, mean 0.9755/3.223.
 - 新增回归待查: settings.font ref shot 夹带外观弹窗(已重拍); settings.personalization/root.dark 较二轮下滑.
+
+## 段6（trans 全实现+库存清零后）
+- inventory: 450 done / 34 residual / 13 n-a / 0 todo — --check 通过。
+- trans.* 22 条全实现+文档化于 .agent/trans-map.md（ref CSS 规格↔原生实现对照）。
+- 提交: e68a84a press fade+voice halo; 6716ea4 thinking+sources; f46f4c2 attach+sider; 960b70b chore transcheck。
+- APK 已重装 app-debug（voice halo/chip enter/shimmer 含）。
+- 进行中: gesture_grid ref+native（shell gesturegrid）；此前 90.7%<95%。
+- 仍待: fling/follow-ratio, API 23/29/34/36 冒烟, shuf-10+FINAL, 34 residual 需 numeric gap+≥4方法。
