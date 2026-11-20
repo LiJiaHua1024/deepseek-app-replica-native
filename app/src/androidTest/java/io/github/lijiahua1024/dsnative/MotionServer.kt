@@ -42,8 +42,12 @@ class MotionServer {
     fun serve() {
         val inst = InstrumentationRegistry.getInstrumentation()
         val auto = inst.uiAutomation
-        val dir = inst.targetContext.getExternalFilesDir(null)
-            ?: throw IllegalStateException("no external files dir")
+        // external files dir may be unreachable from `adb push` while the app
+        // is stopped (run-as denied on /sdcard/Android/data); internal files
+        // dir always works via run-as, so prefer it when inject.cmd is there.
+        val ext = inst.targetContext.getExternalFilesDir(null)
+        var dir = File(inst.targetContext.filesDir, "motion").apply { mkdirs() }
+        if (ext != null && File(ext, "inject.cmd").exists()) dir = ext
         val cmd = File(dir, "inject.cmd")
         val done = File(dir, "inject.done")
         val live = File(dir, "inject.log")
@@ -67,7 +71,7 @@ class MotionServer {
                 "snap" -> {
                     val bmp = auto.takeScreenshot()
                     if (bmp != null) {
-                        File(dir, "snap_${p[1]}.png").outputStream().use {
+                        File(ext ?: dir, "snap_${p[1]}.png").outputStream().use {
                             bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
                         }
                     }
@@ -178,6 +182,16 @@ class MotionServer {
                 }
                 "pv" -> {
                     liveLog("pv ${io.github.lijiahua1024.dsnative.ui.DrawerGestureBus.progressProbe?.invoke()}\n")
+                }
+                "scroll" -> {
+                    val v = if (p[1] == "sider") io.github.lijiahua1024.dsnative.ui.ScrollProbe.sider
+                        else io.github.lijiahua1024.dsnative.ui.ScrollProbe.chat
+                    liveLog("scroll ${p[1]} %.2f\n".format(v))
+                }
+                "scrollreset" -> {
+                    io.github.lijiahua1024.dsnative.ui.ScrollProbe.chat = 0f
+                    io.github.lijiahua1024.dsnative.ui.ScrollProbe.sider = 0f
+                    liveLog("scrollreset ok\n")
                 }
                 "sleep" -> Thread.sleep(p[1].toLong())
             }

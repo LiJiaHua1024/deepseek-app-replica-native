@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -99,7 +100,8 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
         // .listWrap: margin-top 16, relative container for selectChats icon
         Box(Modifier.weight(1f).padding(top = 16.dp)) {
             // session groups
-            LazyColumn(Modifier.fillMaxSize()) {
+            LazyColumn(Modifier.fillMaxSize()
+                .nestedScroll(remember { io.github.lijiahua1024.dsnative.ui.ScrollTracker("sider") })) {
             val filtered = groups.map { g ->
                 g.first to g.second.filter { s -> query.isBlank() || s.title.contains(query, true) }
             }.filter { it.second.isNotEmpty() }

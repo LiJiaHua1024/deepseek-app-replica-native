@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
@@ -106,7 +107,8 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
         if (visible.isEmpty()) {
             Welcome(Modifier.weight(1f))
         } else {
-            LazyColumn(state = listState, modifier = Modifier.weight(1f),
+            LazyColumn(state = listState, modifier = Modifier.weight(1f)
+                .nestedScroll(remember { io.github.lijiahua1024.dsnative.ui.ScrollTracker("chat") }),
                 contentPadding = PaddingValues(bottom = 20.5.dp)) {
                 items(visible.size, key = { visible[it].id }) { index ->
                     when (val msg = visible[index]) {

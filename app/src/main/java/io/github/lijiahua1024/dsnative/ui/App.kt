@@ -3,6 +3,7 @@
 package io.github.lijiahua1024.dsnative.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitHorizontalTouchSlopOrCancellation
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
@@ -210,10 +212,8 @@ fun DrawerFrame(
                 g.current = (g.start + (1.031f * distance) / edgePx).coerceIn(0f, 1f)
                 progress = g.current
                 DrawerGestureBus.trace.add(Triple(t, x, g.current))
-                android.util.Log.d("DsGesture", "MV x=$x t=$t cur=${g.current}")
             }
             DrawerGestureBus.handler = handler@{ ev ->
-                android.util.Log.d("DsGesture", "RAW a=${ev.actionMasked} t=${ev.eventTime} x=${ev.x} y=${ev.y}")
                 var cur = g
                 if (cur == null) {
                     if (ev.actionMasked == android.view.MotionEvent.ACTION_DOWN) {
@@ -229,7 +229,6 @@ fun DrawerFrame(
                 when (ev.actionMasked) {
                     android.view.MotionEvent.ACTION_MOVE,
                     android.view.MotionEvent.ACTION_UP -> {
-                        android.util.Log.d("DsGesture", "ev a=${ev.actionMasked} t=${ev.eventTime} hist=${ev.historySize} h0=${if (ev.historySize>0) ev.getHistoricalEventTime(0) else -1} x=${ev.x}")
                         for (i in 0 until ev.historySize) {
                             evalMove(cur, ev.getHistoricalX(i), ev.getHistoricalY(i), ev.getHistoricalEventTime(i))
                             if (cur.cancelled) break
@@ -246,7 +245,6 @@ fun DrawerFrame(
                                 // ref 0.33 css px/ms → device px = 0.33 * density
                                 val flick = abs(velocity) >= 0.33f * density.density
                                 val open = if (cur.cancelled) cur.startedOpen else if (flick) velocity > 0 else cur.current >= 0.5f
-                                android.util.Log.d("DsGesture", "UP start=${cur.start} cur=${cur.current} vel=$velocity flick=$flick open=$open cancelled=${cur.cancelled} samples=${cur.samples.joinToString { "${it.first}@${it.second}" }} now=$now")
                                 settleTo(if (open) 1f else 0f)
                             }
                             g = null
@@ -259,8 +257,7 @@ fun DrawerFrame(
                     }
                 }
             }
-            android.util.Log.d("DsGesture", "HANDLER set freePan=$freePan")
-            onDispose { android.util.Log.d("DsGesture", "HANDLER null"); DrawerGestureBus.handler = null }
+            onDispose { DrawerGestureBus.handler = null }
         }
 
         Box(Modifier.fillMaxSize()) {
@@ -281,8 +278,12 @@ fun DrawerFrame(
             // native 用一条等高深色带模拟它，main layer 从它下方开始。
             val statusTopPx = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
             Box(Modifier.fillMaxWidth().height(statusTopPx).background(Color(0xFF757575)))
-            if (progress < 1f) {
-                Box(Modifier.fillMaxSize().graphicsLayer { alpha = 0.207f * (1f - progress) }.background(Color.Black))
+            // ref .drawerMask exists only while the drawer is open/moving; at
+            // progress=0 a 0.207 black veil here would darken the visible
+            // status band (93 vs ref 117) and every scene's top area.
+            if (progress > 0f && progress < 1f) {
+                Box(Modifier.fillMaxSize().padding(top = statusTopPx)
+                    .graphicsLayer { alpha = 0.207f * (1f - progress) }.background(Color.Black))
             }
             // Main content layer
             // ref radius is 36px pre-scale; clip applies post-scale → use 34dp (~93.5px ≈ 36*0.9496*2.75)
@@ -320,7 +321,36 @@ fun DrawerFrame(
                 }
             }
             }
+            // ref window-level nav bar on API>=30: black strip under the gesture
+            // pill, drawn over every scene (y2274+ pure black in ref shots);
+            // native previously let content colors (white sheet bg) fill that
+            // inset. Window-level: unaffected by drawer scale of the main layer.
+            val navBotPx = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            if (navBotPx > 0.dp) {
+                Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(navBotPx).background(Color.Black))
+            }
         }
+    }
+}
+
+// Cumulative scroll-offset probes for the fling-equivalence harness
+// (MotionServer `scroll`/`scrollreset`). Accumulates the px each list actually
+// consumed, including fling deltas, matching the ref's scrollTop metric.
+object ScrollProbe {
+    @Volatile var chat = 0f
+    @Volatile var sider = 0f
+}
+
+class ScrollTracker(val name: String) : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+    @Volatile private var pre = 0f
+    override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
+        pre = available.y
+        return androidx.compose.ui.geometry.Offset.Zero
+    }
+    override fun onPostScroll(consumed: androidx.compose.ui.geometry.Offset, available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
+        val used = pre - available.y
+        if (name == "chat") ScrollProbe.chat += used else ScrollProbe.sider += used
+        return androidx.compose.ui.geometry.Offset.Zero
     }
 }
 
