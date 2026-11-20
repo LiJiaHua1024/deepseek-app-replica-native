@@ -63,3 +63,12 @@
 - Added chat.continue scene to both drivers (ref needs fetchHoldBytes+injectStreamReplay since hold streams can't pass the fetch proxy). Scene score 0.9623 — same glyph-rasterization class as residual chat.* scenes.
 - store.continueReply/replaceHistory, native.CaptureProvider/NativeRecorder → done (functional equivalence).
 - Re-measured all 9 residual screen-states on current build: scores unchanged (0.9533–0.9712) — no regression.
+
+## Segment: FileCard/upload group done
+- chat.files scene built both sides (native: DocumentsUI picker on /sdcard/Documents/parity_note.txt; ref: in-memory File injected via input.files=DataTransfer, avoids scoped-storage blob read failure).
+- send_msg quoting fix: multi-word text needs inner single quotes (adb shell strips outer).
+- Native upload pipeline verified: draft -> POST /anthropic/v1/files -> file block in request -> card w/ TXT 21 B.
+- Mock gained filename~fail -> 503 trigger; upload error shows 上传失败 + red border + retry icon; tap retries.
+- Score 0.9802 / mad 1.171 (worst rects glyph-jitter only; card edge x diff <=1px after end=16->20dp fix).
+- Done: comp.FileCard(.module,.module.css.d), comp.FileIcon, comp.MessageFile(.module,.module.css.d), store.retryUpload.
+- Remaining todo: MermaidDiagram, ReadingBars(.module), native.ImageSave, native.SourceBrowserActivity.

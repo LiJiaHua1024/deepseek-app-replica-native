@@ -51,7 +51,8 @@ enter_key() {
 
 send_msg() { # text — injected via the app's debug broadcast receiver;
              # `input text` cannot deliver non-ASCII (NPE on CJK).
-  $ADB shell am broadcast -a "$PKG.DEBUG_INPUT" --es text "$1" --ez send true >/dev/null
+             # Inner single quotes keep multi-word text as one arg on device.
+  $ADB shell am broadcast -a "$PKG.DEBUG_INPUT" --es text "'$1'" --ez send true >/dev/null
   sleep 0.4
 }
 
@@ -204,6 +205,20 @@ EOF
     py=$((ay - 314))
     $ADB shell input tap 165 $py; sleep 0.6
     $ADB shell input tap 407 $py; sleep 0.8 ;;
+  chat.files)
+    enter_key
+    $ADB shell 'echo "parity test document" > /sdcard/Documents/parity_note.txt; chmod 0666 /sdcard/Documents/parity_note.txt'
+    $ADB shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Documents/parity_note.txt >/dev/null 2>&1
+    tap_node "uploadFile|上传文件"
+    wait_text "^文件$|^Files$" 10; sleep 0.4
+    tap_node "^文件$|^Files$"   # panel action -> DocumentsUI (OpenMultipleDocuments)
+    wait_node "parity_note" 25; sleep 0.5
+    tap_node "parity_note"; sleep 1.2
+    # DocumentsUI multi-select keeps a Select action until confirmed
+    c=$(find_node "^SELECT$|^Select$|^选择$" || true)
+    [ -n "$c" ] && { $ADB shell input tap $c; sleep 1.5; }
+    send_msg "refused"
+    wait_text "换个话题" 45; sleep 0.7 ;;
   imageviewer|imageviewer.default)
     enter_key
     $ADB shell pm grant $PKG android.permission.READ_MEDIA_IMAGES >/dev/null 2>&1 || true

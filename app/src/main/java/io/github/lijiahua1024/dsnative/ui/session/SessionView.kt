@@ -278,7 +278,7 @@ fun UserBubble(msg: Message.User, session: Session, chatStore: ChatStore) {
             val hasDoc = msg.files.any { !it.isImage }
             val imgSize = if (hasDoc) 64.dp else 120.dp
             androidx.compose.foundation.layout.FlowRow(
-                Modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp, bottom = 8.dp),
+                Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {

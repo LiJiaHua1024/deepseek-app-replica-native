@@ -622,6 +622,26 @@ const scenes = {
       `document.querySelectorAll('[class*=attachment]').length > 0`), 10000)
     await delay(700)
   },
+  // file attached through the hidden input — deterministic via CDP DOM.setFileInputFiles
+  async 'chat.files'(evaluate, call) {
+    await enterKey(evaluate)
+    // inject an in-memory File through the app's own hidden input: a real
+    // /sdcard path would hit scoped-storage (blob write/read fails) and the
+    // SAF picker cannot be driven deterministically
+    await evaluate(`(() => {
+      const input = document.querySelector('input[type=file]');
+      const dt = new DataTransfer();
+      dt.items.add(new File(['parity test document\\n'], 'parity_note.txt', { type: 'text/plain' }));
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      return true })()`)
+    await until('draft chip', () => evaluate(
+      `document.querySelectorAll('[class*=attachment]').length > 0`), 10000)
+    await delay(600)
+    await sendMessage(evaluate, 'refused')
+    await until('reply done', async () => /换个话题/.test(await replyText(evaluate)), 40000)
+    await delay(600)
+  },
   async 'attachments.measure'(evaluate) {
     await scenes['attachments.default'](evaluate)
     const m = await evaluate(`(() => {

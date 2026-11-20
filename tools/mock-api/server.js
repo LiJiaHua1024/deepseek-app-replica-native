@@ -179,6 +179,9 @@ function handle(req, res) {
     req.on('end', () => {
       if (key !== TEST_KEY) return send(res, 401, { error: { message: 'Invalid API key' } });
       const nm = /filename="([^"]+)"/.exec(body.toString('latin1'));
+      // deterministic failure trigger for upload-error / retry scenarios:
+      // any filename containing 'fail' gets a 503
+      if (nm && /fail/i.test(nm[1])) return send(res, 503, { error: { message: 'mock upload failure' } });
       send(res, 200, {
         id: 'file-' + Math.random().toString(36).slice(2, 12),
         type: 'file',
