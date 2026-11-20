@@ -110,7 +110,7 @@ check() { # id method expect_regex
   local got="$s"
   if echo "$got" | grep -qE "$3"; then echo "PASS $2 $1 -> ${got:0:90}" >>"$LOG"
   else
-    echo "FAIL $2 $1 expected=/$3/ got=${got:0:140}" >>"$LOG"
+    echo "FAIL $2 $1 expected=/$3/ got=${got:0:140} pre=${PRE_BACK_SIG:0:100}" >>"$LOG"
     mkdir -p /tmp/backcheck_fails
     $ADB exec-out screencap -p > "/tmp/backcheck_fails/$1_$2.png" 2>/dev/null
     cp /tmp/dsn.xml "/tmp/backcheck_fails/$1_$2.xml" 2>/dev/null || true
@@ -147,6 +147,7 @@ close_if_drawer() { # press BACK only when the drawer is actually open
 }
 back() { # method: key|swipe — re-focus first so exits don't strand us
   if ! assert_focus; then launch_home; wait_text "$HOME_RE|输入 API Key|Enter API Key" 10; fi
+  PRE_BACK_SIG=$(sig)
   if [ "$1" = key ]; then $ADB shell input keyevent KEYCODE_BACK; else $ADB shell input swipe 0 800 620 800 300 >/dev/null; fi
   sleep 1
 }
@@ -256,7 +257,7 @@ for m in key swipe; do
   back $m; check back.settings.root $m "$HOME_RE"
 done
 # sub-pages -> root ; export -> data
-for pg in "数据管理|数据:data" "个性化:personalization" "字体:font" "协议|条款|服务协议:agreements" "账号管理|账号|API Key:account"; do
+for pg in "数据管理|Data management:data" "个性化|Personalization:personalization" "字体大小|字体|Text size:font" "服务协议|协议|Service agreement:agreements" "账号管理|Account management:account"; do
   pat="${pg%%:*}"; name="${pg##*:}"
   for m in key swipe; do
     open_settings
@@ -300,7 +301,8 @@ for m in key swipe; do
   wait_text "相册|Gallery|Photos" 8; sleep 0.8
   a=$(find_node "相册|Gallery|Photos" || true); ay=$(echo "$a" | awk '{print $2}')
   py=$((ay - 314)); $ADB shell input tap 165 $py; sleep 0.8
-  # viewer opens on tapping a draft thumb
+  # viewer opens on tapping a draft thumb (same ImagePreviewDialog as the
+  # message viewer; message path unreachable without a sendable upload)
   dump; c=$(python3 - <<'EOF'
 import re, xml.etree.ElementTree as ET
 t=ET.parse('/tmp/dsn.xml')
@@ -309,7 +311,7 @@ for e in t.iter('node'):
     m=re.match(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]',b)
     if not m: continue
     x1,y1,x2,y2=map(int,m.groups())
-    if 'ImageView' in (e.get('class') or '') and 80<x2-x1<300 and y1>1200:
+    if e.get('clickable')=='true' and 40<x2-x1<260 and 600<y1<1400:
         print((x1+x2)//2,(y1+y2)//2); break
 EOF
 )

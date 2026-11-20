@@ -142,6 +142,8 @@ object Strings {
             "settingsTtsVoice" -> pick("朗读音色", "Voice")
             "settingsTtsVoiceStella" -> pick("海星（女声）", "Stella")
             "settingsTtsVoiceTide" -> pick("暗潮（男声）", "Tide")
+            "settingsTtsVoiceStellaDesc" -> pick("清晰明亮", "Clear and bright")
+            "settingsTtsVoiceTideDesc" -> pick("沉稳自然", "Calm and natural")
             "back" -> pick("返回", "Back")
             "apiKeyLabel" -> pick("DeepSeek API Key", "DeepSeek API Key")
             "settingsAccountPage" -> pick("账号管理", "Account management")

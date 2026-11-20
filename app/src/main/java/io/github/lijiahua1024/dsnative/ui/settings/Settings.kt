@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -124,7 +125,9 @@ fun AndroidSettings(settings: SettingsStore, chatStore: ChatStore, onBack: () ->
     val c = DsTheme.colors
     val themePref by settings.themePreference.collectAsState()
     val localePref by settings.localePreference.collectAsState()
+    val ttsVoice by settings.ttsVoice.collectAsState()
     var page by remember { mutableStateOf("root") }
+    var popup by remember { mutableStateOf<String?>(null) }
     var confirmLogout by remember { mutableStateOf(false) }
     val ctx = LocalContext.current
 
@@ -138,7 +141,9 @@ fun AndroidSettings(settings: SettingsStore, chatStore: ChatStore, onBack: () ->
             backProgress = 0f; throw e
         }
         backProgress = 0f
-        if (page == "root") onBack() else page = if (page == "export") "data" else "root"
+        // ref AndroidSettings.back(): open popup consumes the back first
+        if (popup != null) popup = null
+        else if (page == "root") onBack() else page = if (page == "export") "data" else "root"
     }
 
     val bg = if (c.dark) Color(0xFF161616) else Color(0xFFF8F8F8)
@@ -176,6 +181,7 @@ fun AndroidSettings(settings: SettingsStore, chatStore: ChatStore, onBack: () ->
             when (page) {
                 "root" -> SettingsRootPage(c, card, muted,
                     onPage = { page = it },
+                    onPopup = { popup = it },
                     onHelp = { io.github.lijiahua1024.dsnative.SourceBrowserActivity.open(
                         ctx, "https://static.deepseek.com/faq/index.html", c.dark, "") },
                     onLogout = { confirmLogout = true },
@@ -189,6 +195,48 @@ fun AndroidSettings(settings: SettingsStore, chatStore: ChatStore, onBack: () ->
             }
         }
         if (page == "font") FontPanel(c, card, muted, settings)
+    }
+
+    when (popup) {
+        "locale" -> ChoicePopup(c, card, muted, Strings.get("settingsLocalePreference"),
+            icon = { Icon(painterResource(R.drawable.ic_globe_lang), null,
+                tint = c.labelPrimary, modifier = Modifier.size(20.dp)) },
+            options = listOf(
+                "system" to Strings.get("settingsThemeSystem"),
+                "zh-CN" to "中文（简体中文）",
+                "en-US" to "English"),
+            selected = when (localePref) {
+                io.github.lijiahua1024.dsnative.data.LocalePreference.ZH_CN -> "zh-CN"
+                io.github.lijiahua1024.dsnative.data.LocalePreference.EN_US -> "en-US"
+                else -> "system" },
+            onConfirm = { v ->
+                settings.setLocalePreference(when (v) {
+                    "zh-CN" -> io.github.lijiahua1024.dsnative.data.LocalePreference.ZH_CN
+                    "en-US" -> io.github.lijiahua1024.dsnative.data.LocalePreference.EN_US
+                    else -> io.github.lijiahua1024.dsnative.data.LocalePreference.SYSTEM })
+                popup = null },
+            onDismiss = { popup = null })
+        "theme" -> ChoicePopup(c, card, muted, Strings.get("settingsAppearance"),
+            icon = { Icon(painterResource(R.drawable.ic_light), null,
+                tint = c.labelPrimary, modifier = Modifier.size(20.dp)) },
+            options = listOf(
+                "system" to Strings.get("settingsThemeSystem"),
+                "light" to Strings.get("settingsThemeLight"),
+                "dark" to Strings.get("settingsThemeDark")),
+            selected = when (themePref) {
+                io.github.lijiahua1024.dsnative.data.ThemePreference.LIGHT -> "light"
+                io.github.lijiahua1024.dsnative.data.ThemePreference.DARK -> "dark"
+                else -> "system" },
+            onConfirm = { v ->
+                settings.setThemePreference(when (v) {
+                    "light" -> io.github.lijiahua1024.dsnative.data.ThemePreference.LIGHT
+                    "dark" -> io.github.lijiahua1024.dsnative.data.ThemePreference.DARK
+                    else -> io.github.lijiahua1024.dsnative.data.ThemePreference.SYSTEM })
+                popup = null },
+            onDismiss = { popup = null })
+        "voice" -> VoiceSheet(c, card, muted, current = ttsVoice,
+            onConfirm = { settings.setTtsVoice(it); popup = null },
+            onDismiss = { popup = null })
     }
 
     if (confirmLogout) {
@@ -208,6 +256,7 @@ private fun SettingsRootPage(
     c: io.github.lijiahua1024.dsnative.theme.DsColors,
     card: Color, muted: Color,
     onPage: (String) -> Unit,
+    onPopup: (String) -> Unit,
     onHelp: () -> Unit, onLogout: () -> Unit,
     themePref: io.github.lijiahua1024.dsnative.data.ThemePreference,
     localePref: io.github.lijiahua1024.dsnative.data.LocalePreference,
@@ -219,10 +268,10 @@ private fun SettingsRootPage(
     SettingsGroup(Strings.get("settingsGroupApp"), card, muted) {
         SettingsRow(c, muted, Strings.get("settingsLocalePreference"),
             { Icon(painterResource(R.drawable.ic_globe_lang), null, tint = c.labelPrimary, modifier = Modifier.size(18.dp)) },
-            value = localeLabel(localePref)) { }
+            value = localeLabel(localePref)) { onPopup("locale") }
         SettingsRow(c, muted, Strings.get("settingsAppearance"),
             { Icon(painterResource(R.drawable.ic_light), null, tint = c.labelPrimary, modifier = Modifier.size(18.dp)) },
-            value = themeLabel(themePref)) { }
+            value = themeLabel(themePref)) { onPopup("theme") }
         SettingsRow(c, muted, Strings.get("settingsFontPage"),
             { Text("ᴀA", fontSize = 17.sp, fontWeight = FontWeight.Medium, color = c.labelPrimary) }) { onPage("font") }
         SettingsRow(c, muted, Strings.get("settingsPersonalizationPage"),
@@ -231,7 +280,7 @@ private fun SettingsRootPage(
     SettingsGroup(Strings.get("settingsGroupVoice"), card, muted) {
         SettingsRow(c, muted, Strings.get("settingsTtsVoice"),
             { Icon(painterResource(R.drawable.ic_sound), null, tint = c.labelPrimary, modifier = Modifier.size(18.dp)) },
-            arrow = false) { }
+            arrow = false) { onPopup("voice") }
     }
     SettingsGroup(Strings.get("settingsGroupAbout"), card, muted) {
         SettingsRow(c, muted, Strings.get("settingsVersion"),
@@ -582,4 +631,157 @@ private fun themeLabel(t: io.github.lijiahua1024.dsnative.data.ThemePreference) 
     io.github.lijiahua1024.dsnative.data.ThemePreference.LIGHT -> Strings.get("settingsThemeLight")
     io.github.lijiahua1024.dsnative.data.ThemePreference.DARK -> Strings.get("settingsThemeDark")
     else -> Strings.get("settingsThemeSystem")
+}
+
+// ref .overlay+.choice: 60% dim, centered card w-56 max290 r20, radio rows h54,
+// border 1px line top/bottom, confirm row brand-text 16/48.
+@Composable
+private fun ChoicePopup(
+    c: io.github.lijiahua1024.dsnative.theme.DsColors,
+    card: Color, muted: Color,
+    title: String,
+    icon: (@Composable () -> Unit)? = null,
+    options: List<Pair<String, String>>,
+    selected: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var next by remember { mutableStateOf(selected) }
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f))
+        .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+            indication = null) { onDismiss() },
+        contentAlignment = Alignment.Center) {
+        Column(Modifier.padding(horizontal = 28.dp).widthIn(max = 290.dp).fillMaxWidth()
+            .heightIn(max = 560.dp).clip(RoundedCornerShape(20.dp)).background(card)
+            .clickable(enabled = false) {}) {
+            Column(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 22.dp, bottom = 15.dp),
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                if (icon != null) { icon(); Spacer(Modifier.height(8.dp)) }
+                Text(title, fontSize = 16.sp, color = c.labelPrimary)
+            }
+            Column(Modifier.fillMaxWidth()
+                .drawBehind {
+                    val w = 1.dp.toPx()
+                    drawLine(c.borderL2, androidx.compose.ui.geometry.Offset(0f, 0f),
+                        androidx.compose.ui.geometry.Offset(size.width, 0f), w)
+                    drawLine(c.borderL2, androidx.compose.ui.geometry.Offset(0f, size.height),
+                        androidx.compose.ui.geometry.Offset(size.width, size.height), w)
+                }) {
+                options.forEach { (id, label) ->
+                    val checked = next == id
+                    Row(Modifier.fillMaxWidth().height(54.dp)
+                        .clickable { next = id }.padding(horizontal = 18.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(17.dp)) {
+                        Box(Modifier.size(20.dp).clip(RoundedCornerShape(50))
+                            .border(2.dp, if (checked) c.labelPrimary else Color(0xFF6D7684),
+                                RoundedCornerShape(50)),
+                            contentAlignment = Alignment.Center) {
+                            if (checked) Box(Modifier.size(11.dp).clip(RoundedCornerShape(50))
+                                .background(c.labelPrimary))
+                        }
+                        Text(label, fontSize = 15.sp, color = c.labelPrimary)
+                    }
+                }
+            }
+            Box(Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
+                .clickable { onConfirm(next) }, contentAlignment = Alignment.Center) {
+                Text(Strings.get("confirm"), fontSize = 16.sp, color = c.brandText)
+            }
+        }
+    }
+}
+
+// ref .overlay[data-sheet]+.voiceSheet: 35% dim bottom sheet h70vh r21top,
+// centered tone art 180x100 r60 + label + desc + dots, horizontal swipe switches
+// tone, primary confirm commits.
+@Composable
+private fun VoiceSheet(
+    c: io.github.lijiahua1024.dsnative.theme.DsColors,
+    card: Color, muted: Color,
+    current: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var tone by remember { mutableStateOf(current) }
+    val tones = listOf(
+        "stella" to (Strings.get("settingsTtsVoiceStella") to Strings.get("settingsTtsVoiceStellaDesc")),
+        "tide" to (Strings.get("settingsTtsVoiceTide") to Strings.get("settingsTtsVoiceTideDesc")))
+    val now = tones.firstOrNull { it.first == tone } ?: tones[0]
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f))
+        .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+            indication = null) { onDismiss() },
+        contentAlignment = Alignment.BottomCenter) {
+        Column(Modifier.fillMaxWidth().fillMaxHeight(0.7f)
+            .clip(RoundedCornerShape(topStart = 21.dp, topEnd = 21.dp)).background(card)
+            .clickable(enabled = false) {}) {
+            Box(Modifier.fillMaxWidth().height(56.dp), contentAlignment = Alignment.Center) {
+                Text(Strings.get("settingsTtsVoice"), fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium, color = c.labelPrimary)
+                Box(Modifier.align(Alignment.CenterEnd).padding(end = 13.dp)
+                    .size(32.dp).clip(RoundedCornerShape(50))
+                    .background(if (c.dark) Color(0xFF303030) else Color(0xFFEBEBEB))
+                    .clickable { onDismiss() }, contentAlignment = Alignment.Center) {
+                    Icon(painterResource(R.drawable.ic_close), Strings.get("close"),
+                        tint = c.labelPrimary, modifier = Modifier.size(16.dp))
+                }
+            }
+            Column(Modifier.weight(1f).fillMaxWidth()
+                .pointerInput(Unit) {
+                    var dx = 0f
+                    detectHorizontalDragGestures(
+                        onDragStart = { dx = 0f },
+                        onHorizontalDrag = { _, d -> dx += d },
+                        onDragEnd = {
+                            if (kotlin.math.abs(dx) > 32 * density)
+                                tone = if (dx > 0) "stella" else "tide"
+                        })
+                },
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center) {
+                VoiceArt(tone)
+                Spacer(Modifier.height(8.dp))
+                Text(now.second.first, fontSize = 16.sp, color = c.labelPrimary)
+                Text(now.second.second, fontSize = 13.sp, color = muted)
+                Row(Modifier.padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    tones.forEach { (id, _) ->
+                        Box(Modifier.size(22.dp).padding(7.dp).clip(RoundedCornerShape(50))
+                            .background(if (tone == id) c.brandText else Color(0xFFCCCCCC))
+                            .clickable { tone = id })
+                    }
+                }
+            }
+            Text(Strings.get("confirm"), fontSize = 16.sp, color = Color.White,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, bottom = 16.dp)
+                    .height(48.dp).clip(RoundedCornerShape(28.dp)).background(c.brandText)
+                    .clickable { onConfirm(tone) }
+                    .wrapContentHeight(Alignment.CenterVertically))
+        }
+    }
+}
+
+@Composable
+private fun VoiceArt(tone: String) {
+    val (base, glows) = if (tone == "tide")
+        listOf(Color(0xFF768FD4), Color(0xFF51649C), Color(0xFF83BBDE)) to
+            listOf(Triple(Color(0xFFD0EDFF), 0.20f to 0.15f, 0.57f),
+                   Triple(Color(0xFF96A1ED), 0.80f to 0.84f, 0.71f))
+    else
+        listOf(Color(0xFFBDE6FB), Color(0xFF97BCE2), Color(0xFF6587C4)) to
+            listOf(Triple(Color(0xFFE7F8FB), 0.14f to 0.82f, 0.63f),
+                   Triple(Color(0xFFECFAFF), 0.72f to 0.18f, 0.59f))
+    androidx.compose.foundation.Canvas(Modifier.size(180.dp, 100.dp)
+        .clip(RoundedCornerShape(60.dp))) {
+        drawRect(androidx.compose.ui.graphics.Brush.linearGradient(base,
+            androidx.compose.ui.geometry.Offset(0f, 0f),
+            androidx.compose.ui.geometry.Offset(size.width, size.height)))
+        glows.forEach { (col, pos, r) ->
+            drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(
+                listOf(col, Color.Transparent),
+                androidx.compose.ui.geometry.Offset(size.width * pos.first, size.height * pos.second),
+                size.minDimension * r), radius = size.minDimension * r,
+                center = androidx.compose.ui.geometry.Offset(size.width * pos.first, size.height * pos.second))
+        }
+    }
 }
