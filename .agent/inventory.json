@@ -117,8 +117,7 @@
   "color_mad": 1.58,
   "attempts": 12,
   "commit": null,
-  "notes": "worst rects: y1758 icons 0.82, y1172 table 0.83, y2051 pills 0.84. Tried: card shadow+border, textarea pad/minHeight calibration, contentPadding anchor, pill geometry, pill border token, statusbar/nav colors, marker disc, sound icon margin, functionRow pad. Remaining diff dominated by WebView-vs-Compose glyph rasterization on text-dense screen; all measured positions within ~5px. | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter",
-  "备注": "residual 0.9665/1.804; worst rects [293,1172,293,293]=0.86 table ink, [293,1465]=0.87 math/KaTeX fallback, [0,1465]=0.886; tried: cssLeading trim fix, content-box table min-width, fnRow pad/gap nudge, icon spec check. KaTeX display math rendered as raw tex fallback — structural gap."
+  "notes": "worst rects: y1758 icons 0.82, y1172 table 0.83, y2051 pills 0.84. Tried: card shadow+border, textarea pad/minHeight calibration, contentPadding anchor, pill geometry, pill border token, statusbar/nav colors, marker disc, sound icon margin, functionRow pad. Remaining diff dominated by WebView-vs-Compose glyph rasterization on text-dense screen; all measured positions within ~5px. | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter"
  },
  {
   "id": "chat.streaming",
@@ -130,8 +129,7 @@
   "color_mad": 1.73,
   "attempts": 2,
   "commit": null,
-  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter",
-  "备注": "worst rect [293,2051,293,289]=composer fnRow 0.859, [293,879]=codeBanner 0.867. Tried: NotoSC font, LineHeightStyle Center+Trim.None, chip placeholders, 44dp header btns, 12dp title margin, composer bottom 52dp, ic_sound_muted size fix"
+  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter"
  },
  {
   "id": "chat.thinking",
@@ -143,8 +141,7 @@
   "color_mad": 1.655,
   "attempts": 4,
   "commit": null,
-  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter",
-  "备注": "residual 0.97/1.655; worst [293,1172]=0.857 table ink, [0,1758]=0.903 action icons +6px low (content ~6px shorter than ref -> bottom-anchored list), [293,1465]=0.914 math fallback. Tried: cssLeading, math fontFamily NotoSC, action-row pad (reverted - shifts all bands), content-box td widths."
+  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter"
  },
  {
   "id": "chat.loading",
@@ -156,8 +153,7 @@
   "color_mad": 0.562,
   "attempts": 1,
   "commit": "7c6de4c",
-  "notes": "",
-  "备注": "3-dot waiting indicator (ref .waiting) replacing 正在思考 text"
+  "notes": ""
  },
  {
   "id": "chat.interrupted",
@@ -169,8 +165,7 @@
   "color_mad": 2.165,
   "attempts": 2,
   "commit": "ceac381",
-  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter",
-  "备注": "residual: worst rects y586/1465 text bands ~0.89 — same glyph-rasterization root cause as chat.default residual. Fixed: INTERRUPTED+partial-content now settles STOPPED (was protocol error 未知错误), action row shows."
+  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter"
  },
  {
   "id": "chat.err_401",
@@ -182,8 +177,7 @@
   "color_mad": 0.97,
   "attempts": 1,
   "commit": "ad78eeb",
-  "notes": "",
-  "备注": "ref .notice icon+inline action + .bottom copy/regenerate row"
+  "notes": ""
  },
  {
   "id": "chat.err_402",
@@ -195,8 +189,7 @@
   "color_mad": 0.756,
   "attempts": 1,
   "commit": "ad78eeb",
-  "notes": "",
-  "备注": "ref .notice icon+inline action + .bottom copy/regenerate row"
+  "notes": ""
  },
  {
   "id": "chat.err_429",
@@ -208,8 +201,7 @@
   "color_mad": 0.703,
   "attempts": 1,
   "commit": "ad78eeb",
-  "notes": "",
-  "备注": "ref .notice icon+inline action + .bottom copy/regenerate row"
+  "notes": ""
  },
  {
   "id": "chat.err_500",
@@ -221,8 +213,7 @@
   "color_mad": 0.691,
   "attempts": 1,
   "commit": "ad78eeb",
-  "notes": "",
-  "备注": "ref .notice icon+inline action + .bottom copy/regenerate row"
+  "notes": ""
  },
  {
   "id": "chat.long",
@@ -234,8 +225,7 @@
   "color_mad": 1.718,
   "attempts": 1,
   "commit": "ceac381",
-  "notes": "",
-  "备注": "wait for stream end via 问候 title before shot"
+  "notes": ""
  },
  {
   "id": "chat.dark",
@@ -247,8 +237,7 @@
   "color_mad": 1.462,
   "attempts": 2,
   "commit": null,
-  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter",
-  "备注": "residual 0.9657/1.693 first shot; same worst rects as chat.default ([293,1172]=0.853 table ink, [293,1465]=0.867 math fallback, [0,1465]=0.884). Inherits all chat.default fixes (cssLeading, table min-width, fnRow). Residual gap is KaTeX display-math fallback vs raw tex + table cell ink — structural, not theme."
+  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter"
  },
  {
   "id": "chat.light",
@@ -260,8 +249,7 @@
   "color_mad": 1.58,
   "attempts": 2,
   "commit": null,
-  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter",
-  "备注": "residual: same scene as chat.default in light theme; identical glyph-rasterization band diffs (y1172 ~0.86). All chat.default fixes already applied."
+  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter"
  },
  {
   "id": "sider.empty",
@@ -297,8 +285,7 @@
   "color_mad": 1.114,
   "attempts": 1,
   "commit": null,
-  "notes": "",
-  "note": "removed 暂无历史对话 hint (ref drawer renders nothing); imePadding so footer stays above IME; ImeAction.Search+Capitalization.Sentences match ref uppercase+magnifier"
+  "notes": ""
  },
  {
   "id": "sider.longpress",
@@ -310,8 +297,7 @@
   "color_mad": 1.341,
   "attempts": 1,
   "commit": null,
-  "notes": "",
-  "note": "ref contextmenu opens anchored 2-item Menu (rename+delete icons); replaced AlertDialog with Popup TopEnd w124 @ vw-8; synthetic TouchEvent does not raise contextmenu — dispatch MouseEvent directly"
+  "notes": ""
  },
  {
   "id": "sider.multiselect",
@@ -323,8 +309,7 @@
   "color_mad": 1.398,
   "attempts": 1,
   "commit": null,
-  "notes": "",
-  "note": "selection enters via select icon only; moved icon after LazyColumn (z-order stole taps); circled close btn, pin icon, disabled alpha .35, no active accent in selection rows"
+  "notes": ""
  },
  {
   "id": "sider.dark",
@@ -336,8 +321,7 @@
   "color_mad": 0.667,
   "attempts": 1,
   "commit": null,
-  "notes": "",
-  "note": "ref [data-android] drawer bg = bg-base (21,21,23), not bg-layer-2"
+  "notes": ""
  },
  {
   "id": "sider.light",
@@ -349,8 +333,7 @@
   "color_mad": 1.116,
   "attempts": 1,
   "commit": null,
-  "notes": "",
-  "note": "same bg-base fix; light bg already matched"
+  "notes": ""
  },
  {
   "id": "settings.root.default",
@@ -398,8 +381,7 @@
   "color_mad": 0.764,
   "attempts": 1,
   "commit": null,
-  "notes": "",
-  "note": "refactored to ref 账户 group: masked-key row (••••••••) + inline editor + 开放平台/帮助 links"
+  "notes": ""
  },
  {
   "id": "settings.data.default",
@@ -507,8 +489,7 @@
   "color_mad": 2.486,
   "attempts": 6,
   "commit": null,
-  "notes": " | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked",
-  "备注": "worst tiles: thumbs band y1465-1758 x293-1080 (ssim 0.83-0.87). Tried: per-item sliver padding, chips/sugg gap fixes, badge stroke+shadow, bottom-pad global shift (regressed to 0.950). mad 2.7 passes; residual = sub-pixel icon/thumb-edge AA + ~3px uniform drift."
+  "notes": " | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked"
  },
  {
   "id": "comp.AndroidIcons",
@@ -520,8 +501,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.edit (pass)"
+  "notes": ""
  },
  {
   "id": "comp.Button.module",
@@ -533,8 +513,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via apikey.default (pass)"
+  "notes": ""
  },
  {
   "id": "comp.Button.module.css.d",
@@ -546,39 +525,7 @@
   "color_mad": 1.603,
   "attempts": 6,
   "commit": "ceac381",
-  "notes": "",
-  "worst_rects": [
-   {
-    "x": 586,
-    "y": 879,
-    "w": 293,
-    "h": 293,
-    "ssim": 0.8755
-   },
-   {
-    "x": 293,
-    "y": 879,
-    "w": 293,
-    "h": 293,
-    "ssim": 0.9186
-   },
-   {
-    "x": 879,
-    "y": 879,
-    "w": 201,
-    "h": 293,
-    "ssim": 0.9406
-   }
-  ],
-  "methods_tried": [
-   "AlertDialog->custom Popup card (Dialog adds own 0.6 dim)",
-   "card width=min(380,vw-32) via padding order",
-   "Button size l h40 pill",
-   "content offset +3px top pad",
-   "scrim 0.36/0.60 alpha"
-  ],
-  "note": "sider.delmodal shot: Popup-based Modal replacing AlertDialog; reached via long-press menu (Popup made focusable so uiautomator sees it). adj_ssim 0.9768/mad 1.60 after 5 rounds; remaining diff is CJK glyph rasterization in title/body/button text + ref's 2px backdrop blur",
-  "备注": "retry2: backdrop blur unreachable — RenderEffect no-op on emulator GPU; dim matches."
+  "notes": ""
  },
  {
   "id": "comp.Button",
@@ -590,8 +537,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via apikey.default (pass)"
+  "notes": ""
  },
  {
   "id": "comp.IconButton.module",
@@ -603,8 +549,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.edit (pass)"
+  "notes": ""
  },
  {
   "id": "comp.IconButton",
@@ -616,8 +561,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.edit (pass)"
+  "notes": ""
  },
  {
   "id": "comp.Menu.module",
@@ -653,39 +597,7 @@
   "color_mad": 1.603,
   "attempts": 6,
   "commit": "ceac381",
-  "notes": "",
-  "worst_rects": [
-   {
-    "x": 586,
-    "y": 879,
-    "w": 293,
-    "h": 293,
-    "ssim": 0.8755
-   },
-   {
-    "x": 293,
-    "y": 879,
-    "w": 293,
-    "h": 293,
-    "ssim": 0.9186
-   },
-   {
-    "x": 879,
-    "y": 879,
-    "w": 201,
-    "h": 293,
-    "ssim": 0.9406
-   }
-  ],
-  "methods_tried": [
-   "AlertDialog->custom Popup card (Dialog adds own 0.6 dim)",
-   "card width=min(380,vw-32) via padding order",
-   "Button size l h40 pill",
-   "content offset +3px top pad",
-   "scrim 0.36/0.60 alpha"
-  ],
-  "note": "sider.delmodal shot: Popup-based Modal replacing AlertDialog; reached via long-press menu (Popup made focusable so uiautomator sees it). adj_ssim 0.9768/mad 1.60 after 5 rounds; remaining diff is CJK glyph rasterization in title/body/button text + ref's 2px backdrop blur",
-  "备注": "retry2: backdrop blur unreachable — RenderEffect no-op on emulator GPU; dim matches."
+  "notes": ""
  },
  {
   "id": "comp.Modal",
@@ -697,39 +609,7 @@
   "color_mad": 1.603,
   "attempts": 6,
   "commit": "ceac381",
-  "notes": "",
-  "worst_rects": [
-   {
-    "x": 586,
-    "y": 879,
-    "w": 293,
-    "h": 293,
-    "ssim": 0.8755
-   },
-   {
-    "x": 293,
-    "y": 879,
-    "w": 293,
-    "h": 293,
-    "ssim": 0.9186
-   },
-   {
-    "x": 879,
-    "y": 879,
-    "w": 201,
-    "h": 293,
-    "ssim": 0.9406
-   }
-  ],
-  "methods_tried": [
-   "AlertDialog->custom Popup card (Dialog adds own 0.6 dim)",
-   "card width=min(380,vw-32) via padding order",
-   "Button size l h40 pill",
-   "content offset +3px top pad",
-   "scrim 0.36/0.60 alpha"
-  ],
-  "note": "sider.delmodal shot: Popup-based Modal replacing AlertDialog; reached via long-press menu (Popup made focusable so uiautomator sees it). adj_ssim 0.9768/mad 1.60 after 5 rounds; remaining diff is CJK glyph rasterization in title/body/button text + ref's 2px backdrop blur",
-  "备注": "retry2: backdrop blur unreachable — RenderEffect no-op on emulator GPU; dim matches."
+  "notes": ""
  },
  {
   "id": "comp.Select.module",
@@ -741,8 +621,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": null,
-  "notes": "",
-  "note": "same: Select unreachable on Android"
+  "notes": ""
  },
  {
   "id": "comp.Select.module.css.d",
@@ -754,8 +633,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": null,
-  "notes": "",
-  "note": "same"
+  "notes": ""
  },
  {
   "id": "comp.Select",
@@ -767,8 +645,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": null,
-  "notes": "",
-  "note": "only used inside SettingsDialog which is replaced by AndroidSettings on android (App.tsx:203) -> dead code"
+  "notes": ""
  },
  {
   "id": "comp.Toast.module",
@@ -804,8 +681,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": null,
-  "notes": "",
-  "note": "same: mobile never renders tooltip"
+  "notes": ""
  },
  {
   "id": "comp.Tooltip",
@@ -817,8 +693,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": null,
-  "notes": "",
-  "note": "unreachable on Android: Tooltip visible only when !isMobile (hover-only), Tooltip.tsx line ~40"
+  "notes": ""
  },
  {
   "id": "comp.anchored",
@@ -842,8 +717,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.edit (pass)"
+  "notes": ""
  },
  {
   "id": "comp.toastState",
@@ -867,30 +741,7 @@
   "color_mad": 2.486,
   "attempts": 5,
   "commit": "6f83321",
-  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked",
-  "worst_rects": [
-   {
-    "x": 879,
-    "y": 1465,
-    "w": 201,
-    "h": 293,
-    "blurred_ssim": 0.8372
-   },
-   {
-    "x": 586,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.8613
-   },
-   {
-    "x": 293,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.8665
-   }
-  ]
+  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked"
  },
  {
   "id": "comp.AndroidAttachments",
@@ -902,30 +753,7 @@
   "color_mad": 2.486,
   "attempts": 5,
   "commit": "6f83321",
-  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked",
-  "worst_rects": [
-   {
-    "x": 879,
-    "y": 1465,
-    "w": 201,
-    "h": 293,
-    "blurred_ssim": 0.8372
-   },
-   {
-    "x": 586,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.8613
-   },
-   {
-    "x": 293,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.8665
-   }
-  ]
+  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked"
  },
  {
   "id": "comp.AndroidDraftAttachments",
@@ -937,30 +765,7 @@
   "color_mad": 2.486,
   "attempts": 5,
   "commit": "6f83321",
-  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked",
-  "worst_rects": [
-   {
-    "x": 879,
-    "y": 1465,
-    "w": 201,
-    "h": 293,
-    "blurred_ssim": 0.8372
-   },
-   {
-    "x": 586,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.8613
-   },
-   {
-    "x": 293,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.8665
-   }
-  ]
+  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked"
  },
  {
   "id": "comp.AndroidVoiceOverlay.module",
@@ -996,8 +801,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.edit (pass)"
+  "notes": ""
  },
  {
   "id": "comp.ChatInput.module.css.d",
@@ -1009,8 +813,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.edit (pass)"
+  "notes": ""
  },
  {
   "id": "comp.ChatInput",
@@ -1022,8 +825,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.edit (pass)"
+  "notes": ""
  },
  {
   "id": "comp.DraftAttachments",
@@ -1035,30 +837,7 @@
   "color_mad": 2.486,
   "attempts": 5,
   "commit": "6f83321",
-  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked",
-  "worst_rects": [
-   {
-    "x": 879,
-    "y": 1465,
-    "w": 201,
-    "h": 293,
-    "blurred_ssim": 0.8372
-   },
-   {
-    "x": 586,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.8613
-   },
-   {
-    "x": 293,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.8665
-   }
-  ]
+  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked"
  },
  {
   "id": "comp.DragMask.module",
@@ -1166,8 +945,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via imageviewer.default (pass)"
+  "notes": ""
  },
  {
   "id": "comp.AndroidImageViewer",
@@ -1179,8 +957,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via imageviewer.default (pass)"
+  "notes": ""
  },
  {
   "id": "comp.FileCard.module",
@@ -1240,8 +1017,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via imageviewer.default (pass)"
+  "notes": ""
  },
  {
   "id": "comp.usePreviewZoom",
@@ -1253,8 +1029,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via imageviewer.default (pass)"
+  "notes": ""
  },
  {
   "id": "comp.CodeBlock.module",
@@ -1266,8 +1041,7 @@
   "color_mad": 0.82,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "pass via chat.code"
+  "notes": ""
  },
  {
   "id": "comp.CodeBlock",
@@ -1279,8 +1053,7 @@
   "color_mad": 0.82,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "pass via chat.code"
+  "notes": ""
  },
  {
   "id": "comp.Link",
@@ -1292,8 +1065,7 @@
   "color_mad": 1.038,
   "attempts": 1,
   "commit": "da384f0",
-  "notes": "",
-  "note": "chat.md scene: mock md reply now includes [DeepSeek 官网](https://www.deepseek.com); link styled identically"
+  "notes": ""
  },
  {
   "id": "comp.Markdown",
@@ -1305,8 +1077,7 @@
   "color_mad": 0.996,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "pass via chat.md"
+  "notes": ""
  },
  {
   "id": "comp.MarkdownAstRenderer",
@@ -1318,8 +1089,7 @@
   "color_mad": 0.996,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "pass via chat.md"
+  "notes": ""
  },
  {
   "id": "comp.MathFormula",
@@ -1331,8 +1101,7 @@
   "color_mad": 1.58,
   "attempts": 6,
   "commit": null,
-  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter",
-  "note": "worst rect x0-293 y586-879 (0.806); tried: TeX parser w/ BigOp limits + stacked frac + serif glyphs; size/offset pixel-fit vs KaTeX; spacing-escape consumption; residual = KaTeX font glyph shape gap"
+  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter"
  },
  {
   "id": "comp.MermaidDiagram",
@@ -1344,8 +1113,7 @@
   "color_mad": 0.97,
   "attempts": 1,
   "commit": null,
-  "notes": "",
-  "note": "pass via chat.mermaid: embedded WebView runs vendored mermaid 11.10.1 (same bundle as ref node_modules) rendering identical SVG; 图表/代码 switch + copy match ref CodeBlock; bounds: 图表/代码 button centers within ~1-3px (ref CDP getBoundingClientRect x2.75+128 vs native uiautomator); stream retry keeps last good diagram, final failure -> 渲染失败"
+  "notes": ""
  },
  {
   "id": "comp.highlight",
@@ -1357,8 +1125,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.code (pass)"
+  "notes": ""
  },
  {
   "id": "comp.markdown",
@@ -1370,8 +1137,7 @@
   "color_mad": 0.996,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "pass via chat.md"
+  "notes": ""
  },
  {
   "id": "comp.useThrottleMarkdownRender",
@@ -1383,8 +1149,7 @@
   "color_mad": 0.996,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "pass via chat.md"
+  "notes": ""
  },
  {
   "id": "comp.AssistantMessage.module",
@@ -1396,8 +1161,7 @@
   "color_mad": 1.143,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "pass via chat.edit/menu/branch"
+  "notes": ""
  },
  {
   "id": "comp.AssistantMessage.module.css.d",
@@ -1409,8 +1173,7 @@
   "color_mad": 1.143,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "pass via chat.edit/menu/branch"
+  "notes": ""
  },
  {
   "id": "comp.AssistantMessage",
@@ -1422,8 +1185,7 @@
   "color_mad": 1.143,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "pass via chat.edit/menu/branch"
+  "notes": ""
  },
  {
   "id": "comp.BranchSwitcher.module",
@@ -1471,8 +1233,7 @@
   "color_mad": 1.232,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "pass via chat.menu"
+  "notes": ""
  },
  {
   "id": "comp.MessageFile.module",
@@ -1520,8 +1281,7 @@
   "color_mad": 1.143,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "pass via chat.edit/menu/branch"
+  "notes": ""
  },
  {
   "id": "comp.MessageList.module.css.d",
@@ -1533,8 +1293,7 @@
   "color_mad": 1.143,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "pass via chat.edit/menu/branch"
+  "notes": ""
  },
  {
   "id": "comp.MessageList",
@@ -1546,8 +1305,7 @@
   "color_mad": 1.143,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "pass via chat.edit/menu/branch"
+  "notes": ""
  },
  {
   "id": "comp.ReadAloudButton",
@@ -1595,8 +1353,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.edit (pass)"
+  "notes": ""
  },
  {
   "id": "comp.ReplyArea.module.css.d",
@@ -1608,8 +1365,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.edit (pass)"
+  "notes": ""
  },
  {
   "id": "comp.ReplyArea",
@@ -1621,8 +1377,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.edit (pass)"
+  "notes": ""
  },
  {
   "id": "comp.UserMessage.module",
@@ -1670,8 +1425,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.edit (pass)"
+  "notes": ""
  },
  {
   "id": "comp.thinking.markdown",
@@ -1683,8 +1437,7 @@
   "color_mad": 0.996,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "pass via chat.md"
+  "notes": ""
  },
  {
   "id": "comp.useReplyView",
@@ -1696,8 +1449,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.edit (pass)"
+  "notes": ""
  },
  {
   "id": "comp.AndroidSearchPanel.module",
@@ -1709,30 +1461,7 @@
   "color_mad": 4.464,
   "attempts": 6,
   "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization",
-  "worst_rects": [
-   {
-    "x": 293,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6923
-   },
-   {
-    "x": 586,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6944
-   },
-   {
-    "x": 586,
-    "y": 2051,
-    "w": 293,
-    "h": 289,
-    "blurred_ssim": 0.7259
-   }
-  ]
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
  },
  {
   "id": "comp.AndroidSearchPanel",
@@ -1744,30 +1473,7 @@
   "color_mad": 4.464,
   "attempts": 6,
   "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization",
-  "worst_rects": [
-   {
-    "x": 293,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6923
-   },
-   {
-    "x": 586,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6944
-   },
-   {
-    "x": 586,
-    "y": 2051,
-    "w": 293,
-    "h": 289,
-    "blurred_ssim": 0.7259
-   }
-  ]
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
  },
  {
   "id": "comp.CitationLink",
@@ -1779,30 +1485,7 @@
   "color_mad": 4.464,
   "attempts": 6,
   "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization",
-  "worst_rects": [
-   {
-    "x": 293,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6923
-   },
-   {
-    "x": 586,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6944
-   },
-   {
-    "x": 586,
-    "y": 2051,
-    "w": 293,
-    "h": 289,
-    "blurred_ssim": 0.7259
-   }
-  ]
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
  },
  {
   "id": "comp.FallbackImage",
@@ -1814,30 +1497,7 @@
   "color_mad": 4.464,
   "attempts": 6,
   "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization",
-  "worst_rects": [
-   {
-    "x": 293,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6923
-   },
-   {
-    "x": 586,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6944
-   },
-   {
-    "x": 586,
-    "y": 2051,
-    "w": 293,
-    "h": 289,
-    "blurred_ssim": 0.7259
-   }
-  ]
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
  },
  {
   "id": "comp.HoverCard.module",
@@ -1849,30 +1509,7 @@
   "color_mad": 4.464,
   "attempts": 6,
   "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization",
-  "worst_rects": [
-   {
-    "x": 293,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6923
-   },
-   {
-    "x": 586,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6944
-   },
-   {
-    "x": 586,
-    "y": 2051,
-    "w": 293,
-    "h": 289,
-    "blurred_ssim": 0.7259
-   }
-  ]
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
  },
  {
   "id": "comp.HoverCard",
@@ -1884,30 +1521,7 @@
   "color_mad": 4.464,
   "attempts": 6,
   "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization",
-  "worst_rects": [
-   {
-    "x": 293,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6923
-   },
-   {
-    "x": 586,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6944
-   },
-   {
-    "x": 586,
-    "y": 2051,
-    "w": 293,
-    "h": 289,
-    "blurred_ssim": 0.7259
-   }
-  ]
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
  },
  {
   "id": "comp.SearchPanel.module",
@@ -1919,30 +1533,7 @@
   "color_mad": 4.464,
   "attempts": 6,
   "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization",
-  "worst_rects": [
-   {
-    "x": 293,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6923
-   },
-   {
-    "x": 586,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6944
-   },
-   {
-    "x": 586,
-    "y": 2051,
-    "w": 293,
-    "h": 289,
-    "blurred_ssim": 0.7259
-   }
-  ]
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
  },
  {
   "id": "comp.SearchPanel",
@@ -1954,30 +1545,7 @@
   "color_mad": 4.464,
   "attempts": 6,
   "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization",
-  "worst_rects": [
-   {
-    "x": 293,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6923
-   },
-   {
-    "x": 586,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6944
-   },
-   {
-    "x": 586,
-    "y": 2051,
-    "w": 293,
-    "h": 289,
-    "blurred_ssim": 0.7259
-   }
-  ]
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
  },
  {
   "id": "comp.SiteLogo.module",
@@ -1989,30 +1557,7 @@
   "color_mad": 4.464,
   "attempts": 6,
   "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization",
-  "worst_rects": [
-   {
-    "x": 293,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6923
-   },
-   {
-    "x": 586,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6944
-   },
-   {
-    "x": 586,
-    "y": 2051,
-    "w": 293,
-    "h": 289,
-    "blurred_ssim": 0.7259
-   }
-  ]
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
  },
  {
   "id": "comp.SiteLogo",
@@ -2024,30 +1569,7 @@
   "color_mad": 4.464,
   "attempts": 6,
   "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization",
-  "worst_rects": [
-   {
-    "x": 293,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6923
-   },
-   {
-    "x": 586,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6944
-   },
-   {
-    "x": 586,
-    "y": 2051,
-    "w": 293,
-    "h": 289,
-    "blurred_ssim": 0.7259
-   }
-  ]
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
  },
  {
   "id": "comp.SourceCard.module",
@@ -2059,30 +1581,7 @@
   "color_mad": 4.464,
   "attempts": 6,
   "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization",
-  "worst_rects": [
-   {
-    "x": 293,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6923
-   },
-   {
-    "x": 586,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6944
-   },
-   {
-    "x": 586,
-    "y": 2051,
-    "w": 293,
-    "h": 289,
-    "blurred_ssim": 0.7259
-   }
-  ]
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
  },
  {
   "id": "comp.SourceCard.module.css.d",
@@ -2094,30 +1593,7 @@
   "color_mad": 4.464,
   "attempts": 6,
   "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization",
-  "worst_rects": [
-   {
-    "x": 293,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6923
-   },
-   {
-    "x": 586,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6944
-   },
-   {
-    "x": 586,
-    "y": 2051,
-    "w": 293,
-    "h": 289,
-    "blurred_ssim": 0.7259
-   }
-  ]
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
  },
  {
   "id": "comp.SourceCard",
@@ -2129,30 +1605,7 @@
   "color_mad": 4.464,
   "attempts": 6,
   "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization",
-  "worst_rects": [
-   {
-    "x": 293,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6923
-   },
-   {
-    "x": 586,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6944
-   },
-   {
-    "x": 586,
-    "y": 2051,
-    "w": 293,
-    "h": 289,
-    "blurred_ssim": 0.7259
-   }
-  ]
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
  },
  {
   "id": "comp.searchPanelState",
@@ -2164,30 +1617,7 @@
   "color_mad": 4.464,
   "attempts": 6,
   "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization",
-  "worst_rects": [
-   {
-    "x": 293,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6923
-   },
-   {
-    "x": 586,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.6944
-   },
-   {
-    "x": 586,
-    "y": 2051,
-    "w": 293,
-    "h": 289,
-    "blurred_ssim": 0.7259
-   }
-  ]
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
  },
  {
   "id": "comp.MobileHeader.module",
@@ -2199,8 +1629,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.edit (pass)"
+  "notes": ""
  },
  {
   "id": "comp.MobileHeader",
@@ -2212,8 +1641,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.edit (pass)"
+  "notes": ""
  },
  {
   "id": "comp.SessionView.module",
@@ -2225,8 +1653,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.edit (pass)"
+  "notes": ""
  },
  {
   "id": "comp.SessionView",
@@ -2238,8 +1665,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.edit (pass)"
+  "notes": ""
  },
  {
   "id": "comp.Welcome.module",
@@ -2251,8 +1677,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via welcome.default (pass)"
+  "notes": ""
  },
  {
   "id": "comp.Welcome.module.css.d",
@@ -2264,8 +1689,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via welcome.default (pass)"
+  "notes": ""
  },
  {
   "id": "comp.Welcome",
@@ -2277,8 +1701,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via welcome.default (pass)"
+  "notes": ""
  },
  {
   "id": "comp.AndroidSettings.module",
@@ -2290,8 +1713,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via settings.root (pass)"
+  "notes": ""
  },
  {
   "id": "comp.AndroidSettings",
@@ -2303,8 +1725,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via settings.root (pass)"
+  "notes": ""
  },
  {
   "id": "comp.ApiKeyField",
@@ -2316,8 +1737,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via apikey.default (pass)"
+  "notes": ""
  },
  {
   "id": "comp.ApiKeyScreen.module",
@@ -2329,8 +1749,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via apikey.default (pass)"
+  "notes": ""
  },
  {
   "id": "comp.ApiKeyScreen",
@@ -2342,8 +1761,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via apikey.default (pass)"
+  "notes": ""
  },
  {
   "id": "comp.Settings.module",
@@ -2355,8 +1773,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via settings.root (pass)"
+  "notes": ""
  },
  {
   "id": "comp.Settings.module.css.d",
@@ -2368,8 +1785,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via settings.root (pass)"
+  "notes": ""
  },
  {
   "id": "comp.SettingsDialog",
@@ -2381,8 +1797,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": null,
-  "notes": "",
-  "note": "App.tsx:203 renders AndroidSettings instead when android -> dead code on this platform"
+  "notes": ""
  },
  {
   "id": "comp.settingsDialogState",
@@ -2394,8 +1809,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via settings.root (pass)"
+  "notes": ""
  },
  {
   "id": "comp.useApiKeyForm",
@@ -2407,8 +1821,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via apikey.default (pass)"
+  "notes": ""
  },
  {
   "id": "comp.CollapsedSider",
@@ -2420,8 +1833,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": null,
-  "notes": "",
-  "note": "siderCollapsed forced false when isMobile (App.tsx:107) -> unreachable on phone layout"
+  "notes": ""
  },
  {
   "id": "comp.SessionItem.module",
@@ -2433,8 +1845,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via sider.sessions (pass)"
+  "notes": ""
  },
  {
   "id": "comp.SessionItem",
@@ -2446,8 +1857,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via sider.sessions (pass)"
+  "notes": ""
  },
  {
   "id": "comp.Sider.module",
@@ -2459,8 +1869,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via sider.sessions (pass)"
+  "notes": ""
  },
  {
   "id": "comp.Sider.module.css.d",
@@ -2472,8 +1881,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via sider.sessions (pass)"
+  "notes": ""
  },
  {
   "id": "comp.Sider",
@@ -2485,8 +1893,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via sider.sessions (pass)"
+  "notes": ""
  },
  {
   "id": "comp.mobileSiderState",
@@ -2498,8 +1905,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via sider.sessions (pass)"
+  "notes": ""
  },
  {
   "id": "comp.useAndroidDrawerGesture",
@@ -2511,8 +1917,7 @@
   "color_mad": null,
   "attempts": 7,
   "commit": null,
-  "notes": "",
-  "备注": "grid majority match 85-89% (<95%); boundary cells coin-flip on both apps — Chromium intermittently holds pointermove delivery ~290ms; deterministic logic verified identical (see decisions.md). tried: velocity-unit, upTime, coalesced samples, hold emulation, up-tail eval, cancel parity. retry2: window-level MotionEvent handler (true timestamps) + warm grid 90.7%; residual=Chromium input-hold coin-flips."
+  "notes": ""
  },
  {
   "id": "comp.useSessionSearch",
@@ -2524,8 +1929,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via sider.search (pass)"
+  "notes": ""
  },
  {
   "id": "text.welcomeMessageChat250808",
@@ -5213,8 +4617,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.default (pass)"
+  "notes": ""
  },
  {
   "id": "store.retrySaveSessions",
@@ -5226,8 +4629,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.default (pass)"
+  "notes": ""
  },
  {
   "id": "store.bindChatPersistence",
@@ -5239,8 +4641,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.default (pass)"
+  "notes": ""
  },
  {
   "id": "store.initChat",
@@ -5252,8 +4653,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.default (pass)"
+  "notes": ""
  },
  {
   "id": "store.replaceHistory",
@@ -5277,8 +4677,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via sider.empty (pass)"
+  "notes": ""
  },
  {
   "id": "store.selectSession",
@@ -5290,8 +4689,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via sider.sessions#2 (pass)"
+  "notes": ""
  },
  {
   "id": "store.renameSession",
@@ -5303,8 +4701,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via sider.longpress (pass)"
+  "notes": ""
  },
  {
   "id": "store.removeSession",
@@ -5316,8 +4713,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via sider.multiselect (pass)"
+  "notes": ""
  },
  {
   "id": "store.stopReply",
@@ -5329,8 +4725,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.interrupted (pass)"
+  "notes": ""
  },
  {
   "id": "store.sendMessage",
@@ -5342,8 +4737,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.default (pass)"
+  "notes": ""
  },
  {
   "id": "store.regenerateReply",
@@ -5355,8 +4749,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.branch (pass)"
+  "notes": ""
  },
  {
   "id": "store.editMessage",
@@ -5368,8 +4761,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.edit (pass)"
+  "notes": ""
  },
  {
   "id": "store.selectMessageVersion",
@@ -5381,8 +4773,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via chat.branch (pass)"
+  "notes": ""
  },
  {
   "id": "store.continueReply",
@@ -5418,8 +4809,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via apikey.default (pass)"
+  "notes": ""
  },
  {
   "id": "native.CaptureProvider",
@@ -5443,8 +4833,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via settings.export.default (pass)"
+  "notes": ""
  },
  {
   "id": "native.ImageSave",
@@ -5468,8 +4857,7 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via settings.root (pass)"
+  "notes": ""
  },
  {
   "id": "native.NativeRecorder",
@@ -5493,30 +4881,7 @@
   "color_mad": 2.486,
   "attempts": 5,
   "commit": "6f83321",
-  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked",
-  "worst_rects": [
-   {
-    "x": 879,
-    "y": 1465,
-    "w": 201,
-    "h": 293,
-    "blurred_ssim": 0.8372
-   },
-   {
-    "x": 586,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.8613
-   },
-   {
-    "x": 293,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.8665
-   }
-  ]
+  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked"
  },
  {
   "id": "native.SelectedPhoto",
@@ -5528,30 +4893,7 @@
   "color_mad": 2.486,
   "attempts": 5,
   "commit": "6f83321",
-  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked",
-  "worst_rects": [
-   {
-    "x": 879,
-    "y": 1465,
-    "w": 201,
-    "h": 293,
-    "blurred_ssim": 0.8372
-   },
-   {
-    "x": 586,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.8613
-   },
-   {
-    "x": 293,
-    "y": 1465,
-    "w": 293,
-    "h": 293,
-    "blurred_ssim": 0.8665
-   }
-  ]
+  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked"
  },
  {
   "id": "native.SourceBrowserActivity",
@@ -5575,8 +4917,1015 @@
   "color_mad": null,
   "attempts": 0,
   "commit": "ceac381",
-  "notes": "",
-  "note": "verified via settings.root (pass)"
+  "notes": ""
+ },
+ {
+  "id": "press.IconButton.module",
+  "path": "src/components/base/IconButton.module.css",
+  "type": "press",
+  "reach": "app shell scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "press.AndroidAttachments.module",
+  "path": "src/components/chatInput/AndroidAttachments.module.css",
+  "type": "press",
+  "reach": "composer scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "press.ChatInput.module",
+  "path": "src/components/chatInput/ChatInput.module.css",
+  "type": "press",
+  "reach": "composer scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "press.VoiceButton.module",
+  "path": "src/components/chatInput/VoiceButton.module.css",
+  "type": "press",
+  "reach": "composer scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "press.CodeBlock.module",
+  "path": "src/components/markdown/CodeBlock.module.css",
+  "type": "press",
+  "reach": "chat scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "press.AndroidSearchPanel.module",
+  "path": "src/components/search/AndroidSearchPanel.module.css",
+  "type": "press",
+  "reach": "search scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "press.AndroidSettings.module",
+  "path": "src/components/settings/AndroidSettings.module.css",
+  "type": "press",
+  "reach": "settings scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "press.SessionItem.module",
+  "path": "src/components/sider/SessionItem.module.css",
+  "type": "press",
+  "reach": "drawer scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "press.ChatInput-longpress",
+  "path": "src/components/chatInput/ChatInput.tsx",
+  "type": "press",
+  "reach": "composer scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "press.UserMessage-longpress",
+  "path": "src/components/messages/UserMessage.tsx",
+  "type": "press",
+  "reach": "chat scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "press.SessionItem-longpress",
+  "path": "src/components/sider/SessionItem.tsx",
+  "type": "press",
+  "reach": "drawer scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "trans.Button.module",
+  "path": "src/components/base/Button.module.css",
+  "type": "transition",
+  "reach": "app shell scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "trans.IconButton.module",
+  "path": "src/components/base/IconButton.module.css",
+  "type": "transition",
+  "reach": "app shell scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "trans.Select.module",
+  "path": "src/components/base/Select.module.css",
+  "type": "transition",
+  "reach": "app shell scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "trans.Toast.module",
+  "path": "src/components/base/Toast.module.css",
+  "type": "transition",
+  "reach": "app shell scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "trans.AndroidAttachments.module",
+  "path": "src/components/chatInput/AndroidAttachments.module.css",
+  "type": "transition",
+  "reach": "composer scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "trans.AndroidVoiceOverlay.module",
+  "path": "src/components/chatInput/AndroidVoiceOverlay.module.css",
+  "type": "transition",
+  "reach": "composer scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "trans.ChatInput.module",
+  "path": "src/components/chatInput/ChatInput.module.css",
+  "type": "transition",
+  "reach": "composer scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "trans.VoiceButton.module",
+  "path": "src/components/chatInput/VoiceButton.module.css",
+  "type": "transition",
+  "reach": "composer scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "trans.AndroidImageViewer.module",
+  "path": "src/components/files/AndroidImageViewer.module.css",
+  "type": "transition",
+  "reach": "attachment/image-viewer scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "trans.FileCard.module",
+  "path": "src/components/files/FileCard.module.css",
+  "type": "transition",
+  "reach": "attachment/image-viewer scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "trans.markdown",
+  "path": "src/components/markdown/markdown.css",
+  "type": "transition",
+  "reach": "chat scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "trans.AssistantMessage.module",
+  "path": "src/components/messages/AssistantMessage.module.css",
+  "type": "transition",
+  "reach": "chat scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "trans.MessageFile.module",
+  "path": "src/components/messages/MessageFile.module.css",
+  "type": "transition",
+  "reach": "chat scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "trans.ReadingBars.module",
+  "path": "src/components/messages/ReadingBars.module.css",
+  "type": "transition",
+  "reach": "chat scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "trans.ReplyArea.module",
+  "path": "src/components/messages/ReplyArea.module.css",
+  "type": "transition",
+  "reach": "chat scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "trans.UserMessage.module",
+  "path": "src/components/messages/UserMessage.module.css",
+  "type": "transition",
+  "reach": "chat scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "trans.AndroidSearchPanel.module",
+  "path": "src/components/search/AndroidSearchPanel.module.css",
+  "type": "transition",
+  "reach": "search scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "trans.SearchPanel.module",
+  "path": "src/components/search/SearchPanel.module.css",
+  "type": "transition",
+  "reach": "search scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "trans.SiteLogo.module",
+  "path": "src/components/search/SiteLogo.module.css",
+  "type": "transition",
+  "reach": "search scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "trans.AndroidSettings.module",
+  "path": "src/components/settings/AndroidSettings.module.css",
+  "type": "transition",
+  "reach": "settings scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "trans.Settings.module",
+  "path": "src/components/settings/Settings.module.css",
+  "type": "transition",
+  "reach": "settings scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "trans.Sider.module",
+  "path": "src/components/sider/Sider.module.css",
+  "type": "transition",
+  "reach": "drawer scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "back.sider",
+  "path": "src/app/App.tsx",
+  "type": "back-stack",
+  "reach": "drawer scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "back.attachments",
+  "path": "src/components/chatInput/ChatInput.tsx",
+  "type": "back-stack",
+  "reach": "composer scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "back.searchpanel",
+  "path": "src/components/search/AndroidSearchPanel.tsx",
+  "type": "back-stack",
+  "reach": "search scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "back.dialog.rename",
+  "path": "src/components/sider/Sider.tsx",
+  "type": "back-stack",
+  "reach": "drawer scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "back.dialog.delete",
+  "path": "src/components/sider/Sider.tsx",
+  "type": "back-stack",
+  "reach": "drawer scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "back.dialog.logout",
+  "path": "src/components/settings/AndroidSettings.tsx",
+  "type": "back-stack",
+  "reach": "settings scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "back.dialog.imagepreview",
+  "path": "src/components/files/AndroidImageViewer.tsx",
+  "type": "back-stack",
+  "reach": "image-viewer scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "back.dialog.attpreview",
+  "path": "src/components/chatInput/AndroidAttachments.tsx",
+  "type": "back-stack",
+  "reach": "composer scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "back.settings.popup",
+  "path": "src/components/settings/AndroidSettings.tsx",
+  "type": "back-stack",
+  "reach": "settings scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "back.settings.root",
+  "path": "src/components/settings/AndroidSettings.tsx",
+  "type": "back-stack",
+  "reach": "settings scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "back.settings.account",
+  "path": "src/components/settings/AndroidSettings.tsx",
+  "type": "back-stack",
+  "reach": "settings scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "back.settings.data",
+  "path": "src/components/settings/AndroidSettings.tsx",
+  "type": "back-stack",
+  "reach": "settings scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "back.settings.export",
+  "path": "src/components/settings/AndroidSettings.tsx",
+  "type": "back-stack",
+  "reach": "settings scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "back.settings.font",
+  "path": "src/components/settings/AndroidSettings.tsx",
+  "type": "back-stack",
+  "reach": "settings scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "back.settings.personalization",
+  "path": "src/components/settings/AndroidSettings.tsx",
+  "type": "back-stack",
+  "reach": "settings scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "back.settings.agreements",
+  "path": "src/components/settings/AndroidSettings.tsx",
+  "type": "back-stack",
+  "reach": "settings scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "back.voice",
+  "path": "src/components/chatInput/AndroidVoiceOverlay.tsx",
+  "type": "back-stack",
+  "reach": "voice scenes; ref has no handler -> exits",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "back.chat",
+  "path": "src/app/App.tsx",
+  "type": "back-stack",
+  "reach": "chat scenes; exits app",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "back.apikey",
+  "path": "src/components/settings/ApiKeyScreen.tsx",
+  "type": "back-stack",
+  "reach": "apikey scenes; exits app",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "back.sider-menu",
+  "path": "src/components/sider/SessionItem.tsx",
+  "type": "back-stack",
+  "reach": "drawer scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "back.multiselect",
+  "path": "src/components/sider/Sider.tsx",
+  "type": "back-stack",
+  "reach": "drawer scenes",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "back.keyboard",
+  "path": "src/components/chatInput/ChatInput.tsx",
+  "type": "back-stack",
+  "reach": "composer scenes; hides IME",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "sys.edge-to-edge",
+  "path": "android/app/src/main/java",
+  "type": "system",
+  "reach": "transparent status+nav bars, content draws behind",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "sys.statusbar-icons",
+  "path": "android/app/src/main/java",
+  "type": "system",
+  "reach": "icon appearance follows theme (dark/light)",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "sys.navbar-icons",
+  "path": "android/app/src/main/java",
+  "type": "system",
+  "reach": "nav bar icon contrast follows theme",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "sys.ime-insets",
+  "path": "android/app/src/main/java",
+  "type": "system",
+  "reach": "composer follows keyboard, bottom padding switches",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "sys.cold-start",
+  "path": "android/app/src/main/java",
+  "type": "system",
+  "reach": "launch to first frame without stale splash band",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "sys.process-death",
+  "path": "android/app/src/main/java",
+  "type": "system",
+  "reach": "state restore after process kill",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "sys.predictive-back",
+  "path": "android/app/src/main/java",
+  "type": "system",
+  "reach": "enableOnBackInvokedCallback + progress animation",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "sys.mic-permission",
+  "path": "android/app/src/main/java",
+  "type": "system",
+  "reach": "RECORD_AUDIO runtime request before voice input",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "sys.photos-permission",
+  "path": "android/app/src/main/java",
+  "type": "system",
+  "reach": "READ_MEDIA_IMAGES/VISUAL_USER_SELECTED once per session",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "sys.camera",
+  "path": "android/app/src/main/java",
+  "type": "system",
+  "reach": "ACTION_IMAGE_CAPTURE via FileProvider uri",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "sys.picker-images",
+  "path": "android/app/src/main/java",
+  "type": "system",
+  "reach": "ACTION_PICK_IMAGES multi-select",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "sys.picker-docs",
+  "path": "android/app/src/main/java",
+  "type": "system",
+  "reach": "document picker for non-image attachments",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "sys.clipboard",
+  "path": "android/app/src/main/java",
+  "type": "system",
+  "reach": "message/copy uses clipboard",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "sys.share-images",
+  "path": "android/app/src/main/java",
+  "type": "system",
+  "reach": "image viewer share/save actions",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "sys.haptics",
+  "path": "android/app/src/main/java",
+  "type": "system",
+  "reach": "long-press / hold-to-talk haptic feedback",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "net.api-origin",
+  "path": "src/services/api/client.ts",
+  "type": "online",
+  "reach": "default build uses ref real API origin",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "net.verify",
+  "path": "src/services/api/client.ts",
+  "type": "online",
+  "reach": "GET /models Bearer",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "net.messages",
+  "path": "src/services/api/client.ts",
+  "type": "online",
+  "reach": "POST /anthropic/v1/messages stream:true headers+body fields",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "net.messages-search",
+  "path": "src/services/api/client.ts",
+  "type": "online",
+  "reach": "messages with search on adds deepseek_web_search",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "net.messages-file",
+  "path": "src/services/api/client.ts",
+  "type": "online",
+  "reach": "messages with file adds anthropic-beta files-api header",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "net.upload",
+  "path": "src/services/api/client.ts",
+  "type": "online",
+  "reach": "POST /anthropic/v1/files x-api-key + files beta, purpose first",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "net.too-long-retry",
+  "path": "src/services/api/client.ts",
+  "type": "online",
+  "reach": "400 user input too long retries without tools/safety_check/title",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "net.sse-normal",
+  "path": "src/services/api/client.ts",
+  "type": "online",
+  "reach": "SSE text stream event sequence",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "net.sse-reasoning",
+  "path": "src/services/api/client.ts",
+  "type": "online",
+  "reach": "SSE reasoning_content events",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "net.sse-keepalive",
+  "path": "src/services/api/client.ts",
+  "type": "online",
+  "reach": "SSE keep-alive comments ignored",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "net.sse-usage",
+  "path": "src/services/api/client.ts",
+  "type": "online",
+  "reach": "SSE usage event parsed",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "net.sse-finish",
+  "path": "src/services/api/client.ts",
+  "type": "online",
+  "reach": "all finish_reason values handled",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "net.sse-error",
+  "path": "src/services/api/client.ts",
+  "type": "online",
+  "reach": "error JSON mid-stream mapped to error kinds",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
+ },
+ {
+  "id": "net.invalid-key",
+  "path": "src/services/api/client.ts",
+  "type": "online",
+  "reach": "invalid key -> 401 UI consistent with ref",
+  "status": "todo",
+  "blurred_ssim": null,
+  "color_mad": null,
+  "attempts": 0,
+  "commit": null,
+  "notes": ""
  },
  {
   "id": "product.account-system",
