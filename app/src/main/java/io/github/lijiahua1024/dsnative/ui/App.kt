@@ -84,6 +84,11 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
         if (apiKey == null) {
             Box(Modifier.fillMaxSize().background(DsTheme.colors.bgBase)) {
                 ApiKeyScreen(settings)
+                // ref statusBarColor is theme-aware even before login:
+                // light #757575, dark black (measured on ref shots).
+                Box(Modifier.fillMaxWidth()
+                    .height(WindowInsets.statusBars.asPaddingValues().calculateTopPadding())
+                    .background(if (dark) Color.Black else Color(0xFF757575)))
             }
             return@DsTheme
         }
@@ -93,6 +98,7 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
             (sessionCache[activeId]?.let { io.github.lijiahua1024.dsnative.data.visibleMessages(it).isNotEmpty() } != true)
         DrawerFrame(
             nav = nav,
+            dark = dark,
             freePan = freePan,
             onNavigate = { nav = it },
             siderContent = { close ->
@@ -114,6 +120,7 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
 @Composable
 fun DrawerFrame(
     nav: NavState,
+    dark: Boolean,
     freePan: Boolean,
     onNavigate: (NavState) -> Unit,
     siderContent: @Composable (close: () -> Unit) -> Unit,
@@ -273,18 +280,19 @@ fun DrawerFrame(
                     siderContent { settleTo(0f) }
                 }
             }
-            // ref 在 API≥30 上不是 edge-to-edge：状态栏区(≈128px)始终是窗口
-            // statusBarColor 画的深灰带，位于 WebView frame 之上；横贯整个顶部。
-            // native 用一条等高深色带模拟它，main layer 从它下方开始。
-            val statusTopPx = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-            Box(Modifier.fillMaxWidth().height(statusTopPx).background(Color(0xFF757575)))
             // ref .drawerMask exists only while the drawer is open/moving; at
             // progress=0 a 0.207 black veil here would darken the visible
             // status band (93 vs ref 117) and every scene's top area.
+            val statusTopPx = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
             if (progress > 0f && progress < 1f) {
                 Box(Modifier.fillMaxSize().padding(top = statusTopPx)
                     .graphicsLayer { alpha = 0.207f * (1f - progress) }.background(Color.Black))
             }
+            // ref statusBarColor 画的状态栏带，在 API≥30 上位于 WebView frame
+            // 之上：light #757575 / dark black。画在 scrim 之后，保证任何抽屉
+            // 进度下都不被遮罩覆盖。
+            Box(Modifier.fillMaxWidth().height(statusTopPx)
+                .background(if (dark) Color.Black else Color(0xFF757575)))
             // Main content layer
             // ref radius is 36px pre-scale; clip applies post-scale → use 34dp (~93.5px ≈ 36*0.9496*2.75)
             val radiusDp = (min(1f, progress * 6f) * 34f)
