@@ -113,9 +113,31 @@ class MotionServer {
                     val x2 = p[3].toFloat(); val y2 = p[4].toFloat()
                     val steps = p[5].toInt(); val durMs = p[6].toLong()
                     val fling = p[0] == "flingseq"
-                    downAt = SystemClock.uptimeMillis()
+                    var injected = false
+                    for (attempt in 0 until 4) {
+                        downAt = SystemClock.uptimeMillis()
+                        val ok = auto.injectInputEvent(
+                            MotionEvent.obtain(downAt, downAt, MotionEvent.ACTION_DOWN, x1, y1, 0), true)
+                        // injectInputEvent only says the event was queued —
+                        // verify the app window actually received this DOWN.
+                        val deadline = downAt + 400
+                        while (SystemClock.uptimeMillis() < deadline &&
+                            io.github.lijiahua1024.dsnative.ui.DrawerGestureBus.lastDownAt != downAt
+                        ) Thread.sleep(10)
+                        if (ok && io.github.lijiahua1024.dsnative.ui.DrawerGestureBus.lastDownAt == downAt) {
+                            injected = true; break
+                        }
+                        liveLog("seq-down-retry $attempt ok=$ok\n")
+                        // release any half-begun stream, then retry the DOWN
+                        inject(auto, MotionEvent.obtain(downAt, SystemClock.uptimeMillis(),
+                            MotionEvent.ACTION_UP, x1, y1, 0))
+                        Thread.sleep(150)
+                    }
+                    if (!injected) {
+                        liveLog("seq-dropped $x1 $y1\n")
+                        continue
+                    }
                     val wall = downAt
-                    inject(auto, MotionEvent.obtain(downAt, wall, MotionEvent.ACTION_DOWN, x1, y1, 0))
                     liveLog("seq-start $wall\n")
                     val moveCount = if (fling) steps else steps - 1
                     for (i in 1..moveCount) {
@@ -132,6 +154,23 @@ class MotionServer {
                     inject(auto, MotionEvent.obtain(downAt, upAt,
                         MotionEvent.ACTION_UP, x2, y2, 0))
                     liveLog("seq-end $upAt\n")
+                }
+                "win" -> {
+                    val sb = StringBuilder()
+                    val sa = auto.windowsOnAllDisplays
+                    for (i in 0 until sa.size()) {
+                        sb.append("d").append(sa.keyAt(i)).append(": ")
+                        for (w in sa.valueAt(i)) {
+                            val r = android.graphics.Rect()
+                            w.getBoundsInScreen(r)
+                            sb.append(w.title).append('/').append(w.type)
+                                .append(r)
+                                .append(if (w.isFocused) "*" else "")
+                                .append(',')
+                        }
+                        sb.append("; ")
+                    }
+                    liveLog("win $sb\n")
                 }
                 "sleep" -> Thread.sleep(p[1].toLong())
             }

@@ -208,6 +208,7 @@ fun DrawerFrame(
                 android.util.Log.d("DsGesture", "MV x=$x t=$t cur=${g.current}")
             }
             DrawerGestureBus.handler = handler@{ ev ->
+                android.util.Log.d("DsGesture", "RAW a=${ev.actionMasked} t=${ev.eventTime} x=${ev.x} y=${ev.y}")
                 var cur = g
                 if (cur == null) {
                     if (ev.actionMasked == android.view.MotionEvent.ACTION_DOWN) {
@@ -252,7 +253,8 @@ fun DrawerFrame(
                     }
                 }
             }
-            onDispose { DrawerGestureBus.handler = null }
+            android.util.Log.d("DsGesture", "HANDLER set freePan=$freePan")
+            onDispose { android.util.Log.d("DsGesture", "HANDLER null"); DrawerGestureBus.handler = null }
         }
 
         Box(Modifier.fillMaxSize()) {
@@ -320,5 +322,12 @@ fun DrawerFrame(
 // drawer gesture handler; MainActivity.dispatchTouchEvent calls this first.
 object DrawerGestureBus {
     var handler: ((android.view.MotionEvent) -> Unit)? = null
-    fun dispatch(ev: android.view.MotionEvent) { handler?.invoke(ev) }
+    @Volatile var lastDownAt = -1L
+    @Volatile var lastDownX = -1f
+    fun dispatch(ev: android.view.MotionEvent) {
+        if (ev.actionMasked == android.view.MotionEvent.ACTION_DOWN) {
+            lastDownAt = ev.eventTime; lastDownX = ev.x
+        }
+        handler?.invoke(ev)
+    }
 }

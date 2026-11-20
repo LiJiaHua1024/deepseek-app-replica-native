@@ -110,3 +110,11 @@ final segment: residual retries complete (34/34). Gesture grid 90.7% best <95% (
 - 原生 bug 修复: canScrollVertically = !freePan || startedOpen — 抽屉开时从 mask/sider 起的对角滑动应取消 (ref: 仅 welcome 容器 free-pan)。
 - 网格 close-swipe 起点 x=850 (sider 内, 避开系统返回手势区)。
 - 进行中: natgrid3 重跑对比 (shell natgrid3)。
+
+## 段8（手势网格 100%）
+- 根因: inject.cmd 的 DOWN 被系统丢弃 (UiAutomation 排队成功≠投递到窗口) — 仅特定 seq 触发, 与位置/时长无关。
+- MotionServer: seq 在注入 DOWN 后轮询 DrawerGestureBus.lastDownAt (同进程直读) 验证投递, 失败重发 UP+DOWN ≤4次, 再败记 seq-dropped。
+- DrawerGestureBus 新增 lastDownAt/lastDownX (Volatile)。
+- 修 canScrollVertically = !freePan || startedOpen (对角关抽屉取消, 与 ref 目标元素规则一致)。
+- 网格结果: 75/75 = 100% (ref CDP 基线同步修复后也为规格一致) — drawer 5×5×3 达标。
+- 发现副效应: 点 sider 会话行会改 freePan (消息列表非空→false) — DisposableEffect 重启瞬间 handler=null 会丢事件, 但 DOWN 重试已覆盖。
