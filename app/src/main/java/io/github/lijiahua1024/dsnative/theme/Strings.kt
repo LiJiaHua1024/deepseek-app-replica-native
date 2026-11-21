@@ -61,6 +61,7 @@ object Strings {
             "androidMultiSelect" -> pick("多选", "Select")
             "androidSelectedChats" -> pick("已选择 {count} 个对话", "Selected conversations ({count})")
             "androidPinned" -> pick("置顶", "Pin")
+            "showMenu" -> pick("显示菜单", "Show menu")
             "androidUnpin" -> pick("取消置顶", "Unpin")
             "androidPinConfirm" -> pick("将选择的 {count} 个对话置顶？", "Pin selected conversations ({count})?")
             "androidUnpinConfirm" -> pick("将选择的 {count} 个对话取消置顶？", "Unpin selected conversations ({count})?")

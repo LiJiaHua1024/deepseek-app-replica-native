@@ -17,6 +17,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -143,6 +145,7 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
                             } else selectSessionWithPress(s.id)
                         },
                         onLongClick = { if (!selectionMode) menuFor = s },
+                        onMenuClick = { if (!selectionMode) menuFor = s },
                         menuOpen = menuFor?.id == s.id,
                         onMenuDismiss = { menuFor = null },
                         onRename = { renameFor = s; menuFor = null },
@@ -378,6 +381,7 @@ private fun allPinned(selected: Set<String>, pinned: Collection<String>) =
 private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean, checked: Boolean,
                      pressPhase: SessionPressPhase,
                      onClick: () -> Unit, onLongClick: () -> Unit,
+                     onMenuClick: () -> Unit = {},
                      menuOpen: Boolean = false, onMenuDismiss: () -> Unit = {},
                      onRename: () -> Unit = {}, onPin: () -> Unit = {},
                      onMultiSelect: () -> Unit = {}, onDelete: () -> Unit = {}) {
@@ -426,6 +430,36 @@ private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean,
                 else -> c.labelPrimary
             },
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        if (active && !selectionMode) {
+            val menuInteractionSource = remember {
+                androidx.compose.foundation.interaction.MutableInteractionSource()
+            }
+            Box(
+                Modifier
+                    .width(44.8f.dp)
+                    .height(44.8f.dp)
+                    .clickable(
+                        interactionSource = menuInteractionSource,
+                        indication = null,
+                        onClick = onMenuClick,
+                    )
+                    .semantics { },
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    Modifier
+                        .size(18.9f.dp)
+                        .semantics { contentDescription = Strings.get("showMenu") },
+                ) {
+                    Icon(
+                        painterResource(R.drawable.ic_ellipsis),
+                        contentDescription = null,
+                        tint = c.labelPrimary,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
+        }
     }
     if (menuOpen) {
         // ref base/Menu: anchored at the item's (invisible) ellipsis — align start
@@ -461,7 +495,7 @@ private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean,
             }
         }
     }
-    }
+}
 }
 
 // .option: flex, gap 8, padding 8px 10px, r8, 14/24; .danger -> error color
