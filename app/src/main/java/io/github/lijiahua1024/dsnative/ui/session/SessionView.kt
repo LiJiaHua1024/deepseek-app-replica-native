@@ -31,6 +31,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
@@ -329,20 +331,34 @@ fun BranchSwitcher(session: Session, msg: Message, chatStore: ChatStore) {
     val c = DsTheme.colors
     val (ids, index) = versionsOf(session, msg)
     if (ids.size <= 1) return
-    Row(Modifier.height(28.dp), verticalAlignment = Alignment.CenterVertically) {
+    val activeColor = Color(0xFF8E9094)
+    val disabledColor = Color(0xFFD4D4D4)
+    Row(Modifier.padding(end = 5.dp).height(42.dp),
+        verticalAlignment = Alignment.CenterVertically) {
         IconButton(enabled = index > 0,
             onClick = { chatStore.selectVersion(session.id, ids[index - 1]) },
-            modifier = Modifier.size(32.dp)) {
+            modifier = Modifier.size(43.4.dp)) {
             Icon(painterResource(R.drawable.ic_chevron_right), null,
-                tint = c.labelTertiary, modifier = Modifier.size(14.dp).rotate(180f))
+                tint = if (index > 0) activeColor else disabledColor,
+                modifier = Modifier.size(16.dp).rotate(180f)
+                    .semantics { contentDescription = Strings.get("previousMessage") }
+                    .offset(x = 0.25.dp))
         }
-        Text("${index + 1} / ${ids.size}", fontSize = 15.sp, lineHeight = 18.sp,
-            fontWeight = FontWeight.Medium, color = c.labelTertiary)
+        Box(Modifier.semantics {
+            contentDescription = Strings.get(
+                "messageBranchCount", "index" to index + 1, "total" to ids.size)
+        }) {
+            Text("${index + 1}/${ids.size}", fontSize = 15.sp, lineHeight = 18.sp,
+                fontWeight = FontWeight.Medium, color = activeColor)
+        }
         IconButton(enabled = index < ids.size - 1,
             onClick = { chatStore.selectVersion(session.id, ids[index + 1]) },
-            modifier = Modifier.size(32.dp)) {
+            modifier = Modifier.size(43.4.dp)) {
             Icon(painterResource(R.drawable.ic_chevron_right), null,
-                tint = c.labelTertiary, modifier = Modifier.size(14.dp))
+                tint = if (index < ids.size - 1) activeColor else disabledColor,
+                modifier = Modifier.size(16.dp)
+                    .semantics { contentDescription = Strings.get("nextMessage") }
+                    .offset(x = (-0.45).dp))
         }
     }
 }
@@ -411,7 +427,9 @@ fun UserBubble(msg: Message.User, session: Session, chatStore: ChatStore,
                     Text(msg.content, fontSize = 16.sp, lineHeight = 24.sp, color = c.labelPrimary)
                 }
             }
-            BranchSwitcher(session, msg, chatStore)
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                BranchSwitcher(session, msg, chatStore)
+            }
         }
         // editing: ref's .editor-in-textWrap leaves ~6px less room below than the bubble
         Spacer(Modifier.height(if (editing) 20.1.dp else 21.6.dp))
@@ -680,7 +698,7 @@ fun AssistantView(msg: Message.Assistant, session: Session, chatStore: ChatStore
             // 6px main-content padding-bottom + 12px .bottom padding-top；
             // ref .bottom { left:-6px }——整行向左偏 6css px
             // 列总高差 ~10dp（底对齐下整体下移 28px）：补在 .bottom 顶部（实测 18.5 对齐最佳）
-            Row(Modifier.fillMaxWidth().offset(x = (-8).dp).padding(top = 18.5.dp, bottom = 10.dp),
+            Row(Modifier.fillMaxWidth().offset(x = (-8).dp).padding(top = 12.dp, bottom = 10.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 BranchSwitcher(session, msg, chatStore)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp),
