@@ -49,10 +49,7 @@ class SettingsStore(context: Context) {
     val autoRead: StateFlow<Boolean> = _autoRead
 
     /** null = 跟随系统 */
-    private val _fontSize = MutableStateFlow(
-        if (prefs.getString("font-size", null) == "system") null
-        else prefs.getInt("font-size", 3)
-    )
+    private val _fontSize = MutableStateFlow(readFontSize())
     val fontSize: StateFlow<Int?> = _fontSize
 
     private val _foldThinking = MutableStateFlow(prefs.getBoolean("fold-thinking", true))
@@ -69,6 +66,14 @@ class SettingsStore(context: Context) {
         (0 until array.length()).mapNotNull { array.optString(it).takeIf(String::isNotEmpty) }
     } catch (e: Exception) {
         emptyList()
+    }
+
+    private fun readFontSize(): Int? {
+        return when (val value = prefs.all["font-size"]) {
+            is Int -> value.coerceIn(0, 6)
+            is String -> if (value == "system") null else value.toIntOrNull()?.coerceIn(0, 6)
+            else -> null
+        }
     }
 
     fun setApiKey(value: String?): Boolean {

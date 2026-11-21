@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.rotate
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -548,9 +549,7 @@ private fun ExportPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: 
 
 @Composable
 private fun FontPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Color, muted: Color, settings: SettingsStore) {
-    val fontSize by settings.fontSize.collectAsState()
-    val scale = fontSize?.let { 1 + (it - 3) * 0.09f } ?: 1f
-    val fs = (16 * scale).sp
+    val fs = 16.sp
     // ref .preview: right bubble + two paragraphs, lineHeight 1.6, scaled by slider value
     Column(Modifier.padding(top = 34.dp, start = 8.dp, end = 8.dp)) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
@@ -569,6 +568,9 @@ private fun FontPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Co
 @Composable
 private fun FontPanel(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Color, muted: Color, settings: SettingsStore) {
     val fontSize by settings.fontSize.collectAsState()
+    val systemFontScale = LocalDensity.current.fontScale
+    val sliderValue = fontSize
+        ?: Math.round((systemFontScale - 1f) / 0.1f + 2f).coerceIn(0, 6)
     // ref .fontPanel: bottom sheet card, r18 top, padding 12 24 36; follow-system switch + labels + slider
     Column(Modifier.fillMaxWidth().navigationBarsPadding()
         .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)).background(card)
@@ -577,7 +579,7 @@ private fun FontPanel(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: C
             .padding(start = 3.dp, end = 3.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Text(Strings.get("settingsFollowSystem"), fontSize = 16.sp, color = c.labelPrimary, modifier = Modifier.weight(1f))
-            RefSwitch(fontSize == null) { settings.setFontSize(if (it) null else 3) }
+            RefSwitch(fontSize == null) { settings.setFontSize(if (it) null else 2) }
         }
         Row(Modifier.fillMaxWidth().padding(top = 13.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -587,24 +589,20 @@ private fun FontPanel(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: C
             Text("A", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = c.labelPrimary, lineHeight = 19.sp)
         }
         // ref range input: thin track, left light gray / right dark, round gray thumb
-        val enabled = fontSize != null
         androidx.compose.foundation.Canvas(
             Modifier.fillMaxWidth().padding(top = 5.dp).height(17.dp)
-                .alpha(if (enabled) 1f else 0.5f)
-                .pointerInput(enabled) {
-                    if (!enabled) return@pointerInput
+                .pointerInput(Unit) {
                     detectTapGestures { p ->
                         settings.setFontSize((p.x / size.width * 6f + 0.5f).toInt().coerceIn(0, 6))
                     }
                 }
-                .pointerInput(enabled) {
-                    if (!enabled) return@pointerInput
+                .pointerInput(Unit) {
                     detectHorizontalDragGestures { ch, _ ->
                         settings.setFontSize((ch.position.x / size.width * 6f + 0.5f).toInt().coerceIn(0, 6))
                     }
                 }) {
             val th = 8.dp.toPx(); val cy = size.height / 2; val tr = th / 2
-            val tx = (size.width * ((fontSize ?: 3) / 6f)).coerceIn(5.5.dp.toPx(), size.width - 5.5.dp.toPx())
+            val tx = (size.width * (sliderValue / 6f)).coerceIn(5.5.dp.toPx(), size.width - 5.5.dp.toPx())
             drawRoundRect(Color(0xFF3B3B3B), topLeft = androidx.compose.ui.geometry.Offset(0f, cy - th / 2),
                 size = androidx.compose.ui.geometry.Size(size.width, th),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(tr))

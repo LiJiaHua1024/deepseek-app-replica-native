@@ -36,6 +36,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
@@ -68,6 +69,7 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
         else -> androidx.compose.foundation.isSystemInDarkTheme()
     }
     val colors = if (dark) io.github.lijiahua1024.dsnative.theme.DarkColors else io.github.lijiahua1024.dsnative.theme.LightColors
+    val fontSizeSetting by settings.fontSize.collectAsState()
     val apiKey by settings.apiKey.collectAsState()
     var nav by remember { mutableStateOf<NavState>(NavState.Chat) }
 
@@ -83,6 +85,13 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
     }
 
     DsTheme(colors) {
+        val density = LocalDensity.current
+        val contentFontScale = fontSizeSetting?.let { 1f + (it - 2) * 0.1f }
+        val contentDensity = if (contentFontScale == null) density else Density(
+            density.density,
+            fontScale = contentFontScale,
+        )
+        androidx.compose.runtime.CompositionLocalProvider(LocalDensity provides contentDensity) {
         // ref base/Modal .overlay has backdrop-filter: blur(2px), but
         // RenderEffect is a no-op on this emulator's GPU path, so the
         // backdrop relies on the dim overlay only (see decisions.md).
@@ -90,7 +99,7 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
             Box(Modifier.fillMaxSize().background(DsTheme.colors.bgBase)) {
                 ApiKeyScreen(settings)
             }
-            return@DsTheme
+            return@CompositionLocalProvider
         }
         val activeId by chatStore.activeId.collectAsState()
         val sessionCache by chatStore.sessionCache.collectAsState()
@@ -124,6 +133,7 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
                     greetingIdentity = newChatRequests,
                 )
             }
+        }
         }
     }
 }
