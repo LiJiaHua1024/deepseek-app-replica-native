@@ -7,6 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -35,6 +36,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -165,7 +168,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     // ref --android-composer-bottom: 27px gesture nav, 11px with keyboard
     val keyboardOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
     Column(Modifier.fillMaxWidth().imePadding()
-        .padding(bottom = if (keyboardOpen) 27.7.dp else 56.5.dp)) {
+        .padding(bottom = if (keyboardOpen) 27.7.dp else 50.1.dp)) {
     Column(
         Modifier.fillMaxWidth()
             .padding(start = 12.dp, end = 12.dp)
@@ -230,7 +233,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
             }
         } else {
         // ref textarea: min-height 56px, padding-top 14.75px, padding-inline 17px
-        Box(Modifier.fillMaxWidth().height(56.dp).padding(start = 17.dp, end = 17.dp, top = 14.75.dp)) {
+        Box(Modifier.fillMaxWidth().height(24.dp).padding(start = 17.dp, end = 17.dp)) {
             BasicTextField(
                 value = text,
                 onValueChange = { text = it; chatStore.setDraft(activeId, it) },
@@ -248,6 +251,8 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                             Text(
                                 Strings.get(if (focused) "androidMessageHint" else "androidHoldHint"),
                                 fontSize = 16.75.sp, color = c.labelCaption,
+                                modifier = Modifier.fillMaxWidth()
+                                    .offset(x = (-1.8).dp, y = 26.7.dp),
                             )
                         }
                         inner()
@@ -305,27 +310,30 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
             }
         }
         }
-        // ref .functionRow (android): h48, padding 0 7px 4px 11px, align center
-        // -> chips sit 6dp below row top ((48-4-32)/2);
-        // .right gap 0; IconButton xl = 44px hit target with 25px icon inside
+        // Official Android function row: 56dp touch wrappers with 28dp icons.
         Row(
-            Modifier.fillMaxWidth().height(48.dp).padding(start = 12.5.dp, end = 7.dp, bottom = 4.dp),
+            Modifier.fillMaxWidth().height(56.dp).offset(y = 24.5.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TogglePill(Strings.get("thinkingSwitch"), thinking, { settings.setThinking(!thinking) }, R.drawable.ic_think)
-            Spacer(Modifier.width(10.dp))
+            TogglePill(Strings.get("thinkingSwitch"), thinking, { settings.setThinking(!thinking) }, R.drawable.ic_think, 12.8.dp)
+            Spacer(Modifier.width(8.5.dp))
             TogglePill(Strings.get("search"), search, { settings.setSearch(!search) }, R.drawable.ic_globe)
             Spacer(Modifier.weight(1f))
             // ref IconButton/VoiceButton :active -> interactive-bg-hover
             val attSrc = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
             val attPressed by attSrc.collectIsPressedAsState()
-            Icon(painterResource(if (showAttachments) R.drawable.ic_close_circle else R.drawable.ic_add_circle),
-                Strings.get(if (showAttachments) "close" else "uploadFile"),
-                tint = c.labelPrimary,
-                modifier = Modifier.align(Alignment.CenterVertically).size(44.dp).padding(9.5.dp)
-                    .clip(CircleShape)
-                    .background(DsTheme.pressTint(attPressed, c.interactiveBgHover))
-                    .clickable(attSrc, null) { showAttachments = !showAttachments })
+            Box(
+                Modifier.align(Alignment.CenterVertically).size(41.244.dp, 56.2.dp)
+                    .clickable(attSrc, null) { showAttachments = !showAttachments },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(painterResource(if (showAttachments) R.drawable.ic_close_circle else R.drawable.ic_add_circle),
+                    Strings.get(if (showAttachments) "close" else "uploadFile"),
+                    tint = c.labelPrimary,
+                    modifier = Modifier.size(28.dp)
+                        .clip(CircleShape)
+                        .background(DsTheme.pressTint(attPressed, c.interactiveBgHover)))
+            }
             val voiceSrc = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
             val voicePressed by voiceSrc.collectIsPressedAsState()
             if (voiceStatus == VoiceInput.Status.RECORDING) {
@@ -356,7 +364,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                         androidx.compose.animation.core.tween(100, delayMillis = 260, easing = easeOut))
                 }
                 Box(
-                    Modifier.align(Alignment.CenterVertically).size(44.dp).padding(9.5.dp)
+                    Modifier.align(Alignment.CenterVertically).size(57.955.dp, 56.2.dp)
                         .clickable(voiceSrc, null) {
                             VoiceInput.cancel()
                             VoiceInput.enabled.value = !VoiceInput.enabled.value
@@ -375,21 +383,30 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                             scaleX = s; scaleY = s; alpha = 0.75f * coreEnter.value
                         }
                         .clip(CircleShape).background(c.brandPrimary))
-                    Icon(painterResource(R.drawable.ic_voice_circle), Strings.get("voiceInput"),
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp)
-                            .graphicsLayer { alpha = glyphIn.value })
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(painterResource(R.drawable.ic_voice_circle), null,
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp)
+                                .graphicsLayer { alpha = glyphIn.value })
+                    }
+                    Box(Modifier.size(28.dp).align(Alignment.Center)
+                        .semantics { contentDescription = Strings.get("voiceInput") }) {}
                 }
             } else {
-            Icon(painterResource(R.drawable.ic_voice_circle), Strings.get("voiceInput"),
-                tint = c.labelPrimary,
-                modifier = Modifier.align(Alignment.CenterVertically).size(44.dp).padding(9.5.dp)
-                    .clip(CircleShape)
-                    .background(DsTheme.pressTint(voicePressed, c.interactiveBgHover))
-                    .clickable(voiceSrc, null) {
-                        VoiceInput.cancel()
-                        VoiceInput.enabled.value = !VoiceInput.enabled.value
-                    })
+                Box(
+                    Modifier.align(Alignment.CenterVertically).size(57.955.dp, 56.2.dp)
+                        .clickable(voiceSrc, null) {
+                            VoiceInput.cancel()
+                            VoiceInput.enabled.value = !VoiceInput.enabled.value
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(painterResource(R.drawable.ic_voice_circle), Strings.get("voiceInput"),
+                        tint = c.labelPrimary,
+                        modifier = Modifier.size(28.dp)
+                            .clip(CircleShape)
+                            .background(DsTheme.pressTint(voicePressed, c.interactiveBgHover)))
+                }
             }
             if (canSend || isStreaming) {
                 Box(
@@ -458,7 +475,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
 }
 
 @Composable
-private fun TogglePill(label: String, on: Boolean, onClick: () -> Unit, icon: Int) {
+private fun TogglePill(label: String, on: Boolean, onClick: () -> Unit, icon: Int, hitStart: androidx.compose.ui.unit.Dp = 0.dp) {
     val c = DsTheme.colors
     // ref [data-android] .toggle:active -> transform: scale(.96), 100ms
     val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -466,20 +483,31 @@ private fun TogglePill(label: String, on: Boolean, onClick: () -> Unit, icon: In
     val scale by androidx.compose.animation.core.animateFloatAsState(
         if (pressed) 0.96f else 1f,
         androidx.compose.animation.core.tween(100), label = "togglePress")
-    Row(
-        Modifier.height(32.dp).graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(RoundedCornerShape(18.dp))
-            .background(if (on) c.buttonGhostActiveFill else androidx.compose.ui.graphics.Color.Transparent)
-            .border(1.dp, if (on) c.buttonGhostActiveBorder else c.borderL2, RoundedCornerShape(18.dp))
-            .clickable(src, null, onClick = onClick)
-            .padding(horizontal = 11.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    Box(
+        Modifier
+            .size(if (hitStart > 0.dp) 111.2.dp else 97.4.dp, 46.5.dp)
+            .toggleable(
+                value = on,
+                interactionSource = src,
+                indication = null,
+                role = androidx.compose.ui.semantics.Role.Checkbox,
+            ) { onClick() },
+        contentAlignment = Alignment.Center,
     ) {
-        Icon(painterResource(icon), null,
-            tint = if (on) c.brandText else c.labelPrimary,
-            modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(4.dp))
-        Text(label, fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Normal,
-            color = if (on) c.brandText else c.labelPrimary)
+        Row(
+            Modifier.offset(x = hitStart).height(32.dp).graphicsLayer { scaleX = scale; scaleY = scale }
+                .clip(RoundedCornerShape(18.dp))
+                .background(if (on) c.buttonGhostActiveFill else androidx.compose.ui.graphics.Color.Transparent)
+                .border(1.dp, if (on) c.buttonGhostActiveBorder else c.borderL2, RoundedCornerShape(18.dp))
+                .padding(horizontal = 11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(painterResource(icon), null,
+                tint = if (on) c.brandText else c.labelPrimary,
+                modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(label, fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Normal,
+                color = if (on) c.brandText else c.labelPrimary)
+        }
     }
 }

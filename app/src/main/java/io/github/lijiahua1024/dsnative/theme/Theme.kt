@@ -226,6 +226,7 @@ object DsTheme {
 // than Android's Roboto fallback). The SC face is bundled in assets because
 // faces inside the system .ttc are not selectable via createFromFile.
 @androidx.compose.runtime.Composable
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 fun DsTheme(colors: DsColors, content: @androidx.compose.runtime.Composable () -> Unit) {
     val assets = androidx.compose.ui.platform.LocalContext.current.assets
     val fontFamily = androidx.compose.runtime.remember {
@@ -241,5 +242,6 @@ fun DsTheme(colors: DsColors, content: @androidx.compose.runtime.Composable () -
         LocalDsFontFamily provides fontFamily,
         androidx.compose.material3.LocalTextStyle provides
             androidx.compose.ui.text.TextStyle(fontFamily = fontFamily),
+        androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement provides false,
     ) { content() }
 }

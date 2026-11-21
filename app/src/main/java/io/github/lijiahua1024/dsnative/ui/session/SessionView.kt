@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -84,10 +85,17 @@ fun SessionView(
     CompositionLocalProvider(LocalOpenSources provides { sourcesPanel = it }) {
     Column(Modifier.fillMaxSize()) {
         // header: h52, padding 0 2 0 4
-        Row(Modifier.fillMaxWidth().height(52.dp).padding(start = 4.dp, end = 2.dp),
+        Row(Modifier.fillMaxWidth().height(52.dp).padding(start = 2.1.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onOpenDrawer, modifier = Modifier.size(44.dp)) {
-                Icon(painterResource(R.drawable.ic_menu), Strings.get("expandSiderbarButton"), tint = c.labelPrimary, modifier = Modifier.size(24.dp))
+            Box(
+                Modifier.size(44.8.dp).clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null,
+                    onClick = onOpenDrawer,
+                ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(painterResource(R.drawable.ic_menu), Strings.get("expandSiderbarButton"), tint = c.labelPrimary, modifier = Modifier.size(22.4.dp))
             }
             val headerTitle = session?.title?.ifEmpty { Strings.get("untitledChat") } ?: ""
             Text(headerTitle, fontSize = 14.sp, lineHeight = 22.sp,
@@ -99,14 +107,29 @@ fun SessionView(
             IconButton(onClick = {
                 settings.setAutoRead(!autoRead)
                 DsToast.show(Strings.get(if (autoRead) "androidAutoReadDisabled" else "androidAutoReadEnabled"))
-            }, modifier = Modifier.size(44.dp)) {
+            }, modifier = Modifier.size(48.dp).offset(x = 2.1.dp).toggleable(
+                value = autoRead,
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                indication = null,
+                role = androidx.compose.ui.semantics.Role.Checkbox,
+            ) {
+                settings.setAutoRead(!autoRead)
+                DsToast.show(Strings.get(if (autoRead) "androidAutoReadDisabled" else "androidAutoReadEnabled"))
+            }) {
                 Icon(
                     painterResource(if (autoRead) R.drawable.ic_sound else R.drawable.ic_sound_muted),
-                    null, tint = c.labelPrimary, modifier = Modifier.size(22.dp))
+                    null, tint = c.labelPrimary, modifier = Modifier.size(22.4.dp))
             }
-            Spacer(Modifier.width(8.dp))
-            IconButton(onClick = { chatStore.newChat() }, modifier = Modifier.size(44.dp)) {
-                Icon(painterResource(R.drawable.ic_new_chat), Strings.get("newChat"), tint = c.labelPrimary, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(5.6.dp))
+            Box(
+                Modifier.size(44.8.dp).clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null,
+                    onClick = { chatStore.newChat() },
+                ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(painterResource(R.drawable.ic_new_chat), Strings.get("newChat"), tint = c.labelPrimary, modifier = Modifier.size(22.4.dp))
             }
         }
 
