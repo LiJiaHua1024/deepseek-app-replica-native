@@ -28,13 +28,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <receiver
-            android:name=".DebugApiOriginReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="${applicationId}.DEBUG_API_ORIGIN" />
-            </intent-filter>
-        </receiver>
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

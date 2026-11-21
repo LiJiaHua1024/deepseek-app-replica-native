@@ -48,7 +48,7 @@ object DsStatics {
     val neutralBluish800 = Color(0xFF353638)
     val neutralBluish850 = Color(0xFF2C2C2E)
     val neutralBluish900 = Color(0xFF1B1B1C)
-    val neutralBluish950 = Color(0xFF151517)
+    val neutralBluish950 = Color(0xFF0F0F0F)
     val red400 = Color(0xFFF25A5A)
     val red600 = Color(0xFFEC1313)
 }
@@ -106,7 +106,7 @@ val dsLightColors = mapOf(
 )
 
 val dsDarkColors = mapOf(
-    "bgBase" to Color(0xFF151517),
+    "bgBase" to Color(0xFF0F0F0F),
     "bgLayer2" to Color(0xFF2C2C2E),
     "bgLayer3" to Color(0xFF353638),
     "bgSkeleton" to Color(255, 255, 255, 20),

@@ -84,11 +84,6 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
         if (apiKey == null) {
             Box(Modifier.fillMaxSize().background(DsTheme.colors.bgBase)) {
                 ApiKeyScreen(settings)
-                // ref statusBarColor is theme-aware even before login:
-                // light #757575, dark black (measured on ref shots).
-                Box(Modifier.fillMaxWidth()
-                    .height(WindowInsets.statusBars.asPaddingValues().calculateTopPadding())
-                    .background(if (dark) Color.Black else Color(0xFF757575)))
             }
             return@DsTheme
         }
@@ -300,11 +295,6 @@ fun DrawerFrame(
                 Box(Modifier.fillMaxSize().padding(top = statusTopPx)
                     .graphicsLayer { alpha = 0.207f * (1f - progress) }.background(Color.Black))
             }
-            // ref statusBarColor 画的状态栏带，在 API≥30 上位于 WebView frame
-            // 之上：light #757575 / dark black。画在 scrim 之后，保证任何抽屉
-            // 进度下都不被遮罩覆盖。
-            Box(Modifier.fillMaxWidth().height(statusTopPx)
-                .background(if (dark) Color.Black else Color(0xFF757575)))
             // Main content layer
             // ref radius is 36px pre-scale; clip applies post-scale → use 34dp (~93.5px ≈ 36*0.9496*2.75)
             val radiusDp = (min(1f, progress * 6f) * 34f)
@@ -340,14 +330,6 @@ fun DrawerFrame(
                         })
                 }
             }
-            }
-            // ref window-level nav bar on API>=30: black strip under the gesture
-            // pill, drawn over every scene (y2274+ pure black in ref shots);
-            // native previously let content colors (white sheet bg) fill that
-            // inset. Window-level: unaffected by drawer scale of the main layer.
-            val navBotPx = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-            if (navBotPx > 0.dp) {
-                Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(navBotPx).background(Color.Black))
             }
         }
     }

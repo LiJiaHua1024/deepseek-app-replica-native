@@ -134,7 +134,7 @@ val LightColors = DsColors(
 
 val DarkColors = DsColors(
     dark = true,
-    bgBase = Color(0xFF151517),
+    bgBase = Color(0xFF0F0F0F),
     bgLayer2 = Color(0xFF2C2C2E),
     bgLayer3 = Color(0xFF353638),
     bgSkeleton = Color(0x14FFFFFF),

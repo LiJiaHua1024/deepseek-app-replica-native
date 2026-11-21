@@ -31,6 +31,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.lijiahua1024.dsnative.R
+import io.github.lijiahua1024.dsnative.BuildConfig
 import io.github.lijiahua1024.dsnative.api.verifyApiKey
 import io.github.lijiahua1024.dsnative.data.ChatStore
 import io.github.lijiahua1024.dsnative.data.SettingsStore
@@ -293,7 +294,7 @@ private fun SettingsRootPage(
     }
     SettingsGroup(Strings.get("settingsGroupAbout"), card, muted) {
         SettingsRow(c, muted, Strings.get("settingsVersion"),
-            { InfoGlyph("i", c.labelPrimary) }, value = "0.4.0", arrow = false) { }
+            { InfoGlyph("i", c.labelPrimary) }, value = BuildConfig.VERSION_NAME, arrow = false) { }
         SettingsRow(c, muted, Strings.get("settingsAgreementsPage"),
             { Icon(painterResource(R.drawable.ic_link), null, tint = c.labelPrimary, modifier = Modifier.size(18.dp)) }) { onPage("agreements") }
     }
