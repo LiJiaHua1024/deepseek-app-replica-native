@@ -108,6 +108,7 @@ object Strings {
             "previousVersion" -> pick("上一个版本", "Previous")
             "nextVersion" -> pick("下一个版本", "Next")
             "messageThinkDuration" -> pick("已思考（用时 {count} 秒）", "Thought for {count}s")
+            "citationLabel" -> pick("引用 {count}", "Citation {count}")
             "messageThinkStopped" -> pick("已停止", "Stopped")
             "messageThinking" -> pick("正在思考", "Thinking")
             "deepSearchSearching" -> pick("正在搜索", "Searching")

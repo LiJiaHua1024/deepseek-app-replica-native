@@ -19,6 +19,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -43,6 +45,7 @@ import androidx.compose.ui.text.style.TextGeometricTransform
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import io.github.lijiahua1024.dsnative.theme.Strings
 import androidx.compose.ui.unit.sp
 import io.github.lijiahua1024.dsnative.theme.DsTheme
 import org.commonmark.ext.autolink.AutolinkExtension
@@ -152,6 +155,7 @@ private fun citeContent(c: io.github.lijiahua1024.dsnative.theme.DsColors): Map<
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(src.index.toString(), fontSize = 9.sp, lineHeight = 14.sp,
+                        modifier = Modifier.semantics { contentDescription = Strings.get("citationLabel", "count" to src.index) },
                         fontWeight = FontWeight.Medium, fontFamily = FontFamily.Monospace,
                         color = c.labelTertiary)
                 }

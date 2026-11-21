@@ -218,7 +218,7 @@ fun SourcesSummary(sources: List<Source>, onClick: () -> Unit) {
     Row(
         Modifier
             .padding(top = 16.dp)
-            .border(1.dp, c.borderL2, RoundedCornerShape(100.dp))
+            .border(1.dp, androidx.compose.ui.graphics.Color(0xFFD4D4D4), RoundedCornerShape(100.dp))
             .clip(RoundedCornerShape(100.dp))
             .background(c.bgBase)
             .clickable(onClick = onClick)
