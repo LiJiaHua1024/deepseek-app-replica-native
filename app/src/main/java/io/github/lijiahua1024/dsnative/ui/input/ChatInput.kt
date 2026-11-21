@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -67,6 +68,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     var focused by remember { mutableStateOf(false) }
     var focusAt by remember { mutableStateOf(0L) }
     val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+    val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val holdScope = androidx.compose.runtime.rememberCoroutineScope()
     val thinking by settings.thinking.collectAsState()
@@ -167,6 +169,9 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
 
     // ref --android-composer-bottom: 27px gesture nav, 11px with keyboard
     val keyboardOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+    LaunchedEffect(keyboardOpen) {
+        if (!keyboardOpen && focused) focusManager.clearFocus()
+    }
     Column(Modifier.fillMaxWidth().imePadding()
         .padding(bottom = if (keyboardOpen) 27.7.dp else 50.1.dp)) {
     Column(
