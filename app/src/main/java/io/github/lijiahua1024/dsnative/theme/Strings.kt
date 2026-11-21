@@ -58,6 +58,7 @@ object Strings {
             "androidSearchChats" -> pick("搜索对话内容...", "Search chats...")
             "androidNoChats" -> pick("暂无历史对话", "No chat history")
             "androidSelectChats" -> pick("选择对话", "Select conversations")
+            "androidMultiSelect" -> pick("多选", "Select")
             "androidSelectedChats" -> pick("已选择 {count} 个对话", "Selected conversations ({count})")
             "androidPinned" -> pick("置顶", "Pin")
             "androidUnpin" -> pick("取消置顶", "Unpin")

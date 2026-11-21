@@ -13,8 +13,10 @@ class StringsTest {
     fun knownKeyLocalizesBothLocales() {
         Strings.locale = LocalePreference.ZH_CN
         assertEquals("发消息", Strings.get("androidMessageHint"))
+        assertEquals("多选", Strings.get("androidMultiSelect"))
         Strings.locale = LocalePreference.EN_US
         assertEquals("Message", Strings.get("androidMessageHint"))
+        assertEquals("Select", Strings.get("androidMultiSelect"))
         Strings.locale = LocalePreference.SYSTEM
     }
 

@@ -74,13 +74,10 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
             }
         } else {
             // .search: h48 r24 bg-skeleton, padding 0 14, gap 8, search icon 16 tertiary
-            Row(
+            Box(
                 Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(24.dp))
-                    .background(c.bgSkeleton).padding(horizontal = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                    .background(c.bgSkeleton)
             ) {
-                Icon(painterResource(R.drawable.ic_search), null, tint = c.labelTertiary, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(8.dp))
                 androidx.compose.foundation.text.BasicTextField(
                     value = query, onValueChange = { query = it },
                     singleLine = true,
@@ -89,12 +86,15 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
                         capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences,
                         imeAction = androidx.compose.ui.text.input.ImeAction.Search),
                     textStyle = androidx.compose.ui.text.TextStyle(fontSize = 16.sp, color = c.labelPrimary),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxSize(),
                     decorationBox = { inner ->
-                        if (query.isEmpty()) Text(Strings.get("androidSearchChats"), fontSize = 16.sp, color = c.labelTertiary)
-                        inner()
+                        Box(Modifier.fillMaxSize().padding(start = 38.dp), contentAlignment = Alignment.CenterStart) { inner() }
                     },
                 )
+                Icon(painterResource(R.drawable.ic_search), null, tint = c.labelTertiary,
+                    modifier = Modifier.align(Alignment.CenterStart).padding(start = 14.dp).size(16.dp))
+                if (query.isEmpty()) Text(Strings.get("androidSearchChats"), fontSize = 16.sp, color = c.labelTertiary,
+                    modifier = Modifier.align(Alignment.CenterStart).padding(start = 38.dp))
             }
         }
         // .listWrap: margin-top 16, relative container for selectChats icon
@@ -127,16 +127,31 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
                         menuOpen = menuFor?.id == s.id,
                         onMenuDismiss = { menuFor = null },
                         onRename = { renameFor = s; menuFor = null },
+                        onPin = {
+                            settings.setPinnedSessions(
+                                if (pinned.contains(s.id)) pinned - s.id else pinned + s.id)
+                            menuFor = null
+                        },
+                        onMultiSelect = {
+                            selectionMode = true
+                            selected = setOf(s.id)
+                            menuFor = null
+                        },
                         onDelete = { deleteFor = s; menuFor = null })
                 }
             }
             }
             // declared after LazyColumn so its touches win over the list
             if (!selectionMode) {
-                Icon(painterResource(R.drawable.ic_select_chats), Strings.get("androidSelectChats"), tint = c.labelPrimary,
-                    modifier = Modifier.align(Alignment.TopEnd).offset(y = 6.dp, x = (-1).dp).size(32.dp).clickable {
+                Box(
+                    Modifier.align(Alignment.TopEnd).offset(y = 6.dp, x = (-1).dp).size(32.dp).clickable {
                         selectionMode = true; selected = emptySet()
-                    }.padding(7.dp))
+                    },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(painterResource(R.drawable.ic_select_chats), Strings.get("androidMultiSelect"), tint = c.labelPrimary,
+                        modifier = Modifier.padding(7.dp))
+                }
             }
         }
 
@@ -337,7 +352,8 @@ private fun allPinned(selected: Set<String>, pinned: Collection<String>) =
 private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean, checked: Boolean,
                      onClick: () -> Unit, onLongClick: () -> Unit,
                      menuOpen: Boolean = false, onMenuDismiss: () -> Unit = {},
-                     onRename: () -> Unit = {}, onDelete: () -> Unit = {}) {
+                     onRename: () -> Unit = {}, onPin: () -> Unit = {},
+                     onMultiSelect: () -> Unit = {}, onDelete: () -> Unit = {}) {
     val c = DsTheme.colors
     Box {
     // [data-android] .item: h48, padding-inline 7/4, r12, font 16;
@@ -402,6 +418,8 @@ private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean,
             ) {
                 Column(Modifier.padding(4.dp)) {
                     SiderMenuOption(R.drawable.ic_edit, Strings.get("sessionItemMenuRenameOption"), c.labelPrimary, onRename)
+                    SiderMenuOption(R.drawable.ic_pin, Strings.get("androidPinned"), c.labelPrimary, onPin)
+                    SiderMenuOption(R.drawable.ic_select_chats, Strings.get("androidMultiSelect"), c.labelPrimary, onMultiSelect)
                     SiderMenuOption(R.drawable.ic_trash, Strings.get("delete"), c.stateErrorPrimary, onDelete)
                 }
             }

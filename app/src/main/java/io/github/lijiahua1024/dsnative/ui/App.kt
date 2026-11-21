@@ -34,11 +34,14 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import io.github.lijiahua1024.dsnative.data.ChatStore
 import io.github.lijiahua1024.dsnative.data.SettingsStore
 import io.github.lijiahua1024.dsnative.theme.DsTheme
+import io.github.lijiahua1024.dsnative.theme.Strings
 import kotlinx.coroutines.launch
 import io.github.lijiahua1024.dsnative.ui.sider.Sider
 import io.github.lijiahua1024.dsnative.ui.session.SessionView
@@ -335,6 +338,7 @@ fun DrawerFrame(
                     Box(Modifier.fillMaxSize()
                         .graphicsLayer { alpha = 0.7f * progress }
                         .background(DsTheme.colors.bgBase)
+                        .semantics { contentDescription = Strings.get("collapseSiderbarButton") }
                         .pointerInput(Unit) {
                             detectTapGestures { settleTo(0f) }
                         })
