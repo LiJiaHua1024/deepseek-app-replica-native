@@ -113,16 +113,26 @@ fun searchSources(blocks: List<ReplyBlock>): List<Source> {
         when (b) {
             is ReplyBlock.Tool -> {
                 val p = JSONObject(b.payload.toString())
-                if (p.optString("type") != "server_tool_use") continue
-                val input = p.optJSONObject("input") ?: continue
-                if (input.optString("action") != "search") continue
-                val result = results[p.optString("id")]
-                val content = result?.optJSONArray("content") ?: continue
-                for (i in 0 until content.length()) {
-                    val item = content.optJSONObject(i) ?: continue
-                    if (item.optString("type") != "web_search_result") continue
-                    registry.add(optStr(item, "url") ?: "", optStr(item, "title"),
-                        optStr(item, "page_age"), item)
+                when (p.optString("type")) {
+                    "web_fetch_tool_result" -> {
+                        val content = p.optJSONObject("content") ?: continue
+                        if (content.optString("type") != "web_fetch_result") continue
+                        registry.add(optStr(content, "url"),
+                            optStr(content.optJSONObject("content"), "title"),
+                            optStr(content, "published_at"), null)
+                    }
+                    "server_tool_use" -> {
+                        val input = p.optJSONObject("input") ?: continue
+                        if (input.optString("action") != "search") continue
+                        val result = results[p.optString("id")]
+                        val content = result?.optJSONArray("content") ?: continue
+                        for (i in 0 until content.length()) {
+                            val item = content.optJSONObject(i) ?: continue
+                            if (item.optString("type") != "web_search_result") continue
+                            registry.add(optStr(item, "url") ?: "", optStr(item, "title"),
+                                optStr(item, "page_age"), item)
+                        }
+                    }
                 }
             }
             is ReplyBlock.Text -> for (cit in b.citations) {
@@ -149,27 +159,73 @@ fun withCitationMarkers(blocks: List<ReplyBlock>, sources: List<Source>): List<R
 }
 
 /** 单个 server_tool_use 块对应一个搜索 step；返回(该次调用注册的来源, 是否已完成) */
-fun toolStep(block: ReplyBlock.Tool, allBlocks: List<ReplyBlock>, registry: List<Source>): Pair<List<Source>, Boolean>? {
+sealed class ToolStep {
+    data class Search(val sources: List<Source>, val status: ToolStatus) : ToolStep()
+    data class Open(val sources: List<Source>, val status: ToolStatus) : ToolStep()
+    data class Find(val pattern: String, val status: ToolStatus) : ToolStep()
+}
+
+enum class ToolStatus { WIP, DONE, FAILED }
+
+private fun toolStatus(status: String?): ToolStatus = when (status) {
+    null -> ToolStatus.WIP
+    "completed", "success" -> ToolStatus.DONE
+    else -> ToolStatus.FAILED
+}
+
+fun toolStep(block: ReplyBlock.Tool, allBlocks: List<ReplyBlock>, registry: List<Source>): ToolStep? {
     val p = JSONObject(block.payload.toString())
     if (p.optString("type") != "server_tool_use") return null
     val input = p.optJSONObject("input") ?: return null
-    if (input.optString("action") != "search") return null
-    val byUrl = registry.associateBy { it.url }
-    var done = false
-    val found = ArrayList<Source>()
+    val byId = HashMap<String, JSONObject>()
     for (b in allBlocks) {
         if (b !is ReplyBlock.Tool) continue
         val r = JSONObject(b.payload.toString())
-        if (r.optString("type") != "web_search_tool_result" || r.optString("tool_use_id") != p.optString("id")) continue
-        done = true
-        val content = r.optJSONArray("content") ?: continue
-        for (i in 0 until content.length()) {
-            val item = content.optJSONObject(i) ?: continue
-            if (item.optString("type") != "web_search_result") continue
-            optStr(item, "url")?.let { byUrl[it]?.let(found::add) }
-        }
+        val id = r.optString("tool_use_id")
+        if (id.isNotEmpty()) byId[id] = r
     }
-    return found to done
+    return when (input.optString("action")) {
+        "search", "deep_search" -> {
+            val r = byId[p.optString("id")]
+            val found = ArrayList<Source>()
+            val status = when {
+                r == null -> ToolStatus.WIP
+                r.optString("status") == "error" -> ToolStatus.FAILED
+                else -> {
+                    val content = r.optJSONArray("content") ?: JSONArray()
+                    for (i in 0 until content.length()) {
+                        val item = content.optJSONObject(i) ?: continue
+                        if (item.optString("type") != "web_search_result") continue
+                        optStr(item, "url")?.let { url -> registry.find { it.url == url }?.let(found::add) }
+                    }
+                    ToolStatus.DONE
+                }
+            }
+            ToolStep.Search(found, status)
+        }
+        "open_page" -> {
+            val r = byId[p.optString("id")]
+            val found = ArrayList<Source>()
+            val status = when {
+                r == null -> ToolStatus.WIP
+                r.optString("status") == "error" -> ToolStatus.FAILED
+                else -> {
+                    val content = r.optJSONObject("content")
+                    if (content != null) {
+                        val url = optStr(content, "url")
+                        if (url != null) registry.find { it.url == url }?.let(found::add)
+                    }
+                    ToolStatus.DONE
+                }
+            }
+            ToolStep.Open(found, status)
+        }
+        "find_pattern", "find" -> ToolStep.Find(
+            pattern = input.optString("pattern").ifEmpty { input.optString("query") },
+            status = byId[p.optString("id")]?.let { toolStatus(it.optString("status")) } ?: ToolStatus.WIP,
+        )
+        else -> null
+    }
 }
 
 fun formatSourceDate(iso: String?): String {
@@ -239,25 +295,73 @@ fun SourcesSummary(sources: List<Source>, onClick: () -> Unit) {
 
 /** ref SearchRow：「已阅读 N 个网页」步骤行，点击打开来源面板 */
 @Composable
-fun SearchStepRow(stepSources: List<Source>, done: Boolean, onOpen: (List<Source>) -> Unit) {
+fun SearchStepRow(step: ToolStep.Search, onOpen: (List<Source>) -> Unit) {
     val c = DsTheme.colors
-    val clickable = done && stepSources.isNotEmpty()
+    val clickable = step.status == ToolStatus.DONE && step.sources.isNotEmpty()
     Row(
         Modifier
             .height(34.dp)
-            .then(if (clickable) Modifier.clickable { onOpen(stepSources) } else Modifier),
+            .then(if (clickable) Modifier.clickable { onOpen(step.sources) } else Modifier),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(painterResource(R.drawable.ic_search), null, tint = c.labelSecondary,
             modifier = Modifier.padding(1.dp).size(14.dp))
         Spacer(Modifier.width(6.dp))
-        Text(
-            if (!done) Strings.get("messageSearching")
-            else Strings.get(if (stepSources.size == 1) "messageSearchResult" else "messageSearchResults")
-                .replace("{count}", stepSources.size.toString()),
+        val label = when (step.status) {
+            ToolStatus.WIP -> Strings.get("messageSearching")
+            ToolStatus.FAILED -> Strings.get("toolSearchFail")
+            ToolStatus.DONE -> when {
+                step.sources.isEmpty() -> Strings.get("messageSearchNoResult")
+                step.sources.size == 1 -> Strings.get("messageSearchResult")
+                else -> Strings.get("messageSearchResults").replace("{count}", step.sources.size.toString())
+            }
+        }
+        Text(label,
             fontSize = 14.sp, lineHeight = 24.sp, color = c.labelSecondary,
         )
-        if (clickable) SiteThumbnails(stepSources)
+        if (clickable) SiteThumbnails(step.sources)
+    }
+}
+
+@Composable
+fun OpenStepRow(step: ToolStep.Open, onOpen: (List<Source>) -> Unit) {
+    val c = DsTheme.colors
+    val clickable = step.status == ToolStatus.DONE && step.sources.isNotEmpty()
+    Row(
+        Modifier
+            .height(34.dp)
+            .then(if (clickable) Modifier.clickable { onOpen(step.sources) } else Modifier),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(painterResource(R.drawable.ic_link), null, tint = c.labelSecondary,
+            modifier = Modifier.padding(1.dp).size(14.dp))
+        Spacer(Modifier.width(6.dp))
+        val label = when {
+            step.status == ToolStatus.WIP -> Strings.get("androidToolOpening")
+            step.status == ToolStatus.FAILED || step.sources.isEmpty() -> Strings.get("toolOpenFail")
+            step.sources.size == 1 -> Strings.get("androidToolOpenOne")
+            else -> Strings.get("androidToolOpenMany").replace("{count}", step.sources.size.toString())
+        }
+        Text(label, fontSize = 14.sp, lineHeight = 24.sp, color = c.labelSecondary)
+        if (clickable) SiteThumbnails(step.sources)
+    }
+}
+
+@Composable
+fun FindStepRow(step: ToolStep.Find) {
+    val c = DsTheme.colors
+    Row(Modifier.height(34.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(painterResource(R.drawable.ic_search), null, tint = c.labelSecondary,
+            modifier = Modifier.padding(1.dp).size(14.dp))
+        Spacer(Modifier.width(6.dp))
+        val label = when (step.status) {
+            ToolStatus.WIP -> Strings.get("messageToolFindWip")
+            ToolStatus.DONE -> Strings.get("messageToolFindFinished")
+                .replace("{query}", step.pattern)
+            ToolStatus.FAILED -> Strings.get("messageToolFindNoResult")
+                .replace("{query}", step.pattern)
+        }
+        Text(label, fontSize = 14.sp, lineHeight = 24.sp, color = c.labelSecondary)
     }
 }
 

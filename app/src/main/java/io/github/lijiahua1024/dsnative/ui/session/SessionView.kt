@@ -616,8 +616,11 @@ fun AssistantView(msg: Message.Assistant, session: Session, chatStore: ChatStore
                     Modifier.padding(top = if (prevWasStep) 5.dp else 0.dp),
                     streaming = msg.status == ReplyStatus.STREAMING)
                     .also { prevWasStep = false }
-                is ReplyBlock.Tool -> toolStep(block, msg.blocks, sources)?.let { (stepSources, done) ->
-                    SearchStepRow(stepSources, done, openSources)
+                is ReplyBlock.Tool -> when (val step = toolStep(block, msg.blocks, sources)) {
+                    is ToolStep.Search -> SearchStepRow(step, openSources)
+                    is ToolStep.Open -> OpenStepRow(step, openSources)
+                    is ToolStep.Find -> FindStepRow(step)
+                    null -> {}
                 }.also { prevWasStep = true }
             }
         }
