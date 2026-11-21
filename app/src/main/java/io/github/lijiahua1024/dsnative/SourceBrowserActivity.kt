@@ -14,13 +14,17 @@ import android.os.Bundle
 import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
+import android.webkit.WebResourceError
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -33,6 +37,13 @@ import io.github.lijiahua1024.dsnative.theme.Strings
 class SourceBrowserActivity : Activity() {
     private var page: WebView? = null
     private var root: LinearLayout? = null
+    private var content: FrameLayout? = null
+    private var loading: LinearLayout? = null
+    private var failure: LinearLayout? = null
+    private var failureMessage: TextView? = null
+    private var initial: Uri? = null
+    private var failedUrl: Uri? = null
+    private var failed = false
 
     companion object {
         fun webUri(value: String?): Uri? {
@@ -50,20 +61,36 @@ class SourceBrowserActivity : Activity() {
 
         fun open(context: Context, url: String, dark: Boolean, browserLabel: String? = null) {
             val uri = webUri(url) ?: return
+            val feedbackBuilder = feedbackFormUri().buildUpon()
+                .appendQueryParameter("hide_uid", "1")
+            feedbackHiddenFields.forEach { key ->
+                feedbackBuilder.appendQueryParameter("hide_$key", "1")
+            }
+            val target = if (uri.host == "static.deepseek.com" &&
+                uri.path == "/faq/index.html") feedbackBuilder.build() else uri
             context.startActivity(
                 Intent(context, SourceBrowserActivity::class.java)
-                    .setData(uri)
+                .setData(target)
                     .putExtra("dark", dark)
                     .putExtra("closeLabel", Strings.get("close"))
                     .putExtra("browserLabel", browserLabel ?: Strings.get("openInBrowser")),
             )
         }
+
+        private fun feedbackFormUri(): Uri = Uri.parse(
+            "https://trtgsjkv6r.feishu.cn/share/base/form/shrcnhcHE4A6lQaQ3v0raCXmBAg"
+        )
+
+        private val feedbackHiddenFields = listOf(
+            "source", "app_version", "os_version", "device_brand", "device_model",
+            "app_locale", "screen_resolution",
+        )
     }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
-        val initial = webUri(intent.dataString)
+        initial = webUri(intent.dataString)
         if (initial == null) {
             finish()
             return
@@ -125,6 +152,9 @@ class SourceBrowserActivity : Activity() {
         divider.setBackgroundColor(Color.parseColor(if (dark) "#373737" else "#E5E5E5"))
         rootLayout.addView(divider, LinearLayout.LayoutParams(-1, dp(1f)))
 
+        val contentLayout = FrameLayout(this)
+        content = contentLayout
+
         val web = WebView(this)
         web.setBackgroundColor(Color.WHITE)
         val settings = web.settings
@@ -140,12 +170,86 @@ class SourceBrowserActivity : Activity() {
             }
         }
         web.webViewClient = object : WebViewClient() {
+            override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
+                showLoading()
+            }
+
+            override fun onPageCommitVisible(view: WebView, url: String) {
+                if (!failed) hideLoading()
+            }
+
+            override fun onPageFinished(view: WebView, url: String) {
+                if (!failed) hideLoading()
+            }
+
+            override fun onReceivedError(
+                view: WebView,
+                request: WebResourceRequest,
+                error: WebResourceError,
+            ) {
+                if (request.isForMainFrame) showFailure(request.url)
+            }
+
+            override fun onReceivedHttpError(
+                view: WebView,
+                request: WebResourceRequest,
+                response: WebResourceResponse,
+            ) {
+                if (request.isForMainFrame && response.statusCode >= 400) showFailure(request.url)
+            }
+
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 return webUri(request.url.toString()) == null
             }
         }
         page = web
-        rootLayout.addView(web, LinearLayout.LayoutParams(-1, 0, 1f))
+        contentLayout.addView(web, FrameLayout.LayoutParams(-1, -1))
+
+        val loadingLayout = LinearLayout(this)
+        loadingLayout.orientation = LinearLayout.VERTICAL
+        loadingLayout.gravity = Gravity.CENTER
+        loadingLayout.setBackgroundColor(background)
+        val spinner = ProgressBar(this)
+        loadingLayout.addView(spinner, LinearLayout.LayoutParams(dp(44f), dp(44f)))
+        val loadingLabel = TextView(this)
+        loadingLabel.text = Strings.get("sourcePageLoading")
+        loadingLabel.setTextColor(Color.parseColor(if (dark) "#B8B8B8" else "#666666"))
+        loadingLabel.textSize = 14f
+        loadingLabel.gravity = Gravity.CENTER
+        val loadingLabelLayout = LinearLayout.LayoutParams(-2, -2)
+        loadingLabelLayout.topMargin = dp(12f)
+        loadingLayout.addView(loadingLabel, loadingLabelLayout)
+        contentLayout.addView(loadingLayout, FrameLayout.LayoutParams(-1, -1))
+        loading = loadingLayout
+        web.postDelayed({ hideLoading() }, 3000)
+
+        val failureLayout = LinearLayout(this)
+        failureLayout.orientation = LinearLayout.VERTICAL
+        failureLayout.gravity = Gravity.CENTER
+        failureLayout.setBackgroundColor(background)
+        failureLayout.setPadding(dp(32f), dp(32f), dp(32f), dp(32f))
+        failureLayout.visibility = View.GONE
+        val message = TextView(this)
+        message.text = Strings.get("sourcePageLoadFailed")
+        message.setTextColor(foreground)
+        message.textSize = 15f
+        message.gravity = Gravity.CENTER
+        failureLayout.addView(message, LinearLayout.LayoutParams(-1, -2))
+        failureMessage = message
+        val retry = Button(this)
+        retry.text = Strings.get("retry")
+        retry.setOnClickListener {
+            val target = failedUrl ?: initial ?: return@setOnClickListener
+            showLoading()
+            page?.loadUrl(target.toString())
+        }
+        val retryLayout = LinearLayout.LayoutParams(-2, -2)
+        retryLayout.topMargin = dp(20f)
+        failureLayout.addView(retry, retryLayout)
+        contentLayout.addView(failureLayout, FrameLayout.LayoutParams(-1, -1))
+        failure = failureLayout
+
+        rootLayout.addView(contentLayout, LinearLayout.LayoutParams(-1, 0, 1f))
         setContentView(rootLayout)
 
         WindowInsetsControllerCompat(window, window.decorView).apply {
@@ -158,9 +262,11 @@ class SourceBrowserActivity : Activity() {
 
         val history = if (state == null) null else web.restoreState(state)
         if (history == null) {
+            showLoading()
             web.loadUrl(initial.toString())
         } else {
             title.text = history.currentItem?.title
+            hideLoading()
         }
     }
 
@@ -190,6 +296,25 @@ class SourceBrowserActivity : Activity() {
 
     private fun dp(value: Float): Int =
         Math.round(value * resources.displayMetrics.density)
+
+    private fun showLoading() {
+        failed = false
+        failureMessage?.text = null
+        failure?.visibility = View.GONE
+        loading?.visibility = View.VISIBLE
+    }
+
+    private fun hideLoading() {
+        loading?.visibility = View.GONE
+    }
+
+    private fun showFailure(url: Uri?) {
+        failed = true
+        failedUrl = url ?: initial
+        loading?.visibility = View.GONE
+        failureMessage?.text = Strings.get("sourcePageLoadFailed")
+        failure?.visibility = View.VISIBLE
+    }
 
     private class ToolbarIcon(context: Context, private val external: Boolean, color: Int) :
         View(context) {

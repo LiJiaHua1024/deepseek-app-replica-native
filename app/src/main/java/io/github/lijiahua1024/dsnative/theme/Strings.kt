@@ -75,6 +75,8 @@ object Strings {
             "newChat" -> pick("开启新对话", "New chat")
             "untitledChat" -> pick("新对话", "New chat")
             "sessionLoading" -> pick("正在加载对话...", "Loading...")
+            "sourcePageLoading" -> pick("正在加载...", "Loading...")
+            "sourcePageLoadFailed" -> pick("页面加载失败，请重试", "Page failed to load. Try again")
             "settings" -> pick("设置", "Settings")
             "appName" -> pick("DeepSeek Replica", "DeepSeek Replica")
             "deleteSessionModalContentTitle" -> pick("永久删除对话", "Delete chat?")
