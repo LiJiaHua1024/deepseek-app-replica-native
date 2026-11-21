@@ -258,16 +258,17 @@ private fun RenderBlock(
                 }
             } else
             Column(
-                Modifier.fillMaxWidth()
+                Modifier.fillMaxWidth().padding(end = 5.dp).offset(x = (-5).dp)
                     .background(c.markdownCodeBlock, androidx.compose.foundation.shape.RoundedCornerShape(12.dp)),
             ) {
                 // ref CodeInfoRow .container: padding 6px; copy .button h28 r8 px10 gap3
                 Row(
-                    Modifier.fillMaxWidth().padding(6.dp),
+                    Modifier.fillMaxWidth().height(46.6.dp).padding(6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(lang.ifEmpty { "text" }, fontFamily = FontFamily.Monospace,
-                        fontSize = 12.sp, lineHeight = 18.sp, color = c.labelPrimary,
+                        fontSize = 12.sp, lineHeight = 18.sp, letterSpacing = 0.4.sp,
+                        color = c.labelPrimary,
                         modifier = Modifier.padding(start = 8.dp))
                     Spacer(Modifier.weight(1f))
                     // ref CodeBlock .button:active -> interactive-bg-hover; tap copies the code
@@ -282,6 +283,8 @@ private fun RenderBlock(
                                 (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
                                     as android.content.ClipboardManager)
                                     .setPrimaryClip(android.content.ClipData.newPlainText("code", literal))
+                                io.github.lijiahua1024.dsnative.ui.session.DsToast.show(
+                                    io.github.lijiahua1024.dsnative.theme.Strings.get("copied"))
                             }
                             .padding(horizontal = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -290,18 +293,25 @@ private fun RenderBlock(
                             androidx.compose.ui.res.painterResource(io.github.lijiahua1024.dsnative.R.drawable.ic_copy),
                             null, tint = c.labelSecondary, modifier = Modifier.size(14.dp))
                         Text(io.github.lijiahua1024.dsnative.theme.Strings.get("copy"),
-                            fontSize = 13.sp, lineHeight = 20.sp, color = c.labelSecondary,
+                            fontSize = 13.sp, lineHeight = 14.2.sp, color = c.labelSecondary,
                             modifier = Modifier.padding(start = 3.dp))
                     }
                 }
-                Text(
-                    highlightCode(literal.trimEnd('\n'), c),
-                    fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 22.sp,
-                    style = cssLeading,
-                    modifier = Modifier.fillMaxWidth()
+                Box(Modifier.fillMaxWidth().height(0.381.dp).background(c.thinkingLine))
+                Box(
+                    Modifier.fillMaxWidth()
+                        .background(c.markdownCodeBlockBanner)
                         .horizontalScroll(rememberScrollState())
-                        .padding(16.dp),
-                )
+                ) {
+                    Text(
+                        highlightCode(literal.trimEnd('\n'), c),
+                        fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 18.8.sp,
+                        style = cssLeading,
+                        modifier = Modifier
+                            .width(IntrinsicSize.Max)
+                            .padding(start = 14.9.dp, end = 34.9.dp, top = 14.9.dp, bottom = 14.9.dp),
+                    )
+                }
             }
         }
         is BlockQuote -> {
