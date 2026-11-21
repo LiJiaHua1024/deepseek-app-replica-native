@@ -350,6 +350,18 @@ object Strings {
             "ttsStop" -> pick("停止朗读", "Stop reading")
             "ttsUnavailable" -> pick("这条回答暂时无法朗读", "This answer cannot be read aloud right now")
             "ttsFailed" -> pick("朗读失败，请稍后再试", "Failed to read aloud. Please try again later.")
+            "readAloudLowVolume" -> pick("当前音量较低，请调高设备音量", "Volume is low. Please turn up your device volume.")
+            "readAloudNetworkError" -> pick("请检查网络后重试", "Check the network and try again")
+            "readAloudFrequent" -> pick("操作过于频繁，请稍后再试", "Too many requests. Please try again later.")
+            "readAloudDailyLimitReached" -> pick("朗读已达今日限额，请稍后再试", "Daily read-aloud limit reached. Please try again later.")
+            "readAloudLanguageNotSupported" -> pick("当前语言暂不支持朗读", "Read aloud is not available in this language")
+            "readAloudLanguageNotSupportedSwitchVoice" -> pick("当前语言暂不支持朗读，可尝试切换音色", "Read aloud is not available in this language. Try another voice.")
+            "readAloudVoiceSwitchFailed" -> pick("音色切换失败，请稍后重试", "Voice switch failed. Please try again later.")
+            "readAloudVoiceDiscontinued" -> pick("该音色已下线，请选择其他音色", "This voice is no longer available. Please select another voice.")
+            "readAloudPlayFailed" -> pick("音色播放失败，请稍后再试", "Voice playback failed. Please try again later.")
+            "readAloudInterrupted" -> pick("语音朗读中断", "Read aloud was interrupted")
+            "readingAloud" -> pick("正在朗读", "Reading aloud")
+            "ttsVoiceSwitched" -> pick("朗读音色已切换为 {voice}", "Read-aloud voice switched to {voice}")
             "latestReminderLanguage" -> pick("中文", "English")
             else -> key
         }

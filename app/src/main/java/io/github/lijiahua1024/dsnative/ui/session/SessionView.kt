@@ -705,6 +705,7 @@ fun AssistantView(msg: Message.Assistant, session: Session, chatStore: ChatStore
                     verticalAlignment = Alignment.CenterVertically) {
                 val clipboard = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                 val scope = androidx.compose.runtime.rememberCoroutineScope()
+                val audioManager = ctx.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
                 IconButton({
                     clipboard.setPrimaryClip(android.content.ClipData.newPlainText("reply", replyText(msg)))
                     DsToast.show(Strings.get("copied"))
@@ -723,7 +724,9 @@ fun AssistantView(msg: Message.Assistant, session: Session, chatStore: ChatStore
                             scope, msg.id, replyText(msg),
                             chatStore.settings.apiKey.value ?: "",
                             chatStore.settings.ttsVoice.value,
-                        ) { key -> DsToast.show(Strings.get(key)) }
+                            { key -> DsToast.show(Strings.get(key)) },
+                            { if (audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) == 0) DsToast.show(Strings.get("readAloudLowVolume")) },
+                        )
                     }, modifier = Modifier.size(32.dp)) {
                         if (reading) {
                             ReadingBars(readStatus ==

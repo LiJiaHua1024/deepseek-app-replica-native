@@ -38,6 +38,7 @@ import io.github.lijiahua1024.dsnative.data.ChatStore
 import io.github.lijiahua1024.dsnative.data.SettingsStore
 import io.github.lijiahua1024.dsnative.theme.DsTheme
 import io.github.lijiahua1024.dsnative.theme.Strings
+import io.github.lijiahua1024.dsnative.ui.session.DsToast
 import kotlinx.coroutines.launch
 
 @Composable
@@ -246,7 +247,13 @@ fun AndroidSettings(settings: SettingsStore, chatStore: ChatStore, onBack: () ->
                 popup = null },
             onDismiss = { popup = null })
         "voice" -> VoiceSheet(c, card, muted, current = ttsVoice,
-            onConfirm = { settings.setTtsVoice(it); popup = null },
+            onConfirm = {
+                if (it != ttsVoice) {
+                    DsToast.show(Strings.get("ttsVoiceSwitched", "voice" to Strings.get(
+                        if (it == "stella") "settingsTtsVoiceStella" else "settingsTtsVoiceTide")))
+                }
+                settings.setTtsVoice(it); popup = null
+            },
             onDismiss = { popup = null })
     }
 

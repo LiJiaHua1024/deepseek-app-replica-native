@@ -16,6 +16,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 // Порт src/services/speech/readAloud.ts: один активный朗读 на ответ,
@@ -56,6 +57,7 @@ object ReadAloud {
         apiKey: String,
         voice: String,
         onError: (String) -> Unit,
+        onFirstFrame: () -> Unit = {},
     ) {
         val reading = _messageId.value
         stop()
@@ -123,15 +125,23 @@ object ReadAloud {
                         if (n < 0) break
                         if (n == 0) continue
                         audio.write(chunk, 0, n)
-                        if (_status.value == Status.LOADING) _status.value = Status.PLAYING
+                        if (_status.value == Status.LOADING) {
+                            _status.value = Status.PLAYING
+                            onFirstFrame()
+                        }
                     }
                 }
+            } catch (e: IOException) {
+                if (_messageId.value == messageId) {
+                    finish()
+                    onError("readAloudNetworkError")
+                }
+                return@launch
             } catch (e: Exception) {
                 if (_messageId.value == messageId) {
                     finish()
                     onError("ttsFailed")
                 }
-                return@launch
             }
             finish()
         }
