@@ -52,7 +52,14 @@ import io.github.lijiahua1024.dsnative.ui.input.VoiceInput
 import io.github.lijiahua1024.dsnative.ui.input.VoiceOverlay
 
 @Composable
-fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () -> Unit, onOpenSettings: () -> Unit = {}) {
+fun SessionView(
+    settings: SettingsStore,
+    chatStore: ChatStore,
+    onOpenDrawer: () -> Unit,
+    onOpenSettings: () -> Unit = {},
+    coldStartWelcome: Boolean = false,
+    greetingIdentity: Any? = null,
+) {
     val c = DsTheme.colors
     val activeId by chatStore.activeId.collectAsState()
     val sessions by chatStore.sessions.collectAsState()
@@ -105,7 +112,11 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
 
         val visible = session?.let { visibleMessages(it) } ?: emptyList()
         if (visible.isEmpty()) {
-            Welcome(Modifier.weight(1f))
+            Welcome(
+                Modifier.weight(1f),
+                coldStart = coldStartWelcome,
+                identity = if (activeId == null) greetingIdentity else activeId,
+            )
         } else {
             LazyColumn(state = listState, modifier = Modifier.weight(1f)
                 .nestedScroll(remember { io.github.lijiahua1024.dsnative.ui.ScrollTracker("chat") }),
@@ -237,9 +248,9 @@ fun SessionView(settings: SettingsStore, chatStore: ChatStore, onOpenDrawer: () 
 }
 
 @Composable
-fun Welcome(modifier: Modifier = Modifier) {
+fun Welcome(modifier: Modifier = Modifier, coldStart: Boolean = false, identity: Any? = null) {
     val c = DsTheme.colors
-    val greeting = remember { Strings.welcomeGreeting() }
+    val greeting = remember(coldStart, identity) { Strings.welcomeGreeting(coldStart) }
     // ref .greeting: margin auto 0 + translateY(-2.7px)
     Column(modifier.fillMaxSize().offset(y = (-2.7).dp), verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally) {

@@ -181,6 +181,9 @@ class ChatStore(
     private val _activeId = MutableStateFlow<String?>(null)
     val activeId: StateFlow<String?> = _activeId
 
+    private val _newChatRequests = MutableStateFlow(0)
+    val newChatRequests: StateFlow<Int> = _newChatRequests
+
     /** 正在生成的会话 id 集合 */
     private val _streaming = MutableStateFlow<Set<String>>(emptySet())
     val streaming: StateFlow<Set<String>> = _streaming
@@ -256,6 +259,7 @@ class ChatStore(
     fun newChat() {
         ReadAloud.stop()
         _activeId.value = null
+        _newChatRequests.value += 1
     }
 
     fun selectSession(id: String) {

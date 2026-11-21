@@ -89,6 +89,9 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
         }
         val activeId by chatStore.activeId.collectAsState()
         val sessionCache by chatStore.sessionCache.collectAsState()
+        val newChatRequests by chatStore.newChatRequests.collectAsState()
+        var coldStartWelcome by remember { mutableStateOf(true) }
+        LaunchedEffect(newChatRequests) { coldStartWelcome = newChatRequests == 0 }
         val freePan = nav == NavState.Chat &&
             (sessionCache[activeId]?.let { io.github.lijiahua1024.dsnative.data.visibleMessages(it).isNotEmpty() } != true)
         DrawerFrame(
@@ -106,7 +109,14 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
                 is NavState.Settings -> Box(Modifier.fillMaxSize().background(DsTheme.colors.bgBase)) {
                     AndroidSettings(settings, chatStore) { nav = NavState.Chat }
                 }
-                else -> SessionView(settings, chatStore, onOpenDrawer = open, onOpenSettings = { nav = NavState.Settings })
+                else -> SessionView(
+                    settings,
+                    chatStore,
+                    onOpenDrawer = open,
+                    onOpenSettings = { nav = NavState.Settings },
+                    coldStartWelcome = coldStartWelcome,
+                    greetingIdentity = newChatRequests,
+                )
             }
         }
     }

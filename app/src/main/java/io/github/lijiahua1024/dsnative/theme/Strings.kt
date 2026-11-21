@@ -26,6 +26,14 @@ object Strings {
         "你好，有什么我能帮你的吗？",
         "你好，让我们开始聊天吧",
         "欢迎回来，想从哪里开始？",
+        "嗨！今天想聊些什么？",
+    )
+
+    val coldStartWelcomeMessages = listOf(
+        "欢迎回来，想从哪里开始？",
+        "欢迎回来，随时开始吧",
+        "嗨！今天想聊些什么？",
+        "你好，我能帮什么忙吗？",
     )
 
     // debug builds: shot drivers pin the greeting so captures are deterministic
@@ -34,8 +42,10 @@ object Strings {
         @Volatile var index: Int = -1
     }
 
-    fun welcomeGreeting(): String =
-        androidWelcomeMessages.getOrElse(GreetingDebug.index) { androidWelcomeMessages.random() }
+    fun welcomeGreeting(coldStart: Boolean = false): String {
+        val messages = if (coldStart) coldStartWelcomeMessages else androidWelcomeMessages
+        return messages.getOrElse(GreetingDebug.index) { messages.random() }
+    }
 
     fun get(key: String, vararg params: Pair<String, Any>): String {
         var s = when (key) {
