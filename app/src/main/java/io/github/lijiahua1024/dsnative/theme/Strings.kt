@@ -203,6 +203,8 @@ object Strings {
             "androidCamera" -> pick("拍照", "Camera")
             "androidGallery" -> pick("相册", "Photos")
             "androidFiles" -> pick("文件", "Files")
+            "androidLocalFiles" -> pick("本地文件", "Local files")
+            "androidWeChatFiles" -> pick("微信文件", "WeChat files")
             "androidPhotoWhat" -> pick("这是什么", "What is this?")
             "androidPhotoAnalyze" -> pick("分析一下", "Analyze this")
             "androidPhotoAdvice" -> pick("怎么办", "What should I do?")

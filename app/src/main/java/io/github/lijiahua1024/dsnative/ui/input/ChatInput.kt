@@ -24,6 +24,9 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -60,6 +63,8 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     var text by remember(activeId) { mutableStateOf(drafts[activeId ?: ""] ?: "") }
     var focused by remember { mutableStateOf(false) }
     var focusAt by remember { mutableStateOf(0L) }
+    val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
     val holdScope = androidx.compose.runtime.rememberCoroutineScope()
     val thinking by settings.thinking.collectAsState()
     val search by settings.search.collectAsState()
@@ -159,7 +164,8 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
 
     // ref --android-composer-bottom: 27px gesture nav, 11px with keyboard
     val keyboardOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
-    Column(Modifier.fillMaxWidth().imePadding().padding(bottom = if (keyboardOpen) 27.7.dp else 50.5.dp)) {
+    Column(Modifier.fillMaxWidth().imePadding()
+        .padding(bottom = if (keyboardOpen) 27.7.dp else 56.5.dp)) {
     Column(
         Modifier.fillMaxWidth()
             .padding(start = 12.dp, end = 12.dp)
@@ -248,6 +254,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
+                    .focusRequester(focusRequester)
                     .onFocusChanged {
                         focused = it.isFocused
                         if (it.isFocused) focusAt = android.os.SystemClock.uptimeMillis()
@@ -287,6 +294,15 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                         }
                     },
             )
+            var previousVoiceMode by remember { mutableStateOf<Boolean?>(null) }
+            LaunchedEffect(voiceMode) {
+                if (previousVoiceMode == true && !voiceMode) {
+                    try { focusRequester.requestFocus() }
+                    catch (_: IllegalStateException) { }
+                    keyboardController?.show()
+                }
+                previousVoiceMode = voiceMode
+            }
         }
         }
         // ref .functionRow (android): h48, padding 0 7px 4px 11px, align center
@@ -397,7 +413,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
             }
         }
         // ref composer 底部留白：卡片内衬在 chips 行下方
-        Spacer(Modifier.height(2.5.dp))
+        Spacer(Modifier.height(5.dp))
     }
     // ref AndroidAttachments：卡片外、composer 列内展开的面板
     AttachmentsPanel(

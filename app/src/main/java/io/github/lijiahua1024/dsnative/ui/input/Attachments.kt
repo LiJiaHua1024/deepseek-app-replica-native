@@ -15,6 +15,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.horizontalScroll
@@ -244,6 +245,8 @@ fun AttachmentsPanel(
     // ref AndroidAttachments.module.css: grid-template-rows 260ms cubic-bezier(0.2,0.8,0.2,1)
     // + opacity 160ms ease-out — expand/collapse the panel instead of instant mount
     val ease = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)
+    var showFileSources by remember { mutableStateOf(false) }
+    val c = DsTheme.colors
     androidx.compose.animation.AnimatedVisibility(visible = open,
         enter = androidx.compose.animation.expandVertically(
             androidx.compose.animation.core.tween(260, easing = ease))
@@ -253,7 +256,6 @@ fun AttachmentsPanel(
             androidx.compose.animation.core.tween(260, easing = ease))
             + androidx.compose.animation.fadeOut(
                 androidx.compose.animation.core.tween(160))) {
-    val c = DsTheme.colors
     val resolver = LocalContext.current.contentResolver
     Column(Modifier.fillMaxWidth()) {
         if (photos.isNotEmpty()) {
@@ -310,9 +312,59 @@ fun AttachmentsPanel(
             AttachmentAction(Modifier.weight(1f), R.drawable.ic_image_outline,
                 Strings.get("androidGallery"), onGallery)
             AttachmentAction(Modifier.weight(1f), R.drawable.ic_files_clip,
-                Strings.get("androidFiles"), onFiles)
+                Strings.get("androidFiles")) { showFileSources = true }
         }
     }
+    }
+    if (open && showFileSources) {
+        Box(
+            Modifier.fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) { showFileSources = false }
+        ) {
+            Box(
+                Modifier.align(Alignment.BottomCenter)
+                    .padding(bottom = 134.dp)
+                    .width(217.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(c.inputMajor)
+                    .shadow(2.dp, RoundedCornerShape(6.dp), clip = false),
+            ) {
+                Column {
+                    FileSourceRow(
+                        icon = R.drawable.ic_files_clip,
+                        label = Strings.get("androidLocalFiles"),
+                    ) { showFileSources = false; onFiles() }
+                    Box(Modifier.fillMaxWidth().height(1.dp).background(c.borderL2))
+                    FileSourceRow(
+                        icon = R.drawable.ic_files_clip,
+                        label = Strings.get("androidWeChatFiles"),
+                    ) { showFileSources = false; onFiles() }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FileSourceRow(icon: Int, label: String, onClick: () -> Unit) {
+    val c = DsTheme.colors
+    val src = remember { MutableInteractionSource() }
+    val pressed by src.collectIsPressedAsState()
+    Row(
+        Modifier.fillMaxWidth().height(63.5.dp).clickable(src, null, onClick = onClick)
+            .background(DsTheme.pressTint(pressed, c.interactiveBgHover)),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(19.dp),
+    ) {
+        Spacer(Modifier.width(32.dp))
+        Column {
+            Icon(painterResource(icon), null, tint = c.labelPrimary, modifier = Modifier.size(20.dp))
+            Text(label, fontSize = 16.sp, lineHeight = 21.sp, color = c.labelPrimary)
+        }
+        Spacer(Modifier.weight(1f))
     }
 }
 
