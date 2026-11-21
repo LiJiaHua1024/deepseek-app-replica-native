@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -30,6 +31,8 @@ import io.github.lijiahua1024.dsnative.data.SettingsStore
 import io.github.lijiahua1024.dsnative.data.groupSessions
 import io.github.lijiahua1024.dsnative.theme.DsTheme
 import io.github.lijiahua1024.dsnative.theme.Strings
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -54,6 +57,20 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
     var deleteFor by remember { mutableStateOf<SessionSummary?>(null) }
     var pinning by remember { mutableStateOf<Pair<Set<String>, Boolean>?>(null) }
     var deletingSel by remember { mutableStateOf<Set<String>?>(null) }
+    var pressGesture by remember { mutableStateOf<SessionPressGesture?>(null) }
+    val pressScope = rememberCoroutineScope()
+
+    fun selectSessionWithPress(sessionId: String) {
+        pressGesture = SessionPressGesture(sessionId, SessionPressPhase.Light)
+        pressScope.launch {
+            delay(17)
+            pressGesture = pressGesture?.copy(phase = SessionPressPhase.Pressed)
+            delay(150)
+            chatStore.selectSession(sessionId)
+            pressGesture = null
+            onClose()
+        }
+    }
 
     // ref [data-android] .mobile: padding 12px 24px 16px 16px (CSS px == dp here)
     // top pad: ref 12css+row 高相抵后 native 行整体低 ~4-5px → 10.3dp
@@ -118,10 +135,12 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
                 }
                 items(list, key = { it.id }) { s ->
                     SiderRow(s, s.id == activeId, selectionMode, selected.contains(s.id),
+                        pressPhase = pressGesture?.takeIf { it.sessionId == s.id }?.phase
+                            ?: SessionPressPhase.Rest,
                         onClick = {
                             if (selectionMode) {
                                 selected = if (selected.contains(s.id)) selected - s.id else selected + s.id
-                            } else { chatStore.selectSession(s.id); onClose() }
+                            } else selectSessionWithPress(s.id)
                         },
                         onLongClick = { if (!selectionMode) menuFor = s },
                         menuOpen = menuFor?.id == s.id,
@@ -344,12 +363,20 @@ private fun DsModal(title: String, body: String?, onDismiss: () -> Unit,
     }
 }
 
+private enum class SessionPressPhase { Rest, Light, Pressed }
+
+private data class SessionPressGesture(
+    val sessionId: String,
+    val phase: SessionPressPhase,
+)
+
 private fun allPinned(selected: Set<String>, pinned: Collection<String>) =
     selected.isNotEmpty() && pinned.containsAll(selected)
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean, checked: Boolean,
+                     pressPhase: SessionPressPhase,
                      onClick: () -> Unit, onLongClick: () -> Unit,
                      menuOpen: Boolean = false, onMenuDismiss: () -> Unit = {},
                      onRename: () -> Unit = {}, onPin: () -> Unit = {},
@@ -366,9 +393,14 @@ private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean,
             // selection rows render as plain .select buttons — no active accent;
             // ref .item:active -> bg-skeleton
             .background(
-                if (pressed) DsTheme.pressTint(pressed, c.bgSkeleton)
-                else if (active && !selectionMode) c.sidebarNavItemActiveAccent
-                else androidx.compose.ui.graphics.Color.Transparent)
+                when {
+                    pressPhase == SessionPressPhase.Light -> Color(0xFFEDF1FE)
+                    pressPhase == SessionPressPhase.Pressed -> Color(0xFFE0E8F1)
+                    pressed -> DsTheme.pressTint(pressed, c.bgSkeleton)
+                    active && !selectionMode -> c.sidebarNavItemActiveAccent
+                    else -> Color.Transparent
+                }
+            )
             .combinedClickable(pressSrc, null, onClick = onClick, onLongClick = onLongClick)
             .padding(start = 7.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -388,7 +420,11 @@ private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean,
             Spacer(Modifier.width(10.dp))
         }
         Text(s.title.ifEmpty { Strings.get("untitledChat") }, fontSize = 16.sp,
-            color = if (active && !selectionMode) c.brandPrimaryInvert else c.labelPrimary,
+            color = when {
+                pressPhase != SessionPressPhase.Rest -> Color(0xFF3269EF)
+                active && !selectionMode -> c.brandPrimaryInvert
+                else -> c.labelPrimary
+            },
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
     }
     if (menuOpen) {

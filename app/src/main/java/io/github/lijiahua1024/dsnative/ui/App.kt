@@ -103,6 +103,7 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
             nav = nav,
             dark = dark,
             freePan = freePan,
+            closeImmediately = true,
             onNavigate = { nav = it },
             siderContent = { close ->
                 Sider(settings, chatStore,
@@ -132,6 +133,7 @@ fun DrawerFrame(
     nav: NavState,
     dark: Boolean,
     freePan: Boolean,
+    closeImmediately: Boolean = false,
     onNavigate: (NavState) -> Unit,
     siderContent: @Composable (close: () -> Unit) -> Unit,
     mainContent: @Composable (open: () -> Unit) -> Unit,
@@ -287,7 +289,14 @@ fun DrawerFrame(
                     .background(DsTheme.colors.bgBase)
             ) {
                 Box(Modifier.width(with(density) { edgePx.toDp() }).fillMaxSize()) {
-                    siderContent { settleTo(0f) }
+                    siderContent {
+                        if (closeImmediately) {
+                            settleJob?.cancel()
+                            progress = 0f
+                        } else {
+                            settleTo(0f)
+                        }
+                    }
                     // ref .frame::after — 缩放后的 main 层把 box-shadow(-7px 3px 33px
                     // rgb(0 0 0/.12)) 投到抽屉右缘，抽屉上呈现约 90px 的内侧渐变。
                     if (progress > 0f) {
