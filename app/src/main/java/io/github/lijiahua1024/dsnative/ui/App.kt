@@ -3,6 +3,7 @@
 package io.github.lijiahua1024.dsnative.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
@@ -338,12 +340,21 @@ fun DrawerFrame(
                     Box(Modifier.fillMaxSize()
                         .graphicsLayer { alpha = 0.7f * progress }
                         .background(DsTheme.colors.bgBase)
-                        .semantics { contentDescription = Strings.get("collapseSiderbarButton") }
                         .pointerInput(Unit) {
                             detectTapGestures { settleTo(0f) }
                         })
                 }
             }
+            }
+            if (progress >= 0.999f) {
+                Box(
+                    Modifier
+                        .fillMaxHeight()
+                        .width(with(density) { (widthPx - 856f).toDp() })
+                        .offset { IntOffset(856, 0) }
+                        .semantics { contentDescription = Strings.get("closeSiderbarButton") }
+                        .clickable { settleTo(0f) },
+                )
             }
         }
     }

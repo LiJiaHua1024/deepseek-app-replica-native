@@ -70,6 +70,7 @@ object Strings {
             "androidContentCaveat" -> pick("回答由 AI 生成，仅供参考", "AI generated, for reference only")
             "expandSiderbarButton" -> pick("打开边栏", "Open sidebar")
             "collapseSiderbarButton" -> pick("收起边栏", "Close sidebar")
+            "closeSiderbarButton" -> pick("关闭侧边栏", "Close sidebar")
             "newChat" -> pick("开启新对话", "New chat")
             "untitledChat" -> pick("新对话", "New chat")
             "sessionLoading" -> pick("正在加载对话...", "Loading...")
