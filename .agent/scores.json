@@ -6,12 +6,12 @@
   "noise_adjusted": true,
   "scenes": {
     "apikey.dark": {
-      "blurred_ssim": 0.9896,
-      "color_mad": 0.692,
+      "blurred_ssim": 0.9893,
+      "color_mad": 0.702,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9896,
-      "adj_mad": 0.692,
+      "adj_ssim": 0.9893,
+      "adj_mad": 0.702,
       "worst": [
         {
           "x": 0,
@@ -42,12 +42,12 @@
       }
     },
     "apikey.default": {
-      "blurred_ssim": 0.9909,
-      "color_mad": 0.555,
+      "blurred_ssim": 0.9908,
+      "color_mad": 0.563,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9909,
-      "adj_mad": 0.555,
+      "adj_ssim": 0.9908,
+      "adj_mad": 0.563,
       "worst": [
         {
           "x": 0,
@@ -78,12 +78,12 @@
       }
     },
     "apikey.invalid": {
-      "blurred_ssim": 0.9898,
-      "color_mad": 0.72,
+      "blurred_ssim": 0.9896,
+      "color_mad": 0.731,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9898,
-      "adj_mad": 0.72,
+      "adj_ssim": 0.9896,
+      "adj_mad": 0.731,
       "worst": [
         {
           "x": 293,
@@ -114,12 +114,12 @@
       }
     },
     "apikey.light": {
-      "blurred_ssim": 0.991,
-      "color_mad": 0.555,
+      "blurred_ssim": 0.9908,
+      "color_mad": 0.563,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.991,
-      "adj_mad": 0.555,
+      "adj_ssim": 0.9908,
+      "adj_mad": 0.563,
       "worst": [
         {
           "x": 0,
@@ -150,12 +150,12 @@
       }
     },
     "apikey": {
-      "blurred_ssim": 0.991,
-      "color_mad": 0.555,
+      "blurred_ssim": 0.9908,
+      "color_mad": 0.563,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.991,
-      "adj_mad": 0.555,
+      "adj_ssim": 0.9908,
+      "adj_mad": 0.563,
       "worst": [
         {
           "x": 0,
@@ -186,19 +186,19 @@
       }
     },
     "apikey.verifying": {
-      "blurred_ssim": 0.9898,
-      "color_mad": 0.615,
+      "blurred_ssim": 0.99,
+      "color_mad": 0.611,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9898,
-      "adj_mad": 0.615,
+      "adj_ssim": 0.99,
+      "adj_mad": 0.611,
       "worst": [
         {
           "x": 293,
           "y": 1172,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.9209
+          "blurred_ssim": 0.9301
         },
         {
           "x": 586,
@@ -222,33 +222,33 @@
       }
     },
     "attachments.default": {
-      "blurred_ssim": 0.9499,
-      "color_mad": 2.913,
+      "blurred_ssim": 0.9511,
+      "color_mad": 2.553,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9499,
-      "adj_mad": 2.913,
+      "adj_ssim": 0.9511,
+      "adj_mad": 2.553,
       "worst": [
         {
-          "x": 293,
-          "y": 1465,
+          "x": 0,
+          "y": 1172,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.8319
+          "blurred_ssim": 0.8307
+        },
+        {
+          "x": 293,
+          "y": 1172,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8311
         },
         {
           "x": 0,
-          "y": 1465,
+          "y": 879,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.8547
-        },
-        {
-          "x": 586,
-          "y": 1465,
-          "w": 293,
-          "h": 293,
-          "blurred_ssim": 0.8764
+          "blurred_ssim": 0.85
         }
       ],
       "pass": false,
@@ -258,33 +258,33 @@
       }
     },
     "chat.branch": {
-      "blurred_ssim": 0.9822,
-      "color_mad": 1.031,
+      "blurred_ssim": 0.9826,
+      "color_mad": 1.041,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9822,
-      "adj_mad": 1.031,
+      "adj_ssim": 0.9826,
+      "adj_mad": 1.041,
       "worst": [
-        {
-          "x": 0,
-          "y": 586,
-          "w": 293,
-          "h": 293,
-          "blurred_ssim": 0.9055
-        },
         {
           "x": 293,
           "y": 586,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.9224
+          "blurred_ssim": 0.9195
+        },
+        {
+          "x": 0,
+          "y": 586,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9381
         },
         {
           "x": 293,
           "y": 2051,
           "w": 293,
           "h": 289,
-          "blurred_ssim": 0.9465
+          "blurred_ssim": 0.9395
         }
       ],
       "pass": true,
@@ -294,20 +294,13 @@
       }
     },
     "chat.code": {
-      "blurred_ssim": 0.9849,
-      "color_mad": 0.82,
+      "blurred_ssim": 0.985,
+      "color_mad": 0.819,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9849,
-      "adj_mad": 0.82,
+      "adj_ssim": 0.985,
+      "adj_mad": 0.819,
       "worst": [
-        {
-          "x": 0,
-          "y": 879,
-          "w": 293,
-          "h": 293,
-          "blurred_ssim": 0.9144
-        },
         {
           "x": 293,
           "y": 586,
@@ -316,11 +309,18 @@
           "blurred_ssim": 0.932
         },
         {
+          "x": 0,
+          "y": 879,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9345
+        },
+        {
           "x": 293,
           "y": 2051,
           "w": 293,
           "h": 289,
-          "blurred_ssim": 0.9465
+          "blurred_ssim": 0.9395
         }
       ],
       "pass": true,
@@ -330,12 +330,12 @@
       }
     },
     "chat.continue": {
-      "blurred_ssim": 0.9623,
-      "color_mad": 2.021,
+      "blurred_ssim": 0.9647,
+      "color_mad": 1.936,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9623,
-      "adj_mad": 2.021,
+      "adj_ssim": 0.9647,
+      "adj_mad": 1.936,
       "worst": [
         {
           "x": 0,
@@ -366,33 +366,33 @@
       }
     },
     "chat.dark": {
-      "blurred_ssim": 0.971,
-      "color_mad": 1.462,
+      "blurred_ssim": 0.953,
+      "color_mad": 2.115,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.971,
-      "adj_mad": 1.462,
+      "adj_ssim": 0.953,
+      "adj_mad": 2.115,
       "worst": [
         {
           "x": 293,
           "y": 1172,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.853
+          "blurred_ssim": 0.8298
         },
         {
           "x": 0,
-          "y": 1758,
+          "y": 293,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.8914
+          "blurred_ssim": 0.8492
         },
         {
-          "x": 293,
-          "y": 1465,
+          "x": 0,
+          "y": 1172,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.9107
+          "blurred_ssim": 0.8799
         }
       ],
       "pass": false,
@@ -402,33 +402,33 @@
       }
     },
     "chat.default.dark": {
-      "blurred_ssim": 0.971,
-      "color_mad": 1.462,
+      "blurred_ssim": 0.953,
+      "color_mad": 2.115,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.971,
-      "adj_mad": 1.462,
+      "adj_ssim": 0.953,
+      "adj_mad": 2.115,
       "worst": [
         {
           "x": 293,
           "y": 1172,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.853
+          "blurred_ssim": 0.8298
         },
         {
           "x": 0,
-          "y": 1758,
+          "y": 293,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.8914
+          "blurred_ssim": 0.8492
         },
         {
-          "x": 293,
-          "y": 1465,
+          "x": 0,
+          "y": 1172,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.9107
+          "blurred_ssim": 0.8799
         }
       ],
       "pass": false,
@@ -438,33 +438,33 @@
       }
     },
     "chat.default": {
-      "blurred_ssim": 0.9717,
-      "color_mad": 1.58,
+      "blurred_ssim": 0.9571,
+      "color_mad": 2.165,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9717,
-      "adj_mad": 1.58,
+      "adj_ssim": 0.9571,
+      "adj_mad": 2.165,
       "worst": [
         {
           "x": 293,
           "y": 1172,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.8595
+          "blurred_ssim": 0.8371
         },
         {
           "x": 0,
-          "y": 1758,
+          "y": 293,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.9027
+          "blurred_ssim": 0.8602
         },
         {
-          "x": 293,
-          "y": 1465,
+          "x": 0,
+          "y": 1172,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.9138
+          "blurred_ssim": 0.8878
         }
       ],
       "pass": false,
@@ -474,12 +474,12 @@
       }
     },
     "chat.edit": {
-      "blurred_ssim": 0.9812,
-      "color_mad": 1.143,
+      "blurred_ssim": 0.9814,
+      "color_mad": 1.145,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9812,
-      "adj_mad": 1.143,
+      "adj_ssim": 0.9814,
+      "adj_mad": 1.145,
       "worst": [
         {
           "x": 0,
@@ -489,18 +489,18 @@
           "blurred_ssim": 0.9235
         },
         {
-          "x": 0,
-          "y": 879,
-          "w": 293,
-          "h": 293,
-          "blurred_ssim": 0.9404
-        },
-        {
           "x": 293,
           "y": 2051,
           "w": 293,
           "h": 289,
-          "blurred_ssim": 0.9465
+          "blurred_ssim": 0.9395
+        },
+        {
+          "x": 879,
+          "y": 2051,
+          "w": 201,
+          "h": 289,
+          "blurred_ssim": 0.9397
         }
       ],
       "pass": true,
@@ -510,12 +510,12 @@
       }
     },
     "chat.err_401": {
-      "blurred_ssim": 0.9793,
-      "color_mad": 1.04,
+      "blurred_ssim": 0.9782,
+      "color_mad": 1.088,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9793,
-      "adj_mad": 1.04,
+      "adj_ssim": 0.9782,
+      "adj_mad": 1.088,
       "worst": [
         {
           "x": 0,
@@ -546,12 +546,12 @@
       }
     },
     "chat.err_402": {
-      "blurred_ssim": 0.9845,
-      "color_mad": 0.812,
+      "blurred_ssim": 0.9835,
+      "color_mad": 0.857,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9845,
-      "adj_mad": 0.812,
+      "adj_ssim": 0.9835,
+      "adj_mad": 0.857,
       "worst": [
         {
           "x": 0,
@@ -582,12 +582,12 @@
       }
     },
     "chat.err_429": {
-      "blurred_ssim": 0.9872,
-      "color_mad": 0.751,
+      "blurred_ssim": 0.9862,
+      "color_mad": 0.795,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9872,
-      "adj_mad": 0.751,
+      "adj_ssim": 0.9862,
+      "adj_mad": 0.795,
       "worst": [
         {
           "x": 0,
@@ -608,7 +608,7 @@
           "y": 2051,
           "w": 293,
           "h": 289,
-          "blurred_ssim": 0.9465
+          "blurred_ssim": 0.9395
         }
       ],
       "pass": true,
@@ -618,12 +618,12 @@
       }
     },
     "chat.err_500": {
-      "blurred_ssim": 0.9877,
-      "color_mad": 0.736,
+      "blurred_ssim": 0.9867,
+      "color_mad": 0.78,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9877,
-      "adj_mad": 0.736,
+      "adj_ssim": 0.9867,
+      "adj_mad": 0.78,
       "worst": [
         {
           "x": 0,
@@ -637,14 +637,14 @@
           "y": 2051,
           "w": 293,
           "h": 289,
-          "blurred_ssim": 0.9465
+          "blurred_ssim": 0.9395
         },
         {
-          "x": 293,
-          "y": 293,
-          "w": 293,
-          "h": 293,
-          "blurred_ssim": 0.949
+          "x": 879,
+          "y": 2051,
+          "w": 201,
+          "h": 289,
+          "blurred_ssim": 0.9397
         }
       ],
       "pass": true,
@@ -654,20 +654,13 @@
       }
     },
     "chat.files": {
-      "blurred_ssim": 0.9802,
-      "color_mad": 1.171,
+      "blurred_ssim": 0.9804,
+      "color_mad": 1.17,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9802,
-      "adj_mad": 1.171,
+      "adj_ssim": 0.9804,
+      "adj_mad": 1.17,
       "worst": [
-        {
-          "x": 0,
-          "y": 879,
-          "w": 293,
-          "h": 293,
-          "blurred_ssim": 0.9152
-        },
         {
           "x": 586,
           "y": 293,
@@ -680,7 +673,14 @@
           "y": 2051,
           "w": 293,
           "h": 289,
-          "blurred_ssim": 0.9465
+          "blurred_ssim": 0.9395
+        },
+        {
+          "x": 879,
+          "y": 2051,
+          "w": 201,
+          "h": 289,
+          "blurred_ssim": 0.9397
         }
       ],
       "pass": true,
@@ -690,12 +690,12 @@
       }
     },
     "chat.interrupted": {
-      "blurred_ssim": 0.9607,
-      "color_mad": 2.165,
+      "blurred_ssim": 0.9603,
+      "color_mad": 2.187,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9607,
-      "adj_mad": 2.165,
+      "adj_ssim": 0.9603,
+      "adj_mad": 2.187,
       "worst": [
         {
           "x": 0,
@@ -712,11 +712,11 @@
           "blurred_ssim": 0.8876
         },
         {
-          "x": 879,
-          "y": 1465,
-          "w": 201,
+          "x": 293,
+          "y": 879,
+          "w": 293,
           "h": 293,
-          "blurred_ssim": 0.9027
+          "blurred_ssim": 0.9067
         }
       ],
       "pass": false,
@@ -726,33 +726,33 @@
       }
     },
     "chat.light": {
-      "blurred_ssim": 0.9717,
-      "color_mad": 1.58,
+      "blurred_ssim": 0.9571,
+      "color_mad": 2.165,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9717,
-      "adj_mad": 1.58,
+      "adj_ssim": 0.9571,
+      "adj_mad": 2.165,
       "worst": [
         {
           "x": 293,
           "y": 1172,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.8595
+          "blurred_ssim": 0.8371
         },
         {
           "x": 0,
-          "y": 1758,
+          "y": 293,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.9027
+          "blurred_ssim": 0.8602
         },
         {
-          "x": 293,
-          "y": 1465,
+          "x": 0,
+          "y": 1172,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.9138
+          "blurred_ssim": 0.8878
         }
       ],
       "pass": false,
@@ -762,33 +762,33 @@
       }
     },
     "chat.loading": {
-      "blurred_ssim": 0.9927,
-      "color_mad": 0.562,
+      "blurred_ssim": 0.9914,
+      "color_mad": 0.642,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9927,
-      "adj_mad": 0.562,
+      "adj_ssim": 0.9914,
+      "adj_mad": 0.642,
       "worst": [
+        {
+          "x": 586,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.9217
+        },
         {
           "x": 293,
           "y": 2051,
           "w": 293,
           "h": 289,
-          "blurred_ssim": 0.9465
+          "blurred_ssim": 0.9395
         },
         {
           "x": 0,
           "y": 2051,
           "w": 293,
           "h": 289,
-          "blurred_ssim": 0.9552
-        },
-        {
-          "x": 586,
-          "y": 2051,
-          "w": 293,
-          "h": 289,
-          "blurred_ssim": 0.9636
+          "blurred_ssim": 0.9449
         }
       ],
       "pass": true,
@@ -798,48 +798,48 @@
       }
     },
     "chat.long": {
-      "blurred_ssim": 0.9841,
-      "color_mad": 1.718,
+      "blurred_ssim": 0.8033,
+      "color_mad": 9.054,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9841,
-      "adj_mad": 1.718,
+      "adj_ssim": 0.8033,
+      "adj_mad": 9.054,
       "worst": [
         {
-          "x": 0,
-          "y": 1758,
+          "x": 293,
+          "y": 1172,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.9027
+          "blurred_ssim": 0.6396
+        },
+        {
+          "x": 586,
+          "y": 293,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.6483
         },
         {
           "x": 293,
-          "y": 2051,
-          "w": 293,
-          "h": 289,
-          "blurred_ssim": 0.9465
-        },
-        {
-          "x": 293,
-          "y": 1758,
+          "y": 879,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.9499
+          "blurred_ssim": 0.6716
         }
       ],
-      "pass": true,
+      "pass": false,
       "thresholds": {
         "blurred_ssim": 0.98,
         "color_mad": 4.0
       }
     },
     "chat.math": {
-      "blurred_ssim": 0.9719,
-      "color_mad": 1.416,
+      "blurred_ssim": 0.9707,
+      "color_mad": 1.47,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9719,
-      "adj_mad": 1.416,
+      "adj_ssim": 0.9707,
+      "adj_mad": 1.47,
       "worst": [
         {
           "x": 0,
@@ -870,20 +870,13 @@
       }
     },
     "chat.md": {
-      "blurred_ssim": 0.9829,
-      "color_mad": 1.038,
+      "blurred_ssim": 0.9831,
+      "color_mad": 1.036,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9829,
-      "adj_mad": 1.038,
+      "adj_ssim": 0.9831,
+      "adj_mad": 1.036,
       "worst": [
-        {
-          "x": 0,
-          "y": 879,
-          "w": 293,
-          "h": 293,
-          "blurred_ssim": 0.9152
-        },
         {
           "x": 0,
           "y": 586,
@@ -896,7 +889,14 @@
           "y": 2051,
           "w": 293,
           "h": 289,
-          "blurred_ssim": 0.9465
+          "blurred_ssim": 0.9395
+        },
+        {
+          "x": 879,
+          "y": 2051,
+          "w": 201,
+          "h": 289,
+          "blurred_ssim": 0.9397
         }
       ],
       "pass": true,
@@ -906,33 +906,33 @@
       }
     },
     "chat.menu": {
-      "blurred_ssim": 0.9812,
-      "color_mad": 1.232,
+      "blurred_ssim": 0.98,
+      "color_mad": 1.224,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9812,
-      "adj_mad": 1.232,
+      "adj_ssim": 0.98,
+      "adj_mad": 1.224,
       "worst": [
         {
           "x": 0,
           "y": 586,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.8894
+          "blurred_ssim": 0.9156
         },
         {
           "x": 586,
-          "y": 586,
+          "y": 293,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.9461
+          "blurred_ssim": 0.9259
         },
         {
           "x": 293,
           "y": 2051,
           "w": 293,
           "h": 289,
-          "blurred_ssim": 0.9465
+          "blurred_ssim": 0.9395
         }
       ],
       "pass": true,
@@ -942,12 +942,12 @@
       }
     },
     "chat.mermaid": {
-      "blurred_ssim": 0.9611,
-      "color_mad": 2.147,
+      "blurred_ssim": 0.96,
+      "color_mad": 2.203,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9611,
-      "adj_mad": 2.147,
+      "adj_ssim": 0.96,
+      "adj_mad": 2.203,
       "worst": [
         {
           "x": 293,
@@ -968,7 +968,7 @@
           "y": 1172,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.9016
+          "blurred_ssim": 0.903
         }
       ],
       "pass": false,
@@ -978,12 +978,12 @@
       }
     },
     "chat.streaming": {
-      "blurred_ssim": 0.97,
-      "color_mad": 1.73,
+      "blurred_ssim": 0.9679,
+      "color_mad": 1.955,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.97,
-      "adj_mad": 1.73,
+      "adj_ssim": 0.9679,
+      "adj_mad": 1.955,
       "worst": [
         {
           "x": 0,
@@ -1014,12 +1014,12 @@
       }
     },
     "chat.table": {
-      "blurred_ssim": 0.9834,
-      "color_mad": 0.907,
+      "blurred_ssim": 0.984,
+      "color_mad": 0.898,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9834,
-      "adj_mad": 0.907,
+      "adj_ssim": 0.984,
+      "adj_mad": 0.898,
       "worst": [
         {
           "x": 0,
@@ -1029,18 +1029,18 @@
           "blurred_ssim": 0.906
         },
         {
-          "x": 0,
-          "y": 879,
-          "w": 293,
-          "h": 293,
-          "blurred_ssim": 0.912
-        },
-        {
           "x": 293,
           "y": 2051,
           "w": 293,
           "h": 289,
-          "blurred_ssim": 0.9465
+          "blurred_ssim": 0.9395
+        },
+        {
+          "x": 879,
+          "y": 2051,
+          "w": 201,
+          "h": 289,
+          "blurred_ssim": 0.9397
         }
       ],
       "pass": true,
@@ -1050,33 +1050,33 @@
       }
     },
     "chat.thinking": {
-      "blurred_ssim": 0.97,
-      "color_mad": 1.655,
+      "blurred_ssim": 0.9598,
+      "color_mad": 2.075,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.97,
-      "adj_mad": 1.655,
+      "adj_ssim": 0.9598,
+      "adj_mad": 2.075,
       "worst": [
         {
           "x": 293,
           "y": 1172,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.8572
+          "blurred_ssim": 0.8391
         },
         {
           "x": 0,
-          "y": 1758,
+          "y": 293,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.9027
+          "blurred_ssim": 0.8839
         },
         {
-          "x": 293,
-          "y": 1465,
+          "x": 0,
+          "y": 1172,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.9138
+          "blurred_ssim": 0.8905
         }
       ],
       "pass": false,
@@ -1086,69 +1086,69 @@
       }
     },
     "chat.toast": {
-      "blurred_ssim": 0.9752,
-      "color_mad": 1.594,
+      "blurred_ssim": 0.9801,
+      "color_mad": 1.32,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9752,
-      "adj_mad": 1.594,
+      "adj_ssim": 0.9801,
+      "adj_mad": 1.32,
       "worst": [
         {
           "x": 0,
           "y": 586,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.8897
+          "blurred_ssim": 0.9159
         },
         {
           "x": 293,
           "y": 2051,
           "w": 293,
           "h": 289,
-          "blurred_ssim": 0.8995
+          "blurred_ssim": 0.9399
         },
         {
-          "x": 0,
+          "x": 879,
           "y": 2051,
-          "w": 293,
+          "w": 201,
           "h": 289,
-          "blurred_ssim": 0.908
+          "blurred_ssim": 0.9401
         }
       ],
-      "pass": false,
+      "pass": true,
       "thresholds": {
         "blurred_ssim": 0.98,
         "color_mad": 4.0
       }
     },
     "imageviewer.default": {
-      "blurred_ssim": 0.997,
-      "color_mad": 0.256,
+      "blurred_ssim": 0.9988,
+      "color_mad": 0.212,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.997,
-      "adj_mad": 0.256,
+      "adj_ssim": 0.9988,
+      "adj_mad": 0.212,
       "worst": [
         {
           "x": 879,
           "y": 2051,
           "w": 201,
           "h": 289,
-          "blurred_ssim": 0.9546
+          "blurred_ssim": 0.9727
         },
         {
           "x": 586,
           "y": 2051,
           "w": 293,
           "h": 289,
-          "blurred_ssim": 0.9745
+          "blurred_ssim": 0.9893
         },
         {
-          "x": 293,
-          "y": 2051,
-          "w": 293,
-          "h": 289,
-          "blurred_ssim": 0.9832
+          "x": 879,
+          "y": 1465,
+          "w": 201,
+          "h": 293,
+          "blurred_ssim": 0.9972
         }
       ],
       "pass": true,
@@ -1159,32 +1159,32 @@
     },
     "searchpanel.default": {
       "blurred_ssim": 0.8799,
-      "color_mad": 4.464,
+      "color_mad": 4.4,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
       "adj_ssim": 0.8799,
-      "adj_mad": 4.464,
+      "adj_mad": 4.4,
       "worst": [
         {
           "x": 586,
           "y": 1465,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.7128
+          "blurred_ssim": 0.7167
         },
         {
           "x": 293,
           "y": 1465,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.7501
+          "blurred_ssim": 0.7552
         },
         {
           "x": 293,
-          "y": 1172,
+          "y": 2051,
           "w": 293,
-          "h": 293,
-          "blurred_ssim": 0.7657
+          "h": 289,
+          "blurred_ssim": 0.7711
         }
       ],
       "pass": false,
@@ -1194,12 +1194,12 @@
       }
     },
     "settings.account.default": {
-      "blurred_ssim": 0.9857,
-      "color_mad": 0.764,
+      "blurred_ssim": 0.9854,
+      "color_mad": 0.774,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9857,
-      "adj_mad": 0.764,
+      "adj_ssim": 0.9854,
+      "adj_mad": 0.774,
       "worst": [
         {
           "x": 293,
@@ -1230,12 +1230,12 @@
       }
     },
     "settings.agreements.default": {
-      "blurred_ssim": 0.9995,
-      "color_mad": 0.102,
+      "blurred_ssim": 0.9994,
+      "color_mad": 0.103,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9995,
-      "adj_mad": 0.102,
+      "adj_ssim": 0.9994,
+      "adj_mad": 0.103,
       "worst": [
         {
           "x": 0,
@@ -1266,12 +1266,12 @@
       }
     },
     "settings.data.default": {
-      "blurred_ssim": 0.9885,
-      "color_mad": 0.442,
+      "blurred_ssim": 0.9883,
+      "color_mad": 0.447,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9885,
-      "adj_mad": 0.442,
+      "adj_ssim": 0.9883,
+      "adj_mad": 0.447,
       "worst": [
         {
           "x": 293,
@@ -1302,12 +1302,12 @@
       }
     },
     "settings.export.default": {
-      "blurred_ssim": 0.9948,
-      "color_mad": 0.231,
+      "blurred_ssim": 0.9947,
+      "color_mad": 0.234,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9948,
-      "adj_mad": 0.231,
+      "adj_ssim": 0.9947,
+      "adj_mad": 0.234,
       "worst": [
         {
           "x": 0,
@@ -1338,33 +1338,33 @@
       }
     },
     "settings.font.default": {
-      "blurred_ssim": 0.7143,
-      "color_mad": 111.64,
+      "blurred_ssim": 0.9751,
+      "color_mad": 1.381,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.7143,
-      "adj_mad": 111.64,
+      "adj_ssim": 0.9751,
+      "adj_mad": 1.381,
       "worst": [
         {
           "x": 293,
           "y": 586,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.5845
+          "blurred_ssim": 0.8734
         },
         {
           "x": 0,
           "y": 586,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.5854
+          "blurred_ssim": 0.887
         },
         {
-          "x": 293,
+          "x": 879,
           "y": 2051,
-          "w": 293,
+          "w": 201,
           "h": 289,
-          "blurred_ssim": 0.6076
+          "blurred_ssim": 0.9077
         }
       ],
       "pass": false,
@@ -1374,12 +1374,12 @@
       }
     },
     "settings.personalization.default": {
-      "blurred_ssim": 0.9713,
-      "color_mad": 3.288,
+      "blurred_ssim": 0.9859,
+      "color_mad": 0.625,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9713,
-      "adj_mad": 3.288,
+      "adj_ssim": 0.9859,
+      "adj_mad": 0.625,
       "worst": [
         {
           "x": 293,
@@ -1396,62 +1396,62 @@
           "blurred_ssim": 0.887
         },
         {
-          "x": 293,
-          "y": 0,
+          "x": 586,
+          "y": 293,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.8904
+          "blurred_ssim": 0.9139
         }
       ],
-      "pass": false,
+      "pass": true,
       "thresholds": {
         "blurred_ssim": 0.98,
         "color_mad": 4.0
       }
     },
     "settings.root.dark": {
-      "blurred_ssim": 0.9608,
-      "color_mad": 1.382,
+      "blurred_ssim": 0.98,
+      "color_mad": 0.969,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9608,
-      "adj_mad": 1.382,
+      "adj_ssim": 0.98,
+      "adj_mad": 0.969,
       "worst": [
         {
-          "x": 293,
-          "y": 0,
+          "x": 586,
+          "y": 586,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.8037
+          "blurred_ssim": 0.89
         },
         {
           "x": 0,
-          "y": 0,
+          "y": 1758,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.8056
+          "blurred_ssim": 0.9222
         },
         {
-          "x": 586,
-          "y": 0,
+          "x": 0,
+          "y": 2051,
           "w": 293,
-          "h": 293,
-          "blurred_ssim": 0.8063
+          "h": 289,
+          "blurred_ssim": 0.9327
         }
       ],
-      "pass": false,
+      "pass": true,
       "thresholds": {
         "blurred_ssim": 0.98,
         "color_mad": 4.0
       }
     },
     "settings.root.light": {
-      "blurred_ssim": 0.9827,
-      "color_mad": 0.891,
+      "blurred_ssim": 0.9824,
+      "color_mad": 0.903,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9827,
-      "adj_mad": 0.891,
+      "adj_ssim": 0.9824,
+      "adj_mad": 0.903,
       "worst": [
         {
           "x": 586,
@@ -1472,7 +1472,7 @@
           "y": 2051,
           "w": 293,
           "h": 289,
-          "blurred_ssim": 0.9461
+          "blurred_ssim": 0.9372
         }
       ],
       "pass": true,
@@ -1482,12 +1482,12 @@
       }
     },
     "settings.root": {
-      "blurred_ssim": 0.9827,
-      "color_mad": 0.891,
+      "blurred_ssim": 0.9824,
+      "color_mad": 0.903,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9827,
-      "adj_mad": 0.891,
+      "adj_ssim": 0.9824,
+      "adj_mad": 0.903,
       "worst": [
         {
           "x": 586,
@@ -1508,7 +1508,7 @@
           "y": 2051,
           "w": 293,
           "h": 289,
-          "blurred_ssim": 0.9461
+          "blurred_ssim": 0.9372
         }
       ],
       "pass": true,
@@ -1518,33 +1518,33 @@
       }
     },
     "sider.dark": {
-      "blurred_ssim": 0.9853,
-      "color_mad": 0.667,
+      "blurred_ssim": 0.9868,
+      "color_mad": 0.488,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9853,
-      "adj_mad": 0.667,
+      "adj_ssim": 0.9868,
+      "adj_mad": 0.488,
       "worst": [
         {
-          "x": 879,
+          "x": 0,
           "y": 0,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.8945
+        },
+        {
+          "x": 293,
+          "y": 0,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9073
+        },
+        {
+          "x": 879,
+          "y": 1172,
           "w": 201,
           "h": 293,
-          "blurred_ssim": 0.8793
-        },
-        {
-          "x": 0,
-          "y": 293,
-          "w": 293,
-          "h": 293,
-          "blurred_ssim": 0.9182
-        },
-        {
-          "x": 586,
-          "y": 293,
-          "w": 293,
-          "h": 293,
-          "blurred_ssim": 0.9411
+          "blurred_ssim": 0.9589
         }
       ],
       "pass": true,
@@ -1554,19 +1554,19 @@
       }
     },
     "sider.delmodal": {
-      "blurred_ssim": 0.977,
-      "color_mad": 1.597,
+      "blurred_ssim": 0.9764,
+      "color_mad": 1.381,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.977,
-      "adj_mad": 1.597,
+      "adj_ssim": 0.9764,
+      "adj_mad": 1.381,
       "worst": [
         {
           "x": 586,
           "y": 879,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.8755
+          "blurred_ssim": 0.8756
         },
         {
           "x": 293,
@@ -1580,7 +1580,7 @@
           "y": 879,
           "w": 201,
           "h": 293,
-          "blurred_ssim": 0.9406
+          "blurred_ssim": 0.9393
         }
       ],
       "pass": false,
@@ -1590,33 +1590,33 @@
       }
     },
     "sider.empty": {
-      "blurred_ssim": 0.9949,
-      "color_mad": 0.93,
+      "blurred_ssim": 0.9922,
+      "color_mad": 0.884,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9949,
-      "adj_mad": 0.93,
+      "adj_ssim": 0.9922,
+      "adj_mad": 0.884,
       "worst": [
         {
-          "x": 879,
+          "x": 0,
           "y": 0,
-          "w": 201,
+          "w": 293,
           "h": 293,
-          "blurred_ssim": 0.9424
+          "blurred_ssim": 0.9169
+        },
+        {
+          "x": 293,
+          "y": 0,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9235
         },
         {
           "x": 879,
           "y": 2051,
           "w": 201,
           "h": 289,
-          "blurred_ssim": 0.9453
-        },
-        {
-          "x": 586,
-          "y": 293,
-          "w": 293,
-          "h": 293,
-          "blurred_ssim": 0.9713
+          "blurred_ssim": 0.9487
         }
       ],
       "pass": true,
@@ -1626,33 +1626,33 @@
       }
     },
     "sider.light": {
-      "blurred_ssim": 0.9892,
-      "color_mad": 1.116,
+      "blurred_ssim": 0.9873,
+      "color_mad": 0.77,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9892,
-      "adj_mad": 1.116,
+      "adj_ssim": 0.9873,
+      "adj_mad": 0.77,
       "worst": [
         {
-          "x": 879,
-          "y": 0,
-          "w": 201,
-          "h": 293,
-          "blurred_ssim": 0.9419
-        },
-        {
           "x": 0,
-          "y": 293,
+          "y": 0,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.9491
+          "blurred_ssim": 0.9169
         },
         {
-          "x": 586,
-          "y": 293,
+          "x": 293,
+          "y": 0,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.9604
+          "blurred_ssim": 0.9235
+        },
+        {
+          "x": 879,
+          "y": 2051,
+          "w": 201,
+          "h": 289,
+          "blurred_ssim": 0.9551
         }
       ],
       "pass": true,
@@ -1662,33 +1662,33 @@
       }
     },
     "sider.longpress": {
-      "blurred_ssim": 0.9837,
-      "color_mad": 1.341,
+      "blurred_ssim": 0.9815,
+      "color_mad": 1.014,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9837,
-      "adj_mad": 1.341,
+      "adj_ssim": 0.9815,
+      "adj_mad": 1.014,
       "worst": [
         {
           "x": 586,
           "y": 586,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.9116
+          "blurred_ssim": 0.8938
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.9169
         },
         {
           "x": 879,
           "y": 586,
           "w": 201,
           "h": 293,
-          "blurred_ssim": 0.9131
-        },
-        {
-          "x": 879,
-          "y": 0,
-          "w": 201,
-          "h": 293,
-          "blurred_ssim": 0.9419
+          "blurred_ssim": 0.9169
         }
       ],
       "pass": true,
@@ -1698,33 +1698,33 @@
       }
     },
     "sider.multiselect": {
-      "blurred_ssim": 0.9806,
-      "color_mad": 1.398,
+      "blurred_ssim": 0.9814,
+      "color_mad": 0.993,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9806,
-      "adj_mad": 1.398,
+      "adj_ssim": 0.9814,
+      "adj_mad": 0.993,
       "worst": [
         {
           "x": 0,
           "y": 0,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.8817
+          "blurred_ssim": 0.8638
         },
         {
           "x": 586,
           "y": 2051,
           "w": 293,
           "h": 289,
-          "blurred_ssim": 0.9071
+          "blurred_ssim": 0.8911
         },
         {
           "x": 0,
           "y": 2051,
           "w": 293,
           "h": 289,
-          "blurred_ssim": 0.9126
+          "blurred_ssim": 0.8982
         }
       ],
       "pass": true,
@@ -1734,12 +1734,12 @@
       }
     },
     "sider.search": {
-      "blurred_ssim": 0.9858,
-      "color_mad": 1.114,
+      "blurred_ssim": 0.9826,
+      "color_mad": 1.107,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9858,
-      "adj_mad": 1.114,
+      "adj_ssim": 0.9826,
+      "adj_mad": 1.107,
       "worst": [
         {
           "x": 0,
@@ -1749,18 +1749,18 @@
           "blurred_ssim": 0.8193
         },
         {
-          "x": 879,
+          "x": 0,
           "y": 0,
-          "w": 201,
+          "w": 293,
           "h": 293,
-          "blurred_ssim": 0.8867
+          "blurred_ssim": 0.9169
         },
         {
-          "x": 879,
-          "y": 1172,
-          "w": 201,
+          "x": 293,
+          "y": 0,
+          "w": 293,
           "h": 293,
-          "blurred_ssim": 0.9227
+          "blurred_ssim": 0.9235
         }
       ],
       "pass": true,
@@ -1770,49 +1770,56 @@
       }
     },
     "sider.sessions": {
-      "blurred_ssim": 0.9892,
-      "color_mad": 1.116,
+      "blurred_ssim": 0.9773,
+      "color_mad": 1.745,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9892,
-      "adj_mad": 1.116,
+      "adj_ssim": 0.9773,
+      "adj_mad": 1.745,
       "worst": [
         {
           "x": 879,
-          "y": 0,
+          "y": 879,
           "w": 201,
           "h": 293,
-          "blurred_ssim": 0.9419
+          "blurred_ssim": 0.8959
         },
         {
-          "x": 0,
-          "y": 293,
-          "w": 293,
+          "x": 879,
+          "y": 586,
+          "w": 201,
           "h": 293,
-          "blurred_ssim": 0.9491
+          "blurred_ssim": 0.8969
         },
         {
-          "x": 586,
-          "y": 293,
-          "w": 293,
+          "x": 879,
+          "y": 1465,
+          "w": 201,
           "h": 293,
-          "blurred_ssim": 0.9604
+          "blurred_ssim": 0.9097
         }
       ],
-      "pass": true,
+      "pass": false,
       "thresholds": {
         "blurred_ssim": 0.98,
         "color_mad": 4.0
       }
     },
     "voice.default": {
-      "blurred_ssim": 0.9976,
-      "color_mad": 2.965,
+      "blurred_ssim": 0.997,
+      "color_mad": 3.021,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9976,
-      "adj_mad": 2.965,
+      "adj_ssim": 0.997,
+      "adj_mad": 3.021,
       "worst": [
+        {
+          "x": 293,
+          "y": 879,
+          "w": 293,
+          "h": 293,
+          "blurred_ssim": 0.979
+        },
         {
           "x": 586,
           "y": 1758,
@@ -1826,13 +1833,6 @@
           "w": 293,
           "h": 293,
           "blurred_ssim": 0.984
-        },
-        {
-          "x": 879,
-          "y": 0,
-          "w": 201,
-          "h": 293,
-          "blurred_ssim": 0.9906
         }
       ],
       "pass": true,
@@ -1842,33 +1842,33 @@
       }
     },
     "welcome.dark": {
-      "blurred_ssim": 0.992,
-      "color_mad": 0.425,
+      "blurred_ssim": 0.9817,
+      "color_mad": 0.689,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.992,
-      "adj_mad": 0.425,
+      "adj_ssim": 0.9817,
+      "adj_mad": 0.689,
       "worst": [
         {
           "x": 293,
           "y": 2051,
           "w": 293,
           "h": 289,
-          "blurred_ssim": 0.9338
+          "blurred_ssim": 0.8301
         },
         {
-          "x": 586,
+          "x": 0,
           "y": 2051,
           "w": 293,
           "h": 289,
-          "blurred_ssim": 0.9362
+          "blurred_ssim": 0.8863
         },
         {
           "x": 879,
           "y": 2051,
           "w": 201,
           "h": 289,
-          "blurred_ssim": 0.9434
+          "blurred_ssim": 0.888
         }
       ],
       "pass": true,
@@ -1878,105 +1878,105 @@
       }
     },
     "welcome.default": {
-      "blurred_ssim": 0.9924,
-      "color_mad": 0.63,
+      "blurred_ssim": 0.9325,
+      "color_mad": 7.168,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9924,
-      "adj_mad": 0.63,
+      "adj_ssim": 0.9325,
+      "adj_mad": 7.168,
       "worst": [
+        {
+          "x": 879,
+          "y": 0,
+          "w": 201,
+          "h": 293,
+          "blurred_ssim": 0.723
+        },
         {
           "x": 879,
           "y": 2051,
           "w": 201,
           "h": 289,
-          "blurred_ssim": 0.9341
+          "blurred_ssim": 0.7756
         },
         {
-          "x": 586,
+          "x": 0,
           "y": 2051,
           "w": 293,
           "h": 289,
-          "blurred_ssim": 0.9425
-        },
-        {
-          "x": 293,
-          "y": 2051,
-          "w": 293,
-          "h": 289,
-          "blurred_ssim": 0.9477
+          "blurred_ssim": 0.7806
         }
       ],
-      "pass": true,
+      "pass": false,
       "thresholds": {
         "blurred_ssim": 0.98,
         "color_mad": 4.0
       }
     },
     "welcome.keyboard": {
-      "blurred_ssim": 0.9937,
-      "color_mad": 0.582,
+      "blurred_ssim": 0.9783,
+      "color_mad": 1.079,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9937,
-      "adj_mad": 0.582,
+      "adj_ssim": 0.9783,
+      "adj_mad": 1.079,
       "worst": [
         {
           "x": 0,
           "y": 1172,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.9477
+          "blurred_ssim": 0.8052
         },
         {
           "x": 879,
           "y": 1172,
           "w": 201,
           "h": 293,
-          "blurred_ssim": 0.9599
+          "blurred_ssim": 0.8709
         },
         {
-          "x": 586,
+          "x": 293,
           "y": 1172,
           "w": 293,
           "h": 293,
-          "blurred_ssim": 0.966
+          "blurred_ssim": 0.8826
         }
       ],
-      "pass": true,
+      "pass": false,
       "thresholds": {
         "blurred_ssim": 0.98,
         "color_mad": 4.0
       }
     },
     "welcome.light": {
-      "blurred_ssim": 0.9924,
-      "color_mad": 0.63,
+      "blurred_ssim": 0.9844,
+      "color_mad": 0.836,
       "noise_ssim_loss": 0.0,
       "noise_mad": 0.0,
-      "adj_ssim": 0.9924,
-      "adj_mad": 0.63,
+      "adj_ssim": 0.9844,
+      "adj_mad": 0.836,
       "worst": [
+        {
+          "x": 0,
+          "y": 2051,
+          "w": 293,
+          "h": 289,
+          "blurred_ssim": 0.8654
+        },
         {
           "x": 879,
           "y": 2051,
           "w": 201,
           "h": 289,
-          "blurred_ssim": 0.9341
-        },
-        {
-          "x": 586,
-          "y": 2051,
-          "w": 293,
-          "h": 289,
-          "blurred_ssim": 0.9425
+          "blurred_ssim": 0.8662
         },
         {
           "x": 293,
           "y": 2051,
           "w": 293,
           "h": 289,
-          "blurred_ssim": 0.9477
+          "blurred_ssim": 0.8861
         }
       ],
       "pass": true,
@@ -1986,7 +1986,7 @@
       }
     }
   },
-  "mean_blurred_ssim": 0.9755,
-  "mean_color_mad": 3.223,
+  "mean_blurred_ssim": 0.9741,
+  "mean_color_mad": 1.467,
   "all_pass": false
 }

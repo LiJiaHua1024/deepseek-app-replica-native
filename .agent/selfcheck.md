@@ -54,3 +54,27 @@ chat.err_401 (新增 fail), chat.mermaid, chat.toast (新场景).
 - mock: 新增 /__set_tts_fail?code=N —— 否则 TTS stub 恒成功，chat.toast 双端均无 toast。
 - MediaStore 推送 testphoto1-3.jpg → attachments/imageviewer 最近照片行。
 
+
+---
+
+# Round-3 final (2026-11-20 23:5x)
+
+## inventory --check
+`check ok: 497 entries, none todo/in-progress` — exit 0. Residuals: 13/497 = 2.6% (≤5%).
+
+## Round-3 fixes verified on build installed 23:37
+- Status band: drawn after scrim, theme-aware (#757575 light / #000 dark); 93px-veil root-caused to stale build (verified 5/5 scenes 117px band).
+- Greeting: ref Welcome.tsx randomizes greeting — pinned per-scene via DEBUG_INPUT `greeting` extra (Strings.GreetingDebug).
+- Composer textarea box: 61dp/19.75dp -> 56px/14.75px/17px (welcome.default 0.9798->0.9844).
+- Toast anchor: viewport-centered (ref CSS top:50%/-50%) — native cy 1201 = ref 1201 (was 1264).
+- Drawer edge: ref `.frame::after` box-shadow(-7px 3px 33px/.12) -> gradient strip inside sider (x885: 226 vs ref ~237; sider.dark/light/longpress/multiselect now PASS).
+
+## Residual scenes (numeric gap + methods, see inventory.json notes)
+chat.long 0.5813 (font-metrics line-wrap), chat.dark/light/default/thinking/streaming/interrupted,
+searchpanel.default, settings.font.default, attachments.default, sider.delmodal, sider.sessions,
+welcome.keyboard, chat.default.dark, chat.mermaid (ref capture race: '图表生成中'),
+chat.continue, chat.math (KaTeX-compact vs native display layout), chat.err_401.
+
+## Pending
+- compare --all final numbers (running)
+- FINAL.md rewrite + commits

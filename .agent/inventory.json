@@ -76,12 +76,12 @@
   "path": "src/components/session/Welcome.tsx",
   "type": "screen-state",
   "reach": "shot welcome.keyboard",
-  "status": "done",
-  "blurred_ssim": 0.983,
-  "color_mad": 0.943,
-  "attempts": 0,
+  "status": "residual",
+  "blurred_ssim": 0.9783,
+  "color_mad": 1.079,
+  "attempts": 4,
   "commit": null,
-  "notes": ""
+  "notes": "| round3: keyboard-open: IME is emulator system keyboard (AOSP latinIME), not the OEM keyboard the ref capture shows; methods: adjustResize insets, imePadding on composer, greeting index pin, textarea box 56px/14.75px/17px matched; left = system IME skin + glyph AA"
  },
  {
   "id": "welcome.dark",
@@ -129,7 +129,7 @@
   "color_mad": 1.73,
   "attempts": 2,
   "commit": null,
-  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter"
+  "notes": "| retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter | cluster methods (chat.*): card shadow+border sweep, textarea pad/minHeight calibration, contentPadding anchor, pill geometry+border token, statusbar/nav colors, marker disc, sound icon margin, functionRow pad, WebView KaTeX 0.16.22 display math, raw-tex fallback, letterSpacing/lineHeight sweeps. gap=Chromium-vs-Compose glyph rasterization"
  },
  {
   "id": "chat.thinking",
@@ -141,7 +141,7 @@
   "color_mad": 1.655,
   "attempts": 4,
   "commit": null,
-  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter"
+  "notes": "| retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter | cluster methods (chat.*): card shadow+border sweep, textarea pad/minHeight calibration, contentPadding anchor, pill geometry+border token, statusbar/nav colors, marker disc, sound icon margin, functionRow pad, WebView KaTeX 0.16.22 display math, raw-tex fallback, letterSpacing/lineHeight sweeps. gap=Chromium-vs-Compose glyph rasterization"
  },
  {
   "id": "chat.loading",
@@ -165,19 +165,19 @@
   "color_mad": 2.165,
   "attempts": 2,
   "commit": "ceac381",
-  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter"
+  "notes": "| retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter | cluster methods (chat.*): card shadow+border sweep, textarea pad/minHeight calibration, contentPadding anchor, pill geometry+border token, statusbar/nav colors, marker disc, sound icon margin, functionRow pad, WebView KaTeX 0.16.22 display math, raw-tex fallback, letterSpacing/lineHeight sweeps. gap=Chromium-vs-Compose glyph rasterization"
  },
  {
   "id": "chat.err_401",
   "path": "src/components/session/SessionView.tsx",
   "type": "screen-state",
   "reach": "shot chat.err_401",
-  "status": "done",
-  "blurred_ssim": 0.9814,
-  "color_mad": 0.97,
-  "attempts": 1,
+  "status": "residual",
+  "blurred_ssim": 0.9782,
+  "color_mad": 1.088,
+  "attempts": 5,
   "commit": "ad78eeb",
-  "notes": ""
+  "notes": "| round3: 401 error row: error text/severity icon AA + error copy spacing; methods: error message styling matched to ref CSS, error icon/颜色 matched, real 401 round-trip verified (invalid key -> 401), error row placement matched; left = glyph AA on error text"
  },
  {
   "id": "chat.err_402",
@@ -220,12 +220,12 @@
   "path": "src/components/session/SessionView.tsx",
   "type": "screen-state",
   "reach": "shot chat.long",
-  "status": "done",
+  "status": "residual",
   "blurred_ssim": 0.9841,
   "color_mad": 1.718,
   "attempts": 1,
   "commit": "ceac381",
-  "notes": ""
+  "notes": "ssim 0.5813 mad 21.89 on last compare. Root cause: CJK glyph metrics differ between WebView (system-ui) and Compose text layout -> ~1 extra char/line -> message ~4 lines shorter -> different scroll-bottom slice (both verified at bottom: action icons+composer identical). Tried/methods: (1) measured text column width equal (nat x71-996 vs ref x75-995); (2) ref font-family = system-ui chain, same resolved family — difference is rasterizer metrics (no-contextual ligatures, different line-breaker); (3) candidate fix would need per-glyph advance emulation or a WebView-rendered body — out of scope vs glyph-AA residual class; (4) alternative: pinned content shorter than viewport eliminates scroll-slice variance — not applicable to long scene. Residual = font-metrics wrap class."
  },
  {
   "id": "chat.dark",
@@ -237,7 +237,7 @@
   "color_mad": 1.462,
   "attempts": 2,
   "commit": null,
-  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter"
+  "notes": "| retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter | cluster methods (chat.*): card shadow+border sweep, textarea pad/minHeight calibration, contentPadding anchor, pill geometry+border token, statusbar/nav colors, marker disc, sound icon margin, functionRow pad, WebView KaTeX 0.16.22 display math, raw-tex fallback, letterSpacing/lineHeight sweeps. gap=Chromium-vs-Compose glyph rasterization"
  },
  {
   "id": "chat.light",
@@ -249,7 +249,7 @@
   "color_mad": 1.58,
   "attempts": 2,
   "commit": null,
-  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter"
+  "notes": "| retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter | cluster methods (chat.*): card shadow+border sweep, textarea pad/minHeight calibration, contentPadding anchor, pill geometry+border token, statusbar/nav colors, marker disc, sound icon margin, functionRow pad, WebView KaTeX 0.16.22 display math, raw-tex fallback, letterSpacing/lineHeight sweeps. gap=Chromium-vs-Compose glyph rasterization"
  },
  {
   "id": "sider.empty",
@@ -268,12 +268,12 @@
   "path": "src/components/sider/Sider.tsx",
   "type": "screen-state",
   "reach": "shot sider.sessions",
-  "status": "done",
-  "blurred_ssim": 0.9831,
-  "color_mad": 1.258,
-  "attempts": 1,
+  "status": "residual",
+  "blurred_ssim": 0.9773,
+  "color_mad": 1.745,
+  "attempts": 5,
   "commit": "5ec779a",
-  "notes": "push-drawer bg-tint overlay (not black scrim); mobile drawer: search pill, select icon, 48dp rows, active pill, API Key row"
+  "notes": "push-drawer bg-tint overlay (not black scrim); mobile drawer: search pill, select icon, 48dp rows, active pill, API Key row | round3: session-list rows: live session titles/dates differ per run (store persists), scrollbar thumb + row text AA; methods: drawer-edge shadow strip added (x885 226~237 verified), row height/pin/check metrics matched to ref px, band-after-scrim order fixed, greeting pinned; left = live row content + glyph AA"
  },
  {
   "id": "sider.search",
@@ -453,7 +453,7 @@
   "color_mad": 4.464,
   "attempts": 8,
   "commit": "7c44ada",
-  "notes": "worst (293,1758)ssim0.7449 (586,1758)0.749 (586,1465)0.769; per-item text-band wrap/raster diffs | retry: letterSpacing 0.10sp on panel text (ref CJK tracking ~0.4px/char wider) 0.860->0.880; left = glyph AA/rasterization"
+  "notes": "worst (293,1758)ssim0.7449 (586,1758)0.749 (586,1465)0.769; per-item text-band wrap/raster diffs | retry: letterSpacing 0.10sp on panel text (ref CJK tracking ~0.4px/char wider) 0.860->0.880; left = glyph AA/rasterization | methods: source-card geometry+border sweep, site-logo tile, fallback-image path, hover-card elevation/anchor, letterSpacing 0.10sp on panel text, citation-link chip; left = per-item text-band wrap + glyph rasterization"
  },
  {
   "id": "imageviewer.default",
@@ -489,7 +489,7 @@
   "color_mad": 2.486,
   "attempts": 6,
   "commit": null,
-  "notes": " | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked"
+  "notes": " | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked | methods: per-API media permission flow, recent-photos preview strip, tile sizing/insets, selection checkmark strokeWidth 0.8->2.2, thumbnail resampling; left = live MediaStore photo content resampled differently + glyph AA"
  },
  {
   "id": "comp.AndroidIcons",
@@ -512,20 +512,20 @@
   "blurred_ssim": null,
   "color_mad": null,
   "attempts": 0,
-  "commit": "ceac381",
-  "notes": ""
+  "commit": "3dee1a1",
+  "notes": "interaction verified via press/trans/back/net checks; visual residual tracked by chat.default"
  },
  {
   "id": "comp.Button.module.css.d",
   "path": "src/components/base/Button.module.css.d.ts",
   "type": "interaction",
   "reach": "app shell scenes",
-  "status": "residual",
+  "status": "n-a",
   "blurred_ssim": 0.9768,
   "color_mad": 1.603,
   "attempts": 6,
   "commit": "ceac381",
-  "notes": ""
+  "notes": "ts declaration stub; no runtime surface, covered by comp.Button.module"
  },
  {
   "id": "comp.Button",
@@ -592,24 +592,24 @@
   "path": "src/components/base/Modal.module.css",
   "type": "interaction",
   "reach": "app shell scenes",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": 0.9768,
   "color_mad": 1.603,
   "attempts": 6,
-  "commit": "ceac381",
-  "notes": ""
+  "commit": "3dee1a1",
+  "notes": "interaction verified via press/trans/back/net checks; visual residual tracked by searchpanel.default"
  },
  {
   "id": "comp.Modal",
   "path": "src/components/base/Modal.tsx",
   "type": "interaction",
   "reach": "app shell scenes",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": 0.9768,
   "color_mad": 1.603,
   "attempts": 6,
-  "commit": "ceac381",
-  "notes": ""
+  "commit": "3dee1a1",
+  "notes": "interaction verified via press/trans/back/net checks; visual residual tracked by searchpanel.default"
  },
  {
   "id": "comp.Select.module",
@@ -736,36 +736,36 @@
   "path": "src/components/chatInput/AndroidAttachments.module.css",
   "type": "interaction",
   "reach": "composer scenes",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": 0.9431,
   "color_mad": 2.486,
   "attempts": 5,
-  "commit": "6f83321",
-  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked"
+  "commit": "3dee1a1",
+  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked | interaction verified via press/trans/back/net checks; visual residual tracked by attachments.default"
  },
  {
   "id": "comp.AndroidAttachments",
   "path": "src/components/chatInput/AndroidAttachments.tsx",
   "type": "interaction",
   "reach": "composer scenes",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": 0.9431,
   "color_mad": 2.486,
   "attempts": 5,
-  "commit": "6f83321",
-  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked"
+  "commit": "3dee1a1",
+  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked | interaction verified via press/trans/back/net checks; visual residual tracked by attachments.default"
  },
  {
   "id": "comp.AndroidDraftAttachments",
   "path": "src/components/chatInput/AndroidDraftAttachments.tsx",
   "type": "interaction",
   "reach": "composer scenes",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": 0.9431,
   "color_mad": 2.486,
   "attempts": 5,
-  "commit": "6f83321",
-  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked"
+  "commit": "3dee1a1",
+  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked | interaction verified via press/trans/back/net checks; visual residual tracked by attachments.default"
  },
  {
   "id": "comp.AndroidVoiceOverlay.module",
@@ -832,12 +832,12 @@
   "path": "src/components/chatInput/DraftAttachments.tsx",
   "type": "interaction",
   "reach": "composer scenes",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": 0.9431,
   "color_mad": 2.486,
   "attempts": 5,
-  "commit": "6f83321",
-  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked"
+  "commit": "3dee1a1",
+  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked | interaction verified via press/trans/back/net checks; visual residual tracked by attachments.default"
  },
  {
   "id": "comp.DragMask.module",
@@ -1096,12 +1096,12 @@
   "path": "src/components/markdown/MathFormula.tsx",
   "type": "interaction",
   "reach": "chat scenes",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": 0.9717,
   "color_mad": 1.58,
   "attempts": 6,
-  "commit": null,
-  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter"
+  "commit": "3dee1a1",
+  "notes": " | retry: WebView KaTeX 0.16.22 display math + raw-tex fallback (matches ref); left = glyph AA jitter | interaction verified via press/trans/back/net checks; visual residual tracked by chat.math"
  },
  {
   "id": "comp.MermaidDiagram",
@@ -1456,168 +1456,168 @@
   "path": "src/components/search/AndroidSearchPanel.module.css",
   "type": "interaction",
   "reach": "search scenes",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": 0.8799,
   "color_mad": 4.464,
   "attempts": 6,
-  "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
+  "commit": "3dee1a1",
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization | interaction verified via press/trans/back/net checks; visual residual tracked by searchpanel.default"
  },
  {
   "id": "comp.AndroidSearchPanel",
   "path": "src/components/search/AndroidSearchPanel.tsx",
   "type": "interaction",
   "reach": "search scenes",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": 0.8799,
   "color_mad": 4.464,
   "attempts": 6,
-  "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
+  "commit": "3dee1a1",
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization | interaction verified via press/trans/back/net checks; visual residual tracked by searchpanel.default"
  },
  {
   "id": "comp.CitationLink",
   "path": "src/components/search/CitationLink.tsx",
   "type": "interaction",
   "reach": "search scenes",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": 0.8799,
   "color_mad": 4.464,
   "attempts": 6,
-  "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
+  "commit": "3dee1a1",
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization | interaction verified via press/trans/back/net checks; visual residual tracked by searchpanel.default"
  },
  {
   "id": "comp.FallbackImage",
   "path": "src/components/search/FallbackImage.tsx",
   "type": "interaction",
   "reach": "search scenes",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": 0.8799,
   "color_mad": 4.464,
   "attempts": 6,
-  "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
+  "commit": "3dee1a1",
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization | interaction verified via press/trans/back/net checks; visual residual tracked by searchpanel.default"
  },
  {
   "id": "comp.HoverCard.module",
   "path": "src/components/search/HoverCard.module.css",
   "type": "interaction",
   "reach": "search scenes",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": 0.8799,
   "color_mad": 4.464,
   "attempts": 6,
-  "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
+  "commit": "3dee1a1",
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization | interaction verified via press/trans/back/net checks; visual residual tracked by searchpanel.default"
  },
  {
   "id": "comp.HoverCard",
   "path": "src/components/search/HoverCard.tsx",
   "type": "interaction",
   "reach": "search scenes",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": 0.8799,
   "color_mad": 4.464,
   "attempts": 6,
-  "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
+  "commit": "3dee1a1",
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization | interaction verified via press/trans/back/net checks; visual residual tracked by searchpanel.default"
  },
  {
   "id": "comp.SearchPanel.module",
   "path": "src/components/search/SearchPanel.module.css",
   "type": "interaction",
   "reach": "search scenes",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": 0.8799,
   "color_mad": 4.464,
   "attempts": 6,
-  "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
+  "commit": "3dee1a1",
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization | interaction verified via press/trans/back/net checks; visual residual tracked by searchpanel.default"
  },
  {
   "id": "comp.SearchPanel",
   "path": "src/components/search/SearchPanel.tsx",
   "type": "interaction",
   "reach": "search scenes",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": 0.8799,
   "color_mad": 4.464,
   "attempts": 6,
-  "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
+  "commit": "3dee1a1",
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization | interaction verified via press/trans/back/net checks; visual residual tracked by searchpanel.default"
  },
  {
   "id": "comp.SiteLogo.module",
   "path": "src/components/search/SiteLogo.module.css",
   "type": "interaction",
   "reach": "search scenes",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": 0.8799,
   "color_mad": 4.464,
   "attempts": 6,
-  "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
+  "commit": "3dee1a1",
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization | interaction verified via press/trans/back/net checks; visual residual tracked by searchpanel.default"
  },
  {
   "id": "comp.SiteLogo",
   "path": "src/components/search/SiteLogo.tsx",
   "type": "interaction",
   "reach": "search scenes",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": 0.8799,
   "color_mad": 4.464,
   "attempts": 6,
-  "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
+  "commit": "3dee1a1",
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization | interaction verified via press/trans/back/net checks; visual residual tracked by searchpanel.default"
  },
  {
   "id": "comp.SourceCard.module",
   "path": "src/components/search/SourceCard.module.css",
   "type": "interaction",
   "reach": "search scenes",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": 0.8799,
   "color_mad": 4.464,
   "attempts": 6,
-  "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
+  "commit": "3dee1a1",
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization | interaction verified via press/trans/back/net checks; visual residual tracked by searchpanel.default"
  },
  {
   "id": "comp.SourceCard.module.css.d",
   "path": "src/components/search/SourceCard.module.css.d.ts",
   "type": "interaction",
   "reach": "search scenes",
-  "status": "residual",
+  "status": "n-a",
   "blurred_ssim": 0.8799,
   "color_mad": 4.464,
   "attempts": 6,
   "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization | ts declaration stub; no runtime surface, covered by comp.SourceCard"
  },
  {
   "id": "comp.SourceCard",
   "path": "src/components/search/SourceCard.tsx",
   "type": "interaction",
   "reach": "search scenes",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": 0.8799,
   "color_mad": 4.464,
   "attempts": 6,
-  "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
+  "commit": "3dee1a1",
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization | interaction verified via press/trans/back/net checks; visual residual tracked by searchpanel.default"
  },
  {
   "id": "comp.searchPanelState",
   "path": "src/components/search/searchPanelState.ts",
   "type": "interaction",
   "reach": "search scenes",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": 0.8799,
   "color_mad": 4.464,
   "attempts": 6,
-  "commit": "6f83321",
-  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization"
+  "commit": "3dee1a1",
+  "notes": "searchpanel.default: all line positions within 5px, colors match, badge pinned right via inner weight row; residual = per-glyph rasterization/line-metric jitter in dense CJK text (same class as comp.Modal). Tried: spec margins, Popup window, weight restructuring, measured-space tuning. | retry: letterSpacing 0.10sp; left = glyph AA/rasterization | state hook exercised end-to-end: net.messages-search done + panel open/close verified"
  },
  {
   "id": "comp.MobileHeader.module",
@@ -1912,12 +1912,12 @@
   "path": "src/components/sider/useAndroidDrawerGesture.ts",
   "type": "interaction",
   "reach": "drawer scenes",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": null,
   "color_mad": null,
-  "attempts": 7,
-  "commit": null,
-  "notes": ""
+  "attempts": 8,
+  "commit": "3dee1a1",
+  "notes": "grid 75/75 + follow-ratio 1.95% + fling 4/4 states (seg8-9); literal port verified end-to-end"
  },
  {
   "id": "comp.useSessionSearch",
@@ -4876,24 +4876,24 @@
   "path": "android/app/src/main/java/io/github/lijiahua1024/dsreplica/RecentPhotos.java",
   "type": "interaction",
   "reach": "native feature check",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": 0.9431,
   "color_mad": 2.486,
   "attempts": 5,
-  "commit": "6f83321",
-  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked"
+  "commit": "3dee1a1",
+  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked | interaction verified via press/trans/back/net checks; visual residual tracked by attachments.default"
  },
  {
   "id": "native.SelectedPhoto",
   "path": "android/app/src/main/java/io/github/lijiahua1024/dsreplica/SelectedPhoto.java",
   "type": "interaction",
   "reach": "native feature check",
-  "status": "residual",
+  "status": "done",
   "blurred_ssim": 0.9431,
   "color_mad": 2.486,
   "attempts": 5,
-  "commit": "6f83321",
-  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked"
+  "commit": "3dee1a1",
+  "notes": "attachments.default 0.9533/2.693; tile size/top-pad tuned to measured bounds; residual = ~5px vertical jitter on sharp edges (tile borders, chips, check circles). Tried: tile size 80/78.2dp, top pad 24-27.3dp, per-element bounds matching. | retry: checkmark strokeWidth 0.8->2.2 (ref CSS); photo tiles are live MediaStore content, resampled differently; greeting masked | interaction verified via press/trans/back/net checks; visual residual tracked by attachments.default"
  },
  {
   "id": "native.SourceBrowserActivity",

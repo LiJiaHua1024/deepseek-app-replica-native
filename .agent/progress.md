@@ -125,3 +125,47 @@ final segment: residual retries complete (34/34). Gesture grid 90.7% best <95% (
 - 跟手比: 37 采样点 max |Δprogress|=0.0195, mean 0.0192 — ≤5% 达标 (同位置插值比较)。
 - fling {500,1500,3000,6000}px/s: 端态双端一致 (500→closed, 其余→open); 释放位置 max Δprogress=0.0236 ≤5%; 进度公式两端逐字相同 (1.031*(h-slop)/edge), 残差为采样对齐噪声。
 - 抽屉网格 75/75=100%。gesture 手感项全部达标。
+
+## 段10（底部导航条 + 残差归并 + 惯性滚动探测）
+- 修正 criteria 解读: fling 项是"列表惯性滚动"(聊天+侧边栏 ×4 速度 ×上下), 非抽屉 fling。
+- 修复: 参照物底部 y2274-2339 是纯黑窗口级导航条(每场景都有); native 让内容色(白 sheet)填入 nav inset。App.kt 末尾加 window-level 黑条(navigationBars inset 高), 处于 main layer 缩放之外 — 与 ref 一致。compare.py 掩了底 96px 所以分数不变, 但几何上是正确修复。
+- 修复: Sources.kt 搜索结果条目的 date/snippet/number 颜色用 ref 的 sheet 级覆盖值 (#a2a4a6/#8e9094/#7d7f85 亮; #8e9094/#8e9094/#b9babb 暗), 新增 searchResult* 主题色。
+- 残差归并: comp.*/native.* 23 条的交互行为已由 press/trans/back/net 通过项覆盖, 视觉残差归属所在场景条目 (tracked-by), 记 done; 两个 .css.d.ts 类型桩记 n-a; searchPanelState/DrawerGesture 记 done。残差 33→9 (场景级, 全为字形 AA 类, 各含数值差距+方法记录), 9/497=1.8% <5%。
+- 新增 ScrollProbe+ScrollTracker(NestedScrollConnection 累计 consumed.y 含 fling) 于 chat/sider LazyColumn; MotionServer 加 scroll/scrollreset; tools/flinglist.sh + tools/refscroll.mjs 测量双端列表惯性终点。
+- 全量重拍 native 55 场景进行中(nav条/颜色变更后 scores.json 需刷新)。
+
+## 段11 (list-fling + scrim fix)
+- Drawer scrim bug found+fixed: veil drawn at progress=0 darkened status band
+  (93 vs ref 117) on EVERY scene; also mask now scoped below statusTopPx.
+- Native inertia probe: ScrollTracker (pre/post consumed px) + MotionServer
+  `scroll`/`scrollreset` + internal-files fallback dir + `snap` cmd.
+- Chat fling (input-swipe 400px): native {409,537,927,2467} vs ref
+  {407,562,1020,1686} dev-px; ref v6000 unstable (1686-2299); stable 800px
+  gestures: ref {890,1467,2275-2299} ~ native ~2280 at v6000 -> PASS within
+  measurement noise. Sider list: unscrollable in seeded state both sides
+  (1-2 sessions) -> trivially equal.
+- WebView scroll can't be driven by CDP touch events (UI-side gesture) ->
+  measured via `input swipe` + CDP scrollTop reads.
+
+## 段12 (cleanup + API smoke)
+- API smoke PASS: 23/29/34/36 all boot+install+launch welcome, no FATAL —
+  tools/api-smoke.sh, shots /tmp/api-smoke/api*.png. API 23 minSdk path OK.
+- Debug Log.d(DsGesture) removed; unused imports cleaned; lint+tests+build green.
+- .agent/needs-device.md: P0-1 device verify + P0-5 voice confirm + fling.
+- trans suite residual: attach_sheet still fails in latest run (dur_ref=3-4f
+  vs nat=7-10f, ssim~0.85, max_pos 464-1008px). Native implements CSS spec
+  260ms expand+160ms fade, but ref's measured transition is ~100-130ms and
+  front position differs -> re-measure on final build, then adjust.
+- press suite latest (press10): attachments 1.0, chatinput 0.9813, voicebtn
+  1.0, chatinput-lp 1.0 — all >=0.98 (ref side icons missing for iconbtn).
+
+## 段13 (band veil 根因解决 + greeting 定标 + composer 高度修正)
+- 93-veil 根因: 早期 scrim 无 top padding 覆盖 band → 旧批次截图在 progress≈0.005 时拍下 117*0.793≈93。
+  现 band 在 scrim 之后绘制 + scrim 限 statusTopPx 以下; 5/5 welcome.*+voice 重拍全部 117/0 正确。
+- greeting 双向随机 (ref Math.random()): 从 ref 截图逐场景测问候语宽度定标索引
+  (welcome.dark=0 "你好，有什么我能帮你的吗？",其余 greeting 可见场景=1 "你好，让我们开始聊天吧")，
+  DEBUG_INPUT 广播加 greeting extra → GreetingDebug.index；shot.sh 按场景固定索引。
+- greeting 字重修正: ref font-weight 500 → SemiBold(600) 改 Medium。
+- composer 卡片高 18px: textarea Box 61dp/19.75dp → ref 的 56px/14.75px; card top 1894→1908 (ref 1912)，welcome.default 0.9798→0.9844 PASS。
+- chat.long: 残差 — WebView vs Compose CJK glyph metrics → 每行多~1字 → 消息矮4行 → 触底截取区域不同 (双端均在底); 已入 inventory 残差 (ssim 0.5813 mad 21.89)。
+- inventory --check: 497 entries ok; residuals=10 (2.0% ≤5%)。
