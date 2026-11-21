@@ -169,8 +169,10 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
 
     // ref --android-composer-bottom: 27px gesture nav, 11px with keyboard
     val keyboardOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+    var previousKeyboardOpen by remember { mutableStateOf(false) }
     LaunchedEffect(keyboardOpen) {
-        if (!keyboardOpen && focused) focusManager.clearFocus()
+        if (previousKeyboardOpen && !keyboardOpen && focused) focusManager.clearFocus()
+        previousKeyboardOpen = keyboardOpen
     }
     Column(Modifier.fillMaxWidth().imePadding()
         .padding(bottom = if (keyboardOpen) 27.7.dp else 50.1.dp)) {
@@ -413,7 +415,23 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                             .background(DsTheme.pressTint(voicePressed, c.interactiveBgHover)))
                 }
             }
-            if (canSend || isStreaming) {
+            if (focused && text.isNotEmpty() && !canSend && !isStreaming) {
+                Box(
+                    Modifier.align(Alignment.CenterVertically)
+                        .padding(start = 6.dp, end = 7.dp)
+                        .size(30.dp).clip(CircleShape)
+                        .clickable(enabled = false) {}
+                        .semantics { contentDescription = Strings.get("send") },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painterResource(R.drawable.ic_send),
+                        null,
+                        tint = Color(0xFFB3C5FF),
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            } else if (canSend || isStreaming) {
                 Box(
                     Modifier.align(Alignment.CenterVertically)
                         .padding(start = 6.dp, end = 7.dp)
