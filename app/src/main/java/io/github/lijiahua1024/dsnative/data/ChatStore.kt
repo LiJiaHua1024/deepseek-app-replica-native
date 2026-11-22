@@ -320,23 +320,39 @@ fun groupSessions(sessions: List<SessionSummary>, now: Long): List<Pair<String, 
     return groups
 }
 
-internal fun sessionMatchesQuery(session: Session, rawQuery: String): Boolean {
+internal fun sessionMatchesQuery(session: Session, rawQuery: String): Boolean =
+    findSessionMatchSnippet(session, rawQuery) != null
+
+internal fun findSessionMatchSnippet(session: Session, rawQuery: String): String? {
     val q = rawQuery.trim()
-    if (q.isEmpty()) return true
-    if (session.title.contains(q, ignoreCase = true)) return true
-    return session.messages.any { msg ->
+    if (q.isEmpty()) return ""
+    fun extractSnippet(raw: String): String? {
+        val pos = raw.indexOf(q, ignoreCase = true)
+        if (pos < 0) return null
+        val start = maxOf(0, pos - 16)
+        val end = minOf(raw.length, pos + q.length + 52)
+        val excerpt = raw.substring(start, end).replace(Regex("\\s+"), " ").trim()
+        return if (start > 0) "…$excerpt" else excerpt
+    }
+    for (msg in session.messages) {
         when (msg) {
-            is Message.User -> msg.content.contains(q, ignoreCase = true) ||
-                msg.files.any { it.name.contains(q, ignoreCase = true) }
-            is Message.Assistant -> msg.blocks.any { block ->
-                when (block) {
-                    is ReplyBlock.Thinking -> block.thinking.contains(q, ignoreCase = true)
-                    is ReplyBlock.Text -> block.text.contains(q, ignoreCase = true)
-                    is ReplyBlock.Tool -> false
+            is Message.User -> {
+                extractSnippet(msg.content)?.let { return it }
+                msg.files.firstNotNullOfOrNull { extractSnippet(it.name) }?.let { return it }
+            }
+            is Message.Assistant -> {
+                for (block in msg.blocks) {
+                    val snip = when (block) {
+                        is ReplyBlock.Text -> extractSnippet(block.text)
+                        is ReplyBlock.Thinking -> extractSnippet(block.thinking)
+                        is ReplyBlock.Tool -> null
+                    }
+                    if (snip != null) return snip
                 }
             }
         }
     }
+    return if (session.title.contains(q, ignoreCase = true)) "" else null
 }
 
 private fun createId(): String = UUID.randomUUID().toString()
@@ -462,19 +478,21 @@ class ChatStore(
 
     fun sessionSnapshot(id: String): Session? = _sessionCache.value[id]
 
-    suspend fun searchSessionIds(query: String): Set<String> {
+    suspend fun searchSessionSnippets(query: String): Map<String, String> {
         val q = query.trim()
         val snapshot = _sessionCache.value.values.toList()
-        if (q.isEmpty()) return snapshot.mapTo(HashSet(snapshot.size)) { it.id }
+        if (q.isEmpty()) return snapshot.associate { it.id to "" }
         return withContext(Dispatchers.Default) {
-            buildSet {
+            buildMap {
                 for (session in snapshot) {
                     ensureActive()
-                    if (sessionMatchesQuery(session, q)) add(session.id)
+                    findSessionMatchSnippet(session, q)?.let { put(session.id, it) }
                 }
             }
         }
     }
+
+    suspend fun searchSessionIds(query: String): Set<String> = searchSessionSnippets(query).keys
 
     fun newChat() {
         ReadAloud.stop()

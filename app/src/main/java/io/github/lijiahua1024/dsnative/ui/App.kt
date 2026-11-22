@@ -190,17 +190,28 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
                         }
                     }
                 } else {
+                    var drawerSearchExpanded by remember { mutableStateOf(false) }
                     DrawerFrame(
                         nav = nav,
                         dark = dark,
                         freePan = freePan,
                         closeImmediately = false,
                         collapseBehindOverlay = settingsMounted && settingsBgAlpha >= 0.99f,
+                        searchExpanded = drawerSearchExpanded,
+                        onCollapseSearch = { drawerSearchExpanded = false },
                         onNavigate = { nav = it },
                         siderContent = { close ->
                             Sider(settings, chatStore,
-                                onNavigateSettings = { nav = NavState.Settings },
-                                onClose = close)
+                                onNavigateSettings = {
+                                    drawerSearchExpanded = false
+                                    nav = NavState.Settings
+                                },
+                                onClose = {
+                                    drawerSearchExpanded = false
+                                    close()
+                                },
+                                searchExpanded = drawerSearchExpanded,
+                                onSearchExpandedChange = { drawerSearchExpanded = it })
                         },
                     ) { open ->
                         SessionView(
@@ -241,6 +252,8 @@ fun DrawerFrame(
     freePan: Boolean,
     closeImmediately: Boolean = false,
     collapseBehindOverlay: Boolean = false,
+    searchExpanded: Boolean = false,
+    onCollapseSearch: () -> Unit = {},
     onNavigate: (NavState) -> Unit,
     siderContent: @Composable (close: () -> Unit) -> Unit,
     mainContent: @Composable (open: () -> Unit) -> Unit,
@@ -252,6 +265,14 @@ fun DrawerFrame(
         val edgePx = with(density) { min(drawerWidthPx + 9.dp.toPx(), widthPx - 63.dp.toPx()) }
         var progress by remember { mutableStateOf(0f) }
         var settling by remember { mutableStateOf(false) }
+        val searchFrac by androidx.compose.animation.core.animateFloatAsState(
+            targetValue = if (searchExpanded && progress > 0.5f) 1f else 0f,
+            animationSpec = androidx.compose.animation.core.tween(220, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            label = "drawerSearchExpand",
+        )
+        LaunchedEffect(progress) {
+            if (progress <= 0.001f && searchExpanded) onCollapseSearch()
+        }
         // Official drawer settle timing ~160ms ease-out.
         val settleScope = rememberCoroutineScope()
         val settleEasing = androidx.compose.animation.core.CubicBezierEasing(0.18f, 0.23f, 0.32f, 1f)
@@ -279,7 +300,7 @@ fun DrawerFrame(
 
         // Back gesture closes an open drawer only while on Chat nav; latch active state so first move doesn't self-cancel.
         var drawerBackActive by remember { mutableStateOf(false) }
-        androidx.activity.compose.PredictiveBackHandler(enabled = nav == NavState.Chat && (progress >= 0.999f || drawerBackActive)) { flow ->
+        androidx.activity.compose.PredictiveBackHandler(enabled = nav == NavState.Chat && !searchExpanded && (progress >= 0.999f || drawerBackActive)) { flow ->
             drawerBackActive = true
             try {
                 flow.collect { ev -> progress = (1f - ev.progress).coerceIn(0f, 1f) }
@@ -389,14 +410,15 @@ fun DrawerFrame(
         }
 
         Box(Modifier.fillMaxSize()) {
+            val activeDrawerWidthPx = drawerWidthPx + (widthPx - drawerWidthPx) * searchFrac
             Box(
                 Modifier
                     .fillMaxSize()
                     .background(DsTheme.colors.bgBase)
             ) {
                 Box(
-                    Modifier.width(with(density) { drawerWidthPx.toDp() }).fillMaxSize()
-                        .graphicsLayer { translationX = -drawerWidthPx * (1f - progress) }
+                    Modifier.width(with(density) { activeDrawerWidthPx.toDp() }).fillMaxSize()
+                        .graphicsLayer { translationX = -activeDrawerWidthPx * (1f - progress) }
                 ) {
                     siderContent {
                         if (closeImmediately) {
@@ -414,11 +436,12 @@ fun DrawerFrame(
             }
             // Main content layer (full-height card; inner screens apply statusBarsPadding() so scaled top reaches ~55px under status bar).
             val radiusDp = (min(1f, progress * 6f) * 32f)
+            val mainOffsetX = (edgePx * (1f - searchFrac) + widthPx * searchFrac) * progress
             Box(Modifier.fillMaxSize()) {
             Box(
                 Modifier
                     .fillMaxSize()
-                    .offset { IntOffset((edgePx * progress).roundToInt(), 0) }
+                    .offset { IntOffset(mainOffsetX.roundToInt(), 0) }
                     .graphicsLayer {
                         val s = 1f - 0.051f * progress
                         scaleX = s; scaleY = s

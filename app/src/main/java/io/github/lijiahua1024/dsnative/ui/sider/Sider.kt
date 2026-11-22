@@ -26,6 +26,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import io.github.lijiahua1024.dsnative.R
 import io.github.lijiahua1024.dsnative.data.ChatStore
 import io.github.lijiahua1024.dsnative.data.SessionSummary
@@ -46,8 +53,11 @@ fun Sider(
     onClose: () -> Unit,
     isWideLayout: Boolean = false,
     onCollapseWide: () -> Unit = {},
+    searchExpanded: Boolean = false,
+    onSearchExpandedChange: (Boolean) -> Unit = {},
 ) {
     val c = DsTheme.colors
+    val focusManager = LocalFocusManager.current
     val sessions by chatStore.sessions.collectAsState()
     val activeId by chatStore.activeId.collectAsState()
     val pinned by settings.pinnedSessions.collectAsState()
@@ -61,29 +71,43 @@ fun Sider(
 
     var query by remember { mutableStateOf("") }
     val trimmedQuery = query.trim()
-    val titleMatchIds = remember(sessions, trimmedQuery) {
-        if (trimmedQuery.isEmpty()) emptySet()
+    val titleMatchSnippets = remember(sessions, trimmedQuery) {
+        if (trimmedQuery.isEmpty()) emptyMap()
         else sessions.asSequence()
             .filter { it.title.contains(trimmedQuery, ignoreCase = true) }
-            .map { it.id }
-            .toSet()
+            .associate { it.id to "" }
     }
-    var settledSearch by remember { mutableStateOf<Pair<String, Set<String>>?>(null) }
+    var settledSearch by remember { mutableStateOf<Pair<String, Map<String, String>>?>(null) }
     LaunchedEffect(trimmedQuery, sessions) {
         if (trimmedQuery.isEmpty()) {
             settledSearch = null
             return@LaunchedEffect
         }
         delay(200)
-        val matched = chatStore.searchSessionIds(trimmedQuery)
+        val matched = chatStore.searchSessionSnippets(trimmedQuery)
         settledSearch = trimmedQuery to matched
     }
-    val matchedIds = when {
+    val matchedSnippets = when {
         trimmedQuery.isEmpty() -> null
         settledSearch?.first == trimmedQuery -> settledSearch!!.second
-        else -> titleMatchIds
+        else -> titleMatchSnippets
     }
+    val matchedIds = matchedSnippets?.keys
     var selectionMode by remember { mutableStateOf(false) }
+
+    fun closeSearchOverlay() {
+        query = ""
+        focusManager.clearFocus()
+        onSearchExpandedChange(false)
+    }
+
+    PredictiveBackHandler(enabled = !isWideLayout && searchExpanded && !selectionMode) { flow ->
+        try {
+            flow.collect { }
+            closeSearchOverlay()
+        } catch (_: Throwable) {
+        }
+    }
     var selected by remember { mutableStateOf(setOf<String>()) }
     var menuFor by remember { mutableStateOf<SessionSummary?>(null) }
     var renameFor by remember { mutableStateOf<SessionSummary?>(null) }
@@ -180,55 +204,100 @@ fun Sider(
                 }
             }
         } else {
-            // .search: h48 r24, padding 0 14, gap 8, search icon 16 tertiary
-            Box(
-                Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(24.dp))
-                    .background(if (c.dark) Color(0xFF292929) else Color(0xFFF3F3F4))
-            ) {
-                androidx.compose.foundation.text.BasicTextField(
-                    value = query, onValueChange = { query = it },
-                    singleLine = true,
-                    // ref input[type=search] -> search action on the IME
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences,
-                        imeAction = androidx.compose.ui.text.input.ImeAction.Search),
-                    textStyle = androidx.compose.ui.text.TextStyle(fontSize = 16.sp, color = c.labelPrimary),
-                    modifier = Modifier.fillMaxSize(),
-                    decorationBox = { inner ->
-                        Box(
-                            Modifier.fillMaxSize().padding(
-                                start = 38.dp,
-                                end = if (query.isNotEmpty()) 38.dp else 14.dp,
-                            ),
-                            contentAlignment = Alignment.CenterStart,
-                        ) { inner() }
-                    },
-                )
-                Icon(painterResource(R.drawable.ic_search), null, tint = c.labelTertiary,
-                    modifier = Modifier.align(Alignment.CenterStart).padding(start = 14.dp).size(16.dp))
-                if (query.isEmpty()) Text(Strings.get("androidSearchChats"), fontSize = 16.sp, color = c.labelTertiary,
-                    modifier = Modifier.align(Alignment.CenterStart).padding(start = 38.dp))
-                if (query.isNotEmpty()) {
+            // .search: h48 r24, padding 0 14, gap 8, search icon 16 tertiary; expands to full width when active
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                if (!isWideLayout && searchExpanded) {
                     Box(
-                        Modifier.align(Alignment.CenterEnd)
+                        Modifier
                             .padding(end = 6.dp)
-                            .size(32.dp)
+                            .size(36.dp)
                             .clip(androidx.compose.foundation.shape.CircleShape)
-                            .clickable { query = "" },
+                            .clickable { closeSearchOverlay() },
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
-                            painterResource(R.drawable.ic_close),
-                            Strings.get("close"),
-                            tint = c.labelTertiary,
-                            modifier = Modifier.size(14.dp),
+                            painterResource(R.drawable.ic_chevron_right),
+                            Strings.get("cancel"),
+                            tint = c.labelPrimary,
+                            modifier = Modifier.size(18.dp).rotate(180f),
                         )
+                    }
+                }
+                Box(
+                    Modifier.weight(1f).height(48.dp).clip(RoundedCornerShape(24.dp))
+                        .background(if (c.dark) Color(0xFF292929) else Color(0xFFF5F5F5))
+                ) {
+                    androidx.compose.foundation.text.BasicTextField(
+                        value = query, onValueChange = { query = it },
+                        singleLine = true,
+                        // ref input[type=search] -> search action on the IME
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences,
+                            imeAction = androidx.compose.ui.text.input.ImeAction.Search),
+                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 16.sp, color = c.labelPrimary),
+                        modifier = Modifier.fillMaxSize().onFocusChanged { st ->
+                            if (st.isFocused && !isWideLayout && !searchExpanded) {
+                                onSearchExpandedChange(true)
+                            }
+                        },
+                        decorationBox = { inner ->
+                            Box(
+                                Modifier.fillMaxSize().padding(
+                                    start = 38.dp,
+                                    end = if (query.isNotEmpty()) 38.dp else 14.dp,
+                                ),
+                                contentAlignment = Alignment.CenterStart,
+                            ) { inner() }
+                        },
+                    )
+                    Icon(painterResource(R.drawable.ic_search), null, tint = c.labelTertiary,
+                        modifier = Modifier.align(Alignment.CenterStart).padding(start = 14.dp).size(16.dp))
+                    if (query.isEmpty()) Text(Strings.get("androidSearchChats"), fontSize = 16.sp, color = c.labelTertiary,
+                        modifier = Modifier.align(Alignment.CenterStart).padding(start = 38.dp))
+                    if (query.isNotEmpty()) {
+                        Box(
+                            Modifier.align(Alignment.CenterEnd)
+                                .padding(end = 6.dp)
+                                .size(32.dp)
+                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                .clickable { query = "" },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                painterResource(R.drawable.ic_close),
+                                Strings.get("close"),
+                                tint = c.labelTertiary,
+                                modifier = Modifier.size(14.dp),
+                            )
+                        }
                     }
                 }
             }
         }
         // .listWrap: margin-top 10, relative container for selectChats icon + bottom fade
         Box(Modifier.weight(1f).padding(top = 10.dp)) {
+            if (!isWideLayout && searchExpanded) {
+                val results = remember(sessions, matchedIds) {
+                    if (matchedIds == null) sessions else sessions.filter { it.id in matchedIds }
+                }
+                LazyColumn(
+                    Modifier.fillMaxSize()
+                        .nestedScroll(remember { io.github.lijiahua1024.dsnative.ui.ScrollTracker("siderSearch") }),
+                    contentPadding = PaddingValues(bottom = 24.dp),
+                ) {
+                    items(results, key = { "sr-${it.id}" }) { s ->
+                        SearchSessionRow(
+                            s = s,
+                            snippet = matchedSnippets?.get(s.id).orEmpty(),
+                            query = trimmedQuery,
+                            onClick = {
+                                closeSearchOverlay()
+                                selectSessionWithPress(s.id)
+                            },
+                        )
+                    }
+                }
+            } else {
             // session groups
             LazyColumn(Modifier.fillMaxSize()
                 .nestedScroll(remember { io.github.lijiahua1024.dsnative.ui.ScrollTracker("sider") }),
@@ -288,6 +357,7 @@ fun Sider(
                 }
             }
             }
+            }
             Box(
                 Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(22.dp)
                     .background(
@@ -321,7 +391,7 @@ fun Sider(
                     Text(Strings.get("delete"), fontSize = 15.sp, color = c.labelPrimary)
                 }
             }
-        } else {
+        } else if (!searchExpanded || isWideLayout) {
             // Match official drawer footer: 62dp row, flush 16dp start, 32dp avatar + username
             val profile by settings.accountProfile.collectAsState()
             val displayName = profile.username.ifBlank { Strings.get("profileDefaultUsername") }
@@ -564,6 +634,99 @@ private fun DsModal(title: String, body: String?, onDismiss: () -> Unit,
                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                     verticalAlignment = Alignment.CenterVertically,
                     content = buttons)
+            }
+        }
+    }
+}
+
+private fun formatSearchDate(tsMs: Long, nowMs: Long = System.currentTimeMillis()): String {
+    val startOfToday = java.util.Calendar.getInstance().apply {
+        timeInMillis = nowMs
+        set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0)
+        set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
+    }.timeInMillis
+    val dayMs = 86_400_000L
+    return when {
+        tsMs >= startOfToday -> Strings.get("sessionHistoryTimelineLabelToday")
+        tsMs >= startOfToday - dayMs -> Strings.get("sessionHistoryTimelineLabelYesterday")
+        else -> java.text.SimpleDateFormat(if (Strings.isZh()) "M月d日" else "MMM d", java.util.Locale.getDefault())
+            .format(java.util.Date(tsMs))
+    }
+}
+
+@Composable
+private fun SearchSessionRow(
+    s: SessionSummary,
+    snippet: String,
+    query: String,
+    onClick: () -> Unit,
+) {
+    val c = DsTheme.colors
+    val dateLabel = remember(s.updatedAt) { formatSearchDate(s.updatedAt) }
+    val highlightedSnippet = remember(snippet, query, c.brandText, c.labelSecondary) {
+        buildAnnotatedString {
+            if (query.isEmpty()) {
+                append(snippet)
+            } else {
+                var pos = 0
+                while (pos < snippet.length) {
+                    val idx = snippet.indexOf(query, pos, ignoreCase = true)
+                    if (idx < 0) {
+                        append(snippet.substring(pos))
+                        break
+                    }
+                    if (idx > pos) append(snippet.substring(pos, idx))
+                    withStyle(SpanStyle(color = c.brandText, fontWeight = FontWeight.Medium)) {
+                        append(snippet.substring(idx, idx + query.length))
+                    }
+                    pos = idx + query.length
+                }
+            }
+        }
+    }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 6.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Icon(
+            painterResource(R.drawable.ic_chat_item),
+            null,
+            tint = c.labelSecondary,
+            modifier = Modifier.padding(top = 3.dp).size(18.dp),
+        )
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    s.title.ifBlank { Strings.get("untitledChat") },
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = c.labelPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    dateLabel,
+                    fontSize = 12.5.sp,
+                    color = c.labelTertiary,
+                )
+            }
+            if (snippet.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    highlightedSnippet,
+                    fontSize = 13.5.sp,
+                    lineHeight = 19.sp,
+                    color = c.labelSecondary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }

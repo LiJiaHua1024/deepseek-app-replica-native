@@ -7,6 +7,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Text
@@ -281,12 +282,12 @@ private fun RenderBlock(
                 }
             } else
             Column(
-                Modifier.fillMaxWidth().padding(end = 5.dp).offset(x = (-5).dp)
+                Modifier.fillMaxWidth()
                     .background(c.markdownCodeBlock, androidx.compose.foundation.shape.RoundedCornerShape(12.dp)),
             ) {
                 // ref CodeInfoRow .container: padding 6px; copy .button h28 r8 px10 gap3
                 Row(
-                    Modifier.fillMaxWidth().height(46.6.dp).padding(6.dp),
+                    Modifier.fillMaxWidth().height(42.dp).padding(horizontal = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(lang.ifEmpty { "text" }, fontFamily = FontFamily.Monospace,
@@ -320,7 +321,7 @@ private fun RenderBlock(
                             modifier = Modifier.padding(start = 3.dp))
                     }
                 }
-                Box(Modifier.fillMaxWidth().height(0.381.dp).background(c.thinkingLine))
+                Box(Modifier.fillMaxWidth().height(0.5.dp).background(if (c.dark) c.borderL2 else Color(0xFFEBEBEB)))
                 val codeScroll = rememberScrollState()
                 Box(
                     Modifier.fillMaxWidth()
@@ -491,6 +492,102 @@ private fun ParagraphText(
     )
 }
 
+private data class ExtractedTableData(
+    val headerRows: List<List<TableCell>>,
+    val bodyRows: List<List<TableCell>>,
+    val columnCount: Int,
+    val markdownCopy: String,
+    val csvText: String,
+)
+
+private fun nodePlainText(node: Node): String {
+    val sb = StringBuilder()
+    var cur = node.firstChild
+    while (cur != null) {
+        when (cur) {
+            is org.commonmark.node.Text -> sb.append(cur.literal)
+            is org.commonmark.node.Code -> sb.append(cur.literal)
+            is org.commonmark.node.SoftLineBreak, is org.commonmark.node.HardLineBreak -> sb.append(' ')
+            else -> sb.append(nodePlainText(cur))
+        }
+        cur = cur.next
+    }
+    return sb.toString().trim()
+}
+
+private fun collectTableData(table: TableBlock): ExtractedTableData {
+    val headers = ArrayList<List<TableCell>>()
+    val body = ArrayList<List<TableCell>>()
+    var section = table.firstChild
+    while (section != null) {
+        val isHead = section is TableHead
+        var row = section.firstChild
+        while (row != null) {
+            if (row is TableRow) {
+                val cells = ArrayList<TableCell>()
+                var cell = row.firstChild
+                while (cell != null) {
+                    if (cell is TableCell) cells.add(cell)
+                    cell = cell.next
+                }
+                if (cells.isNotEmpty()) {
+                    if (isHead) headers.add(cells) else body.add(cells)
+                }
+            }
+            row = row.next
+        }
+        section = section.next
+    }
+    val allRows = headers + body
+    val colCount = allRows.maxOfOrNull { it.size } ?: 0
+    val mdSb = StringBuilder()
+    headers.forEach { row ->
+        mdSb.append("| ").append(row.joinToString(" | ") { nodePlainText(it) }).append(" |\n")
+        if (colCount > 0) mdSb.append("| ").append((0 until colCount).joinToString(" | ") { "---" }).append(" |\n")
+    }
+    body.forEach { row ->
+        mdSb.append("| ").append(row.joinToString(" | ") { nodePlainText(it) }).append(" |\n")
+    }
+    val csvSb = StringBuilder()
+    allRows.forEach { row ->
+        csvSb.append(row.joinToString(",") { cell ->
+            val raw = nodePlainText(cell)
+            if (raw.contains(',') || raw.contains('"') || raw.contains('\n')) "\"${raw.replace("\"", "\"\"")}\"" else raw
+        }).append('\n')
+    }
+    return ExtractedTableData(headers, body, colCount, mdSb.toString().trimEnd(), csvSb.toString())
+}
+
+private fun exportTableCsv(context: android.content.Context, csv: String): Boolean {
+    return runCatching {
+        val filename = "deepseek_table_${System.currentTimeMillis()}.csv"
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            val values = android.content.ContentValues().apply {
+                put(android.provider.MediaStore.Downloads.DISPLAY_NAME, filename)
+                put(android.provider.MediaStore.Downloads.MIME_TYPE, "text/csv")
+                put(android.provider.MediaStore.Downloads.RELATIVE_PATH, "${android.os.Environment.DIRECTORY_DOWNLOADS}/DeepSeek")
+                put(android.provider.MediaStore.Downloads.IS_PENDING, 1)
+            }
+            val resolver = context.contentResolver
+            val uri = resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return false
+            val ok = resolver.openOutputStream(uri)?.use { it.write(csv.toByteArray(Charsets.UTF_8)); true } ?: false
+            if (!ok) {
+                resolver.delete(uri, null, null)
+                false
+            } else {
+                values.clear()
+                values.put(android.provider.MediaStore.Downloads.IS_PENDING, 0)
+                resolver.update(uri, values, null, null)
+                true
+            }
+        } else {
+            val dir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS) ?: context.filesDir
+            java.io.File(dir, filename).writeText(csv, Charsets.UTF_8)
+            true
+        }
+    }.getOrDefault(false)
+}
+
 @Composable
 private fun RenderTable(
     table: TableBlock,
@@ -498,52 +595,256 @@ private fun RenderTable(
     uriHandler: androidx.compose.ui.platform.UriHandler,
     mathTokens: Map<Int, ExtractedMathToken> = emptyMap(),
 ) {
-    val tableScroll = rememberScrollState()
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val data = remember(table) { collectTableData(table) }
+    var showFullscreen by remember { mutableStateOf(false) }
+
+    val cardBg = if (c.dark) c.markdownCodeBlock else Color(0xFFFAFAFA)
+    val gridColor = if (c.dark) c.borderL2 else Color(0xFFDCDCDC)
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+
     Column(
-        Modifier.then(if (tableScroll.maxValue > 0) Modifier.excludeFromDrawerGesture() else Modifier)
-            .horizontalScroll(tableScroll)
+        Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .border(0.75.dp, gridColor, shape)
+            .background(cardBg),
     ) {
-        var section = table.firstChild
-        while (section != null) {
-            val header = section is TableHead
-            var row = section.firstChild
-            while (row != null) {
-                if (row is TableRow) {
-                    Row {
-                        var cell = row.firstChild
-                        var first = true
-                        while (cell != null) {
-                            if (cell is TableCell) {
-                                val line = if (header) c.borderL3 else c.borderL2
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(42.dp)
+                .background(cardBg)
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                Strings.get("tableLabel"),
+                fontSize = 13.sp,
+                color = c.labelSecondary,
+                modifier = Modifier.weight(1f),
+            )
+            val actionTint = if (c.dark) c.labelSecondary else Color(0xFF7B7F85)
+            androidx.compose.material3.IconButton(
+                onClick = {
+                    (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager)
+                        .setPrimaryClip(android.content.ClipData.newPlainText("table", data.markdownCopy))
+                    io.github.lijiahua1024.dsnative.ui.session.DsToast.show(Strings.get("copied"))
+                },
+                modifier = Modifier.size(34.dp),
+            ) {
+                androidx.compose.material3.Icon(
+                    androidx.compose.ui.res.painterResource(io.github.lijiahua1024.dsnative.R.drawable.ic_copy),
+                    Strings.get("copy"),
+                    tint = actionTint,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+            androidx.compose.material3.IconButton(
+                onClick = {
+                    val ok = exportTableCsv(ctx, data.csvText)
+                    io.github.lijiahua1024.dsnative.ui.session.DsToast.show(
+                        Strings.get(if (ok) "tableExported" else "tableExportFailed"),
+                    )
+                },
+                modifier = Modifier.size(34.dp),
+            ) {
+                androidx.compose.material3.Icon(
+                    androidx.compose.ui.res.painterResource(io.github.lijiahua1024.dsnative.R.drawable.ic_download),
+                    Strings.get("tableExportCsv"),
+                    tint = actionTint,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+            androidx.compose.material3.IconButton(
+                onClick = { showFullscreen = true },
+                modifier = Modifier.size(34.dp),
+            ) {
+                androidx.compose.material3.Icon(
+                    androidx.compose.ui.res.painterResource(io.github.lijiahua1024.dsnative.R.drawable.ic_fullscreen),
+                    Strings.get("mermaidFullscreen"),
+                    tint = actionTint,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
+        Box(Modifier.fillMaxWidth().height(0.75.dp).background(gridColor))
+        RenderTableGrid(data, c, uriHandler, mathTokens, gridColor)
+    }
+
+    if (showFullscreen) {
+        TableFullscreenDialog(
+            data = data,
+            c = c,
+            uriHandler = uriHandler,
+            mathTokens = mathTokens,
+            onCopy = {
+                (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager)
+                    .setPrimaryClip(android.content.ClipData.newPlainText("table", data.markdownCopy))
+                io.github.lijiahua1024.dsnative.ui.session.DsToast.show(Strings.get("copied"))
+            },
+            onExportCsv = {
+                val ok = exportTableCsv(ctx, data.csvText)
+                io.github.lijiahua1024.dsnative.ui.session.DsToast.show(
+                    Strings.get(if (ok) "tableExported" else "tableExportFailed"),
+                )
+            },
+            onDismiss = { showFullscreen = false },
+        )
+    }
+}
+
+@Composable
+private fun RenderTableGrid(
+    data: ExtractedTableData,
+    c: io.github.lijiahua1024.dsnative.theme.DsColors,
+    uriHandler: androidx.compose.ui.platform.UriHandler,
+    mathTokens: Map<Int, ExtractedMathToken>,
+    gridColor: Color,
+) {
+    val headerBg = if (c.dark) c.markdownCodeBlock else Color(0xFFFAFAFA)
+    val bodyBg = if (c.dark) c.bgBase else Color.White
+    val tableScroll = rememberScrollState()
+    val cols = data.columnCount.coerceAtLeast(1)
+
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val equalCol = maxWidth / cols
+        val colW = maxOf(116.dp, equalCol)
+        val needHScroll = colW * cols > maxWidth + 0.5.dp
+        val rows = data.headerRows.map { true to it } + data.bodyRows.map { false to it }
+
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .then(if (needHScroll) Modifier.excludeFromDrawerGesture().horizontalScroll(tableScroll) else Modifier),
+        ) {
+            rows.forEachIndexed { rIdx, (isHeader, rowCells) ->
+                Row(
+                    Modifier
+                        .height(IntrinsicSize.Max)
+                        .background(if (isHeader) headerBg else bodyBg),
+                ) {
+                    for (colIdx in 0 until cols) {
+                        val cell = rowCells.getOrNull(colIdx)
+                        Box(
+                            Modifier
+                                .width(colW)
+                                .fillMaxHeight()
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            contentAlignment = Alignment.CenterStart,
+                        ) {
+                            if (cell != null) {
                                 val (cellStr, cellInline) = rememberInlineMathPrepared(
-                                    inlineText(cell, c, uriHandler), c, mathTokens, fontSizeSp = 15f,
+                                    inlineText(cell, c, uriHandler),
+                                    c,
+                                    mathTokens,
+                                    fontSizeSp = 15f,
                                 )
                                 Text(
                                     cellStr,
-                                    fontSize = 15.sp, lineHeight = 25.sp,
-                                    fontWeight = if (header) FontWeight.Medium else FontWeight.Normal,
+                                    fontSize = 15.sp,
+                                    lineHeight = 23.sp,
+                                    fontWeight = if (isHeader) FontWeight.Medium else FontWeight.Normal,
                                     style = cssLeading,
                                     color = c.labelPrimary,
                                     inlineContent = chipPadContent + citeContent(c) + cellInline,
-                                    modifier = Modifier
-                                        // CSS min-width:100px is content-box:
-                                        // cell = max(100px, content) + padding
-                                        // (16px right, +16px left on non-first).
-                                        .defaultMinSize(minWidth = if (first) 116.dp else 132.dp)
-                                        .drawBehind {
-                                            drawLine(line, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
-                                        }
-                                        .padding(start = if (first) 0.dp else 16.dp, end = 16.dp, top = 10.dp, bottom = 10.dp),
                                 )
                             }
-                            first = false
-                            cell = cell.next
+                        }
+                        if (colIdx < cols - 1) {
+                            Box(Modifier.width(0.75.dp).fillMaxHeight().background(gridColor))
                         }
                     }
                 }
-                row = row.next
+                if (rIdx < rows.lastIndex) {
+                    Box(Modifier.width(colW * cols).height(0.75.dp).background(gridColor))
+                }
             }
-            section = section.next
+        }
+    }
+}
+
+@Composable
+private fun TableFullscreenDialog(
+    data: ExtractedTableData,
+    c: io.github.lijiahua1024.dsnative.theme.DsColors,
+    uriHandler: androidx.compose.ui.platform.UriHandler,
+    mathTokens: Map<Int, ExtractedMathToken>,
+    onCopy: () -> Unit,
+    onExportCsv: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val gridColor = if (c.dark) c.borderL2 else Color(0xFFDCDCDC)
+    var visible by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(Unit) { visible = true }
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false,
+        ),
+    ) {
+        androidx.activity.compose.PredictiveBackHandler { flow ->
+            try {
+                flow.collect { }
+                onDismiss()
+            } catch (_: Throwable) {
+            }
+        }
+        androidx.compose.animation.AnimatedVisibility(
+            visible = visible,
+            enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(180)),
+            exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(150)),
+        ) {
+            val vScroll = rememberScrollState()
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .background(c.bgBase)
+                    .statusBarsPadding()
+                    .navigationBarsPadding(),
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    androidx.compose.material3.IconButton(onClick = onDismiss) {
+                        androidx.compose.material3.Icon(
+                            androidx.compose.ui.res.painterResource(io.github.lijiahua1024.dsnative.R.drawable.ic_close),
+                            Strings.get("close"),
+                            tint = c.labelPrimary,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                    Text(
+                        Strings.get("tableLabel"),
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = c.labelPrimary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    androidx.compose.material3.IconButton(onClick = onCopy) {
+                        androidx.compose.material3.Icon(
+                            androidx.compose.ui.res.painterResource(io.github.lijiahua1024.dsnative.R.drawable.ic_copy),
+                            Strings.get("copy"),
+                            tint = c.labelSecondary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    androidx.compose.material3.IconButton(onClick = onExportCsv) {
+                        androidx.compose.material3.Icon(
+                            androidx.compose.ui.res.painterResource(io.github.lijiahua1024.dsnative.R.drawable.ic_download),
+                            Strings.get("tableExportCsv"),
+                            tint = c.labelSecondary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+                Box(Modifier.fillMaxWidth().height(0.75.dp).background(gridColor))
+                Box(Modifier.weight(1f).fillMaxWidth().verticalScroll(vScroll)) {
+                    RenderTableGrid(data, c, uriHandler, mathTokens, gridColor)
+                }
+            }
         }
     }
 }
@@ -748,29 +1049,30 @@ private fun inlineText(
 }
 
 private val KEYWORDS = setOf(
-    "fun", "val", "var", "class", "interface", "object", "return", "if", "else",
-    "for", "while", "when", "import", "package", "null", "is",
-    "in", "as", "data", "sealed", "public", "private", "internal", "override",
-    "suspend", "const", "def",
-    "function", "let", "new", "void", "int", "long", "double", "float",
-    "static", "final", "extends", "implements", "async", "await",
-    "from", "with", "lambda", "this", "super", "try", "catch", "throw", "throws",
+    "fun", "val", "var", "class", "interface", "object", "return", "if", "else", "elif",
+    "for", "while", "when", "import", "package", "null", "None", "is", "not", "and", "or",
+    "in", "as", "data", "sealed", "public", "private", "internal", "override", "suspend",
+    "const", "def", "function", "let", "new", "void", "int", "long", "double", "float",
+    "static", "final", "extends", "implements", "async", "await", "yield", "pass", "break",
+    "continue", "raise", "except", "finally", "assert", "with", "from", "lambda", "self",
+    "this", "super", "try", "catch", "throw", "throws", "switch", "case", "default",
+    "struct", "enum", "type", "export", "fn", "pub", "impl", "mut", "match", "use",
 )
 
 private val BOOLEANS = setOf("true", "false", "True", "False")
 
-// Prism palette lifted from ref src/components/markdown/highlight.css (light + dark)
+// Atom One Light palette matching official DeepSeek code card (light + dark)
 private fun highlightCode(
     code: String,
     c: io.github.lijiahua1024.dsnative.theme.DsColors,
 ): AnnotatedString = buildAnnotatedString {
-    val comment = if (c.dark) Color(0xFF8DA1B9) else Color(0xFF9EA1AB)
-    val keyword = if (c.dark) Color(0xFFE9AE7E) else Color(0xFFA425AA)
-    val function = if (c.dark) Color(0xFFC699E3) else Color(0xFF397CFB)
-    val string = if (c.dark) Color(0xFF91D076) else Color(0xFF579E5A)
-    val number = if (c.dark) Color(0xFFE6D37A) else Color(0xFFB75500)
-    val className = if (c.dark) Color(0xFF6CB8E6) else Color(0xFFB75500)
-    val plain = if (c.dark) Color(0xFFE3EAF2) else c.labelPrimary
+    val comment = if (c.dark) Color(0xFF8DA1B9) else Color(0xFFA0A1A7)
+    val keyword = if (c.dark) Color(0xFFE9AE7E) else Color(0xFFA626A4)
+    val function = if (c.dark) Color(0xFFC699E3) else Color(0xFF4078F2)
+    val string = if (c.dark) Color(0xFF91D076) else Color(0xFF50A14F)
+    val number = if (c.dark) Color(0xFFE6D37A) else Color(0xFF986801)
+    val className = if (c.dark) Color(0xFF6CB8E6) else Color(0xFFC18401)
+    val plain = if (c.dark) Color(0xFFE3EAF2) else Color(0xFF191B23)
     val token = Regex("(\"([^\"\\\\]|\\\\.)*\"|'([^'\\\\]|\\\\.)*'|//[^\n]*|#[^\n]*|/\\*[\\s\\S]*?\\*/|\\b\\d+(\\.\\d+)?\\b|\\b[A-Za-z_][A-Za-z0-9_]*\\b)")
     var i = 0
     for (m in token.findAll(code)) {

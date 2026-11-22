@@ -112,8 +112,8 @@ val LightColors = DsColors(
     buttonGhostActiveBorder = Color(0xFFD3E2FF),
     buttonGhostActiveHover = Color(0xFFE4EDFD),
     markdownCitation = Color(0xFFEBEEF2),
-    markdownCodeBlockBanner = Color(0xFFF9FAFB),
-    markdownCodeBlock = Color(0xFFF9FAFB),
+    markdownCodeBlockBanner = Color(0xFFFAFAFA),
+    markdownCodeBlock = Color(0xFFFAFAFA),
     markdownInlineCode = Color(0xFFEBEEF2),
     markdownPlaceholder = Color(0xFFF5F6F7),
     markdownTag = Color(0xFFF1F3F5),
@@ -134,7 +134,7 @@ val LightColors = DsColors(
     sidebarNavItemHover = Color(0xFFF1F3F5),
     thinkingText = Color(0xFF7D7F85),
     thinkingDot = Color(0xFFA2A4A6),
-    thinkingLine = Color(0xFFE5E5E5),
+    thinkingLine = Color(0xFFEDEDED),
     searchSummaryText = Color(0xFF545557),
 )
 
