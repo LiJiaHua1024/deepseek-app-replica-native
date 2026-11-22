@@ -150,6 +150,7 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
                 }
                 items(list, key = { it.id }) { s ->
                     SiderRow(s, s.id == activeId, selectionMode, selected.contains(s.id),
+                        isPinned = pinned.contains(s.id),
                         pressPhase = pressGesture?.takeIf { it.sessionId == s.id }?.phase
                             ?: SessionPressPhase.Rest,
                         onClick = {
@@ -189,9 +190,11 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
         // .bottom: h64 padding-top 8; .settings padding 4px 0
         if (selectionMode) {
             // .selectionActions: border-top borderL2, two buttons h42
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp).height(42.dp)
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp)
                 .background(c.bgBase)
-                .drawBehind { drawLine(c.borderL2, androidx.compose.ui.geometry.Offset(0f, 0f), androidx.compose.ui.geometry.Offset(size.width, 0f), 1.dp.toPx()) }) {
+                .drawBehind { drawLine(c.borderL2, androidx.compose.ui.geometry.Offset(0f, 0f), androidx.compose.ui.geometry.Offset(size.width, 0f), 1.dp.toPx()) }
+                .navigationBarsPadding()
+                .height(42.dp)) {
                 // &:disabled { opacity: 0.35 } — whole button fades
                 val actionsAlpha = if (selected.isEmpty()) 0.35f else 1f
                 TextButton(onClick = { if (selected.isNotEmpty()) pinning = selected to allPinned(selected, pinned) },
@@ -380,6 +383,7 @@ private fun allPinned(selected: Set<String>, pinned: Collection<String>) =
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean, checked: Boolean,
+                     isPinned: Boolean = false,
                      pressPhase: SessionPressPhase,
                      onClick: () -> Unit, onLongClick: () -> Unit,
                      onMenuClick: () -> Unit = {},
@@ -399,8 +403,10 @@ private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean,
             // ref .item:active -> bg-skeleton
             .background(
                 when {
-                    pressPhase == SessionPressPhase.Light -> Color(0xFFEDF1FE)
-                    pressPhase == SessionPressPhase.Pressed -> Color(0xFFE0E8F1)
+                    pressPhase == SessionPressPhase.Light ->
+                        if (c.dark) c.sidebarNavItemActiveAccent.copy(alpha = 0.72f) else Color(0xFFEDF1FE)
+                    pressPhase == SessionPressPhase.Pressed ->
+                        if (c.dark) c.sidebarNavItemActiveAccent else Color(0xFFE0E8F1)
                     pressed -> DsTheme.pressTint(pressed, c.bgSkeleton)
                     active && !selectionMode -> c.sidebarNavItemActiveAccent
                     else -> Color.Transparent
@@ -426,7 +432,7 @@ private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean,
         }
         Text(s.title.ifEmpty { Strings.get("untitledChat") }, fontSize = 16.sp,
             color = when {
-                pressPhase != SessionPressPhase.Rest -> Color(0xFF3269EF)
+                pressPhase != SessionPressPhase.Rest -> if (c.dark) c.brandText else Color(0xFF3269EF)
                 active && !selectionMode -> c.brandText
                 else -> c.labelPrimary
             },
@@ -491,7 +497,12 @@ private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean,
             ) {
                 Column(Modifier.padding(4.dp)) {
                     SiderMenuOption(R.drawable.ic_edit, Strings.get("sessionItemMenuRenameOption"), c.labelPrimary, onRename)
-                    SiderMenuOption(R.drawable.ic_pin, Strings.get("androidPinned"), c.labelPrimary, onPin)
+                    SiderMenuOption(
+                        R.drawable.ic_pin,
+                        Strings.get(if (isPinned) "androidUnpin" else "androidPinned"),
+                        c.labelPrimary,
+                        onPin,
+                    )
                     SiderMenuOption(R.drawable.ic_select_chats, Strings.get("androidMultiSelect"), c.labelPrimary, onMultiSelect)
                     SiderMenuOption(R.drawable.ic_trash, Strings.get("delete"), c.stateErrorPrimary, onDelete)
                 }
