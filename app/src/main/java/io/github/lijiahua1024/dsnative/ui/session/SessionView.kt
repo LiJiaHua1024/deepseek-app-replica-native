@@ -454,16 +454,20 @@ fun UserBubble(msg: Message.User, session: Session, chatStore: ChatStore,
                onMenu: (Message.User, androidx.compose.ui.geometry.Rect, () -> Unit) -> Unit = { _, _, _ -> }) {
     val c = DsTheme.colors
     val ctx = LocalContext.current
-    var editing by remember { mutableStateOf(false) }
-    var draft by remember { mutableStateOf(msg.content) }
-    var bubbleRect by remember { mutableStateOf(androidx.compose.ui.geometry.Rect.Zero) }
+    var editing by remember(msg.id) { mutableStateOf(false) }
+    var draft by remember(msg.id) { mutableStateOf(msg.content) }
+    var bubbleRect by remember(msg.id) { mutableStateOf(androidx.compose.ui.geometry.Rect.Zero) }
     Column(Modifier.fillMaxWidth().padding(top = 22.dp)) {
         // ref .files: wrap 行右对齐 gap 10px mb 8px；混排文档时缩略图 64px
         if (msg.files.isNotEmpty()) {
             val hasDoc = msg.files.any { !it.isImage }
             val imgSize = if (hasDoc) 64.dp else 120.dp
             androidx.compose.foundation.layout.FlowRow(
-                Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 8.dp),
+                Modifier.fillMaxWidth().padding(
+                    start = 20.dp,
+                    end = 20.dp,
+                    bottom = if (msg.content.isNotEmpty() || editing) 8.dp else 0.dp,
+                ),
                 horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
@@ -497,19 +501,21 @@ fun UserBubble(msg: Message.User, session: Session, chatStore: ChatStore,
                 }
             }
         } else {
-            Box(Modifier.fillMaxWidth().padding(start = 48.dp, end = 16.dp)) {
-                Box(Modifier.align(Alignment.TopEnd)
-                    .onGloballyPositioned { val p = it.localToRoot(androidx.compose.ui.geometry.Offset.Zero); bubbleRect = androidx.compose.ui.geometry.Rect(p.x, p.y, p.x + it.size.width, p.y + it.size.height) }
-                    .clip(RoundedCornerShape(22.dp, 22.dp, 5.dp, 22.dp))
-                    .background(c.bubble)
-                    .combinedClickable(
-                        // ref .bubble 无 :active 变色：长按/点按都不显示 ripple
-                        indication = null,
-                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                        onClick = { editing = true; draft = msg.content },
-                        onLongClick = { onMenu(msg, bubbleRect) { editing = true; draft = msg.content } })
-                    .padding(horizontal = 16.dp, vertical = 10.dp)) {
-                    Text(msg.content, fontSize = 16.sp, lineHeight = 24.sp, color = c.labelPrimary)
+            if (msg.content.isNotEmpty()) {
+                Box(Modifier.fillMaxWidth().padding(start = 48.dp, end = 16.dp)) {
+                    Box(Modifier.align(Alignment.TopEnd)
+                        .onGloballyPositioned { val p = it.localToRoot(androidx.compose.ui.geometry.Offset.Zero); bubbleRect = androidx.compose.ui.geometry.Rect(p.x, p.y, p.x + it.size.width, p.y + it.size.height) }
+                        .clip(RoundedCornerShape(22.dp, 22.dp, 5.dp, 22.dp))
+                        .background(c.bubble)
+                        .combinedClickable(
+                            // ref .bubble 无 :active 变色：长按/点按都不显示 ripple
+                            indication = null,
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            onClick = { editing = true; draft = msg.content },
+                            onLongClick = { onMenu(msg, bubbleRect) { editing = true; draft = msg.content } })
+                        .padding(horizontal = 16.dp, vertical = 10.dp)) {
+                        Text(msg.content, fontSize = 16.sp, lineHeight = 24.sp, color = c.labelPrimary)
+                    }
                 }
             }
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
