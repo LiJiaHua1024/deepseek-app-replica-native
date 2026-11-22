@@ -253,13 +253,14 @@ private fun RenderBlock(
             val lang = (node as? FencedCodeBlock)?.info ?: ""
             if (lang.trim().lowercase() == "mermaid") {
                 MermaidCodeBlock(literal, streaming, c) { code ->
+                    val mScroll = rememberScrollState()
                     Text(
                         highlightCode(code, c),
                         fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 22.sp,
                         style = cssLeading,
                         modifier = Modifier.fillMaxWidth()
-                            .excludeFromDrawerGesture()
-                            .horizontalScroll(rememberScrollState()),
+                            .then(if (mScroll.maxValue > 0) Modifier.excludeFromDrawerGesture() else Modifier)
+                            .horizontalScroll(mScroll),
                     )
                 }
             } else
@@ -304,11 +305,12 @@ private fun RenderBlock(
                     }
                 }
                 Box(Modifier.fillMaxWidth().height(0.381.dp).background(c.thinkingLine))
+                val codeScroll = rememberScrollState()
                 Box(
                     Modifier.fillMaxWidth()
                         .background(c.markdownCodeBlockBanner)
-                        .excludeFromDrawerGesture()
-                        .horizontalScroll(rememberScrollState())
+                        .then(if (codeScroll.maxValue > 0) Modifier.excludeFromDrawerGesture() else Modifier)
+                        .horizontalScroll(codeScroll)
                 ) {
                     Text(
                         highlightCode(literal.trimEnd('\n'), c),
@@ -457,7 +459,11 @@ private fun RenderTable(
     c: io.github.lijiahua1024.dsnative.theme.DsColors,
     uriHandler: androidx.compose.ui.platform.UriHandler,
 ) {
-    Column(Modifier.excludeFromDrawerGesture().horizontalScroll(rememberScrollState())) {
+    val tableScroll = rememberScrollState()
+    Column(
+        Modifier.then(if (tableScroll.maxValue > 0) Modifier.excludeFromDrawerGesture() else Modifier)
+            .horizontalScroll(tableScroll)
+    ) {
         var section = table.firstChild
         while (section != null) {
             val header = section is TableHead

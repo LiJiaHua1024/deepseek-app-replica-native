@@ -18,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import io.github.lijiahua1024.dsnative.theme.DsColors
-import io.github.lijiahua1024.dsnative.ui.excludeFromDrawerGesture
 import org.json.JSONObject
 
 // ref MathFormula.tsx: display math runs the same KaTeX 0.16.22 bundle as the
@@ -51,7 +50,7 @@ fun KaTeXMath(
     }
 
     // ref .ds-markdown > * .ds-markdown-math { margin: 16px 0 }
-    Box(Modifier.fillMaxWidth().padding(vertical = 16.dp).excludeFromDrawerGesture()) {
+    Box(Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
         AndroidView(
             factory = { ctx ->
                 WebView(ctx).apply {
