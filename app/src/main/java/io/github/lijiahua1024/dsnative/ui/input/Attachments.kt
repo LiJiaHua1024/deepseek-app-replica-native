@@ -609,30 +609,35 @@ fun ImagePreviewDialog(
         // ref preview is fully immersive: the WebView overlay hides both system
         // bars and sits under a black status scrim
         val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
-        SideEffect {
-            dialogWindow?.let { w ->
-                WindowCompat.setDecorFitsSystemWindows(w, false)
-                w.statusBarColor = android.graphics.Color.TRANSPARENT
-                w.navigationBarColor = android.graphics.Color.TRANSPARENT
-                w.attributes = w.attributes.apply { dimAmount = 1f }
-                WindowInsetsControllerCompat(w, w.decorView).apply {
-                    systemBarsBehavior =
-                        WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                    hide(WindowInsetsCompat.Type.systemBars())
+        DisposableEffect(dialogWindow) {
+            val w = dialogWindow ?: return@DisposableEffect onDispose {}
+            WindowCompat.setDecorFitsSystemWindows(w, false)
+            w.statusBarColor = android.graphics.Color.TRANSPARENT
+            w.navigationBarColor = android.graphics.Color.TRANSPARENT
+            w.attributes = w.attributes.apply { dimAmount = 1f }
+            WindowInsetsControllerCompat(w, w.decorView).apply {
+                systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                hide(WindowInsetsCompat.Type.systemBars())
+            }
+            // DialogWrapper re-applies wrap_content on every layout pass;
+            // re-assert MATCH_PARENT each time so the window keeps filling
+            // the parent frame (y128..2340, same as the ref overlay)
+            val fill = {
+                val lp = w.attributes
+                if (lp.width != WindowManager.LayoutParams.MATCH_PARENT ||
+                    lp.height != WindowManager.LayoutParams.MATCH_PARENT) {
+                    w.setLayout(WindowManager.LayoutParams.MATCH_PARENT,
+                        WindowManager.LayoutParams.MATCH_PARENT)
                 }
-                // DialogWrapper re-applies wrap_content on every layout pass;
-                // re-assert MATCH_PARENT each time so the window keeps filling
-                // the parent frame (y128..2340, same as the ref overlay)
-                val fill = {
-                    val lp = w.attributes
-                    if (lp.width != WindowManager.LayoutParams.MATCH_PARENT ||
-                        lp.height != WindowManager.LayoutParams.MATCH_PARENT) {
-                        w.setLayout(WindowManager.LayoutParams.MATCH_PARENT,
-                            WindowManager.LayoutParams.MATCH_PARENT)
-                    }
-                }
-                w.decorView.post(fill)
-                w.decorView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fill() }
+            }
+            val fillRunnable = Runnable { fill() }
+            val layoutListener = android.view.View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fill() }
+            w.decorView.post(fillRunnable)
+            w.decorView.addOnLayoutChangeListener(layoutListener)
+            onDispose {
+                w.decorView.removeCallbacks(fillRunnable)
+                w.decorView.removeOnLayoutChangeListener(layoutListener)
             }
         }
         Box(Modifier.fillMaxSize().background(Color(0xFF111317))
