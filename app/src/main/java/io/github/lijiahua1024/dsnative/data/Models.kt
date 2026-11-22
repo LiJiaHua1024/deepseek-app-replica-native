@@ -119,6 +119,13 @@ sealed class Message {
 }
 
 @Serializable
+data class ContextCheckpoint(
+    val replyId: String,
+    val summary: String,
+    val offset: Int? = null,
+)
+
+@Serializable
 data class Session(
     val id: String,
     val title: String,
@@ -127,6 +134,7 @@ data class Session(
     val messages: List<Message> = emptyList(),
     /** null 表示空会话 */
     val rootMessageId: String? = null,
+    val contextCheckpoints: List<ContextCheckpoint> = emptyList(),
 )
 
 @Serializable

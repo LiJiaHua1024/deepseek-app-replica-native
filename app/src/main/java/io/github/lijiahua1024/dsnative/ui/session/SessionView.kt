@@ -1012,6 +1012,7 @@ fun ThinkingBlock(block: ReplyBlock.Thinking, msg: Message.Assistant, foldThinki
 }
 
 private fun errorText(e: ReplyError): String {
+    if (e.kind == "too_long") return Strings.get("replyInputTooLong")
     val key = when (e.status) {
         401 -> "replyInvalidApiKey"
         402 -> "replyInsufficientBalance"

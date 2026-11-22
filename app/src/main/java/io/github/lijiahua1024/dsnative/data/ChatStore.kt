@@ -18,6 +18,8 @@ import io.github.lijiahua1024.dsnative.api.StreamSession
 import io.github.lijiahua1024.dsnative.api.TRANSIENT_RETRY_LIMIT
 import io.github.lijiahua1024.dsnative.api.backoffDelayMs
 import io.github.lijiahua1024.dsnative.api.buildCreateMessageRequest
+import io.github.lijiahua1024.dsnative.api.estimatePrefixTokens
+import io.github.lijiahua1024.dsnative.api.estimateUserTokens
 import io.github.lijiahua1024.dsnative.api.extractFileIds
 import io.github.lijiahua1024.dsnative.api.getFileErrorCode
 import io.github.lijiahua1024.dsnative.api.getRejectedFileIdAtPosition
@@ -1027,16 +1029,31 @@ class ChatStore(
             persist(sessionId)
 
             val key = settings.apiKey.value ?: ""
+            val activeModel = initial.model ?: MODEL
             val prefixThinking = prefix?.thinking ?: settings.thinking.value
             val fallbackOutputCap = if (initial.thinking) {
                 FALLBACK_THINKING_OUTPUT_TOKENS
             } else {
                 FALLBACK_NON_THINKING_OUTPUT_TOKENS
             }
+            val budget = contextBudget(MAX_OUTPUT_TOKENS)
+            var historyBudget = kotlin.math.max(
+                0,
+                budget.input - estimateUserTokens(question) - estimatePrefixTokens(prefix),
+            )
+            var historyRetries = 0
+            var historySummaryRequests = 0
+            var historyContext: HistoryContextResult? = null
             var maxOutputCap = MAX_OUTPUT_TOKENS
+            var reduceInput = false
+            var reducedInput: ReducedInputResult? = null
             var fileInvalidRetries = 0
             var imageRepairRetries = 0
             var transientRetries = 0
+
+            val summarizeFn: suspend (SummaryRequestInput) -> String? = { req ->
+                requestContextSummary(key, activeModel, req)
+            }
 
             while (true) {
                 var preparing = false
@@ -1045,25 +1062,74 @@ class ChatStore(
                 var preparedQuestion = question
                 var preparedHistory = history
                 try {
+                    val activeCtx = historyContext ?: prepareHistoryContext(
+                        history = history,
+                        checkpoints = _sessionCache.value[sessionId]?.contextCheckpoints.orEmpty(),
+                        budget = historyBudget,
+                        recentBudget = budget.recent,
+                        summarize = { input ->
+                            if (historySummaryRequests++ < HISTORY_SUMMARY_LIMIT) {
+                                summarizeFn(input)
+                            } else null
+                        },
+                        saveCheckpoint = { cp ->
+                            updateSession(sessionId) { session ->
+                                session.copy(
+                                    contextCheckpoints = saveContextCheckpoint(session.contextCheckpoints, cp),
+                                )
+                            }
+                            persist(sessionId)
+                        },
+                    ).also { historyContext = it }
+
                     preparing = true
-                    val preparedPair = prepareRequestFiles(sessionId, question, history, key)
+                    val preparedPair = prepareRequestFiles(sessionId, question, activeCtx.history, key)
                     preparedQuestion = preparedPair.first
                     preparedHistory = preparedPair.second
                     preparing = false
 
+                    if (reduceInput && reducedInput == null) {
+                        val reduced = summarizeCurrentInput(
+                            context = context,
+                            apiKey = key,
+                            question = preparedQuestion,
+                            prefix = prefix,
+                            summarize = summarizeFn,
+                        ) ?: throw ApiError(
+                            ApiErrorKind.PROTOCOL,
+                            Strings.get("replyInputTooLong"),
+                            code = "reply_input_too_long",
+                        )
+                        reducedInput = reduced
+                        historyBudget = kotlin.math.max(
+                            0,
+                            kotlin.math.min(
+                                budget.recent,
+                                contextBudget(maxOutputCap).input -
+                                    estimateUserTokens(reduced.question) -
+                                    estimatePrefixTokens(reduced.prefix),
+                            ),
+                        )
+                        historyContext = null
+                        continue
+                    }
+
+                    val sendQuestion = reducedInput?.question ?: preparedQuestion
+                    val sendPrefix = if (reducedInput != null) reducedInput!!.prefix else prefix
                     val built = buildCreateMessageRequest(
-                        model = initial.model ?: MODEL,
+                        model = activeModel,
                         systemPrompt = SYSTEM_PROMPT,
                         history = preparedHistory,
-                        question = preparedQuestion,
+                        question = sendQuestion,
                         latestReminder = reminder,
                         thinking = initial.thinking,
                         search = initial.search,
                         requestTitle = titleSessions.contains(sessionId),
-                        prefix = prefix,
+                        prefix = sendPrefix,
                         prefixThinking = prefixThinking,
                         maxOutputTokensCap = maxOutputCap,
                         includeExtensions = true,
+                        contextSummary = activeCtx.summary,
                     )
                     lastBuilt = built
                     val stream = try {
@@ -1072,18 +1138,19 @@ class ChatStore(
                         // ref streamMessage：扩展模式在生成前拒绝长输入时，退回基础 Messages API。
                         if (isExtendedInputTooLong(e)) {
                             val basic = buildCreateMessageRequest(
-                                model = initial.model ?: MODEL,
+                                model = activeModel,
                                 systemPrompt = SYSTEM_PROMPT,
                                 history = preparedHistory,
-                                question = preparedQuestion,
+                                question = sendQuestion,
                                 latestReminder = reminder,
                                 thinking = initial.thinking,
                                 search = initial.search,
                                 requestTitle = titleSessions.contains(sessionId),
-                                prefix = prefix,
+                                prefix = sendPrefix,
                                 prefixThinking = prefixThinking,
                                 maxOutputTokensCap = maxOutputCap,
                                 includeExtensions = false,
+                                contextSummary = activeCtx.summary,
                             )
                             lastBuilt = basic
                             openMessageStreamRaw(key, basic.bodyJson, basic.hasFiles)
@@ -1151,9 +1218,27 @@ class ChatStore(
                 } catch (e: ApiError) {
                     if (preparing || receivedContent) throw e
 
-                    if (isContextOverflow(e) && maxOutputCap > fallbackOutputCap) {
-                        maxOutputCap = fallbackOutputCap
-                        continue
+                    if (isContextOverflow(e)) {
+                        val ctxTokens = historyContext?.tokens ?: 0
+                        if (ctxTokens > 0 && historyRetries < HISTORY_OVERFLOW_RETRIES) {
+                            historyBudget = if (++historyRetries < HISTORY_OVERFLOW_RETRIES) ctxTokens / 2 else 0
+                            historyContext = null
+                            continue
+                        }
+                        if (maxOutputCap > fallbackOutputCap) {
+                            maxOutputCap = fallbackOutputCap
+                            continue
+                        }
+                        if (!reduceInput) {
+                            reduceInput = true
+                            continue
+                        }
+                        throw ApiError(
+                            ApiErrorKind.PROTOCOL,
+                            Strings.get("replyInputTooLong"),
+                            e.status,
+                            code = "reply_input_too_long",
+                        )
                     }
                     if (getFileErrorCode(e) != null && fileInvalidRetries < FILE_RETRY_LIMIT) {
                         val mentioned = extractFileIds(e.message)
@@ -1218,6 +1303,8 @@ class ChatStore(
                 // silently (no error notice), keeping the action row.
                 e.kind == ApiErrorKind.INTERRUPTED && reply.blocks.isNotEmpty() ->
                     settleReply(reply, ReplyStatus.STOPPED)
+                e.code == "reply_input_too_long" ->
+                    settleReply(reply, ReplyStatus.ERROR, ReplyError("too_long", e.message ?: "", e.status))
                 else ->
                     settleReply(reply, ReplyStatus.ERROR, ReplyError(e.kind.name.lowercase(), e.message ?: "", e.status))
             }

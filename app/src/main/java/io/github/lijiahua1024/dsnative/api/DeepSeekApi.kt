@@ -148,6 +148,23 @@ suspend fun uploadFile(
     }
 }
 
+/** DELETE /anthropic/v1/files/{file_id}（用于分段总结 PDF 临时文件 Best-Effort 清理）。 */
+suspend fun deleteFile(apiKey: String, fileId: String): Unit = withContext(Dispatchers.IO) {
+    val shortClient = oneShotClient.newBuilder()
+        .callTimeout(4, TimeUnit.SECONDS)
+        .build()
+    val encoded = java.net.URLEncoder.encode(fileId, "UTF-8").replace("+", "%20")
+    val request = Request.Builder()
+        .url("${ApiOrigin.get()}/anthropic/v1/files/$encoded")
+        .header("x-api-key", apiKey)
+        .header("anthropic-beta", FILES_BETA)
+        .delete()
+        .build()
+    try {
+        shortClient.newCall(request).execute().use { /* best-effort cleanup */ }
+    } catch (_: Exception) { }
+}
+
 /** Anthropic 兼容 Files API 及 file_id 引用图片时必传（ref FILES_BETA）。 */
 const val FILES_BETA = "files-api-2025-04-14"
 

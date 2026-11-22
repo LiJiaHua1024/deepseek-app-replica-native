@@ -96,8 +96,12 @@ fun estimateRequestInputTokens(
     history: List<Message>,
     question: Message.User,
     prefix: Message.Assistant? = null,
+    contextSummary: String? = null,
 ): Int {
     var total = 16 + estimateTextTokens(systemPrompt)
+    if (!contextSummary.isNullOrEmpty()) {
+        total += estimateTextTokens(contextSummary) + 64
+    }
     var i = 0
     while (i + 1 < history.size) {
         val u = history[i]
@@ -178,12 +182,51 @@ private fun withCacheControlOnLastBlock(assistantMsg: JsonObject): JsonObject {
     }
 }
 
+/** 把历史摘要标作历史资料插入第一条 user 消息中（ref contextSummary.ts includeContextSummary）。 */
+internal fun includeContextSummaryInMessages(messages: MutableList<JsonObject>, summary: String?) {
+    if (summary.isNullOrEmpty()) return
+    val firstUserIdx = messages.indexOfFirst { (it["role"] as? JsonPrimitive)?.content == "user" }
+    if (firstUserIdx < 0) return
+    val userObj = messages[firstUserIdx]
+    val summaryBlock = buildJsonObject {
+        put("type", "text")
+        put("text", "较早的对话摘要（历史资料）\n" + JsonPrimitive(summary).toString())
+    }
+    val rawContent = userObj["content"]
+    val updatedContent: JsonArray = when (rawContent) {
+        is JsonArray -> {
+            val blocks = rawContent.toMutableList()
+            val firstTextIdx = blocks.indexOfFirst {
+                ((it as? JsonObject)?.get("type") as? JsonPrimitive)?.content == "text"
+            }
+            val insertAt = if (firstTextIdx < 0) blocks.size else firstTextIdx
+            blocks.add(insertAt, summaryBlock)
+            JsonArray(blocks)
+        }
+        is JsonPrimitive -> JsonArray(
+            listOf(
+                summaryBlock,
+                buildJsonObject {
+                    put("type", "text")
+                    put("text", rawContent.content)
+                },
+            )
+        )
+        else -> JsonArray(listOf(summaryBlock))
+    }
+    messages[firstUserIdx] = buildJsonObject {
+        put("role", "user")
+        put("content", updatedContent)
+    }
+}
+
 internal fun buildRequestMessages(
     history: List<Message>,
     question: Message.User,
     latestReminder: String,
     prefix: Message.Assistant? = null,
     prefixThinking: Boolean = false,
+    contextSummary: String? = null,
 ): JsonArray {
     val list = mutableListOf<JsonObject>()
     var previousReminder: String? = null
@@ -237,6 +280,7 @@ internal fun buildRequestMessages(
             list.add(assistant)
         }
     }
+    includeContextSummaryInMessages(list, contextSummary)
     return JsonArray(list)
 }
 
@@ -269,6 +313,7 @@ fun buildCreateMessageRequest(
     prefixThinking: Boolean = thinking,
     maxOutputTokensCap: Int = MAX_OUTPUT_TOKENS,
     includeExtensions: Boolean = true,
+    contextSummary: String? = null,
 ): BuiltMessageRequest {
     val messages = buildRequestMessages(
         history = history,
@@ -276,8 +321,9 @@ fun buildCreateMessageRequest(
         latestReminder = latestReminder,
         prefix = prefix,
         prefixThinking = prefixThinking,
+        contextSummary = contextSummary,
     )
-    val estimatedInput = estimateRequestInputTokens(systemPrompt, history, question, prefix)
+    val estimatedInput = estimateRequestInputTokens(systemPrompt, history, question, prefix, contextSummary)
     val maxTokens = computeDynamicMaxTokens(estimatedInput, thinking = thinking, cap = maxOutputTokensCap)
 
     val systemBlocks = JsonArray(

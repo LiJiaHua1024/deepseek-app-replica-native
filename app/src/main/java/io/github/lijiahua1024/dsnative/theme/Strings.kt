@@ -383,6 +383,7 @@ object Strings {
             "readingAloud" -> pick("正在朗读", "Reading aloud")
             "ttsVoiceSwitched" -> pick("朗读音色已切换为 {voice}", "Read-aloud voice switched to {voice}")
             "ttsPreviewSample" -> pick("你好，很高兴认识你", "Hello, nice to meet you")
+            "replyInputTooLong" -> pick("这条消息或附件超过模型可处理的长度，请拆成几部分后重试", "This message or its attachments are too long. Split them into smaller parts and try again.")
             "updateCurrent" -> pick("当前已是最新版本", "You’re on the latest version")
             "latestReminderLanguage" -> pick("中文", "English")
             else -> key

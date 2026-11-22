@@ -1428,6 +1428,7 @@ internal fun mergeArchiveSession(
             updatedAt = updatedAt,
             messages = mergedMessages,
             rootMessageId = rootMessageId,
+            contextCheckpoints = local.contextCheckpoints,
         ),
         changed = true,
         addedMessages = addedMessages,
