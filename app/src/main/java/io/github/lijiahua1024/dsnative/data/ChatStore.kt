@@ -3,18 +3,41 @@ package io.github.lijiahua1024.dsnative.data
 import android.content.Context
 import io.github.lijiahua1024.dsnative.api.ApiError
 import io.github.lijiahua1024.dsnative.api.ApiErrorKind
+import io.github.lijiahua1024.dsnative.api.BuiltMessageRequest
+import io.github.lijiahua1024.dsnative.api.FALLBACK_NON_THINKING_OUTPUT_TOKENS
+import io.github.lijiahua1024.dsnative.api.FALLBACK_THINKING_OUTPUT_TOKENS
+import io.github.lijiahua1024.dsnative.api.FILE_RETRY_LIMIT
+import io.github.lijiahua1024.dsnative.api.IMAGE_REPAIR_RETRY_LIMIT
+import io.github.lijiahua1024.dsnative.api.MANY_IMAGES_COUNT
+import io.github.lijiahua1024.dsnative.api.MANY_IMAGES_MAX_EDGE
+import io.github.lijiahua1024.dsnative.api.MAX_IMAGE_EDGE
 import io.github.lijiahua1024.dsnative.api.MAX_OUTPUT_TOKENS
 import io.github.lijiahua1024.dsnative.api.MODEL
 import io.github.lijiahua1024.dsnative.api.SYSTEM_PROMPT
 import io.github.lijiahua1024.dsnative.api.StreamSession
-import io.github.lijiahua1024.dsnative.api.openMessageStream
+import io.github.lijiahua1024.dsnative.api.TRANSIENT_RETRY_LIMIT
+import io.github.lijiahua1024.dsnative.api.backoffDelayMs
+import io.github.lijiahua1024.dsnative.api.buildCreateMessageRequest
+import io.github.lijiahua1024.dsnative.api.extractFileIds
+import io.github.lijiahua1024.dsnative.api.getFileErrorCode
+import io.github.lijiahua1024.dsnative.api.getRejectedFileIdAtPosition
+import io.github.lijiahua1024.dsnative.api.getRejectedImagePosition
+import io.github.lijiahua1024.dsnative.api.isContextOverflow
+import io.github.lijiahua1024.dsnative.api.isExtendedInputTooLong
+import io.github.lijiahua1024.dsnative.api.isTransientRetryableError
+import io.github.lijiahua1024.dsnative.api.isUploadParseFailed
+import io.github.lijiahua1024.dsnative.api.latestReminderText
+import io.github.lijiahua1024.dsnative.api.openMessageStreamRaw
+import io.github.lijiahua1024.dsnative.api.prepareImageForUpload
 import io.github.lijiahua1024.dsnative.api.uploadFile
+import io.github.lijiahua1024.dsnative.theme.Strings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,13 +53,15 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.encodeToString
-import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 /** sessions 排序：updatedAt 新→旧 */
 private fun sortSessions(sessions: List<SessionSummary>) = sessions.sortedByDescending { it.updatedAt }
@@ -65,6 +90,32 @@ internal fun orphanAttachmentPaths(
         }
     }
     return candidates - referenced
+}
+
+/** 原子写入文件（先写同目录 .tmp 再 renameTo），防止写中途进程被杀损坏会话 JSON。 */
+internal fun atomicWriteText(target: File, content: String) {
+    target.parentFile?.mkdirs()
+    val tmp = File(target.parentFile, "${target.name}.tmp.${System.nanoTime()}")
+    try {
+        FileOutputStream(tmp).use { out ->
+            out.write(content.toByteArray(Charsets.UTF_8))
+            out.flush()
+            try {
+                out.fd.sync()
+            } catch (_: Exception) {
+                // 部分文件系统不支持 fsync，忽略即可
+            }
+        }
+        if (!tmp.renameTo(target)) {
+            if (target.exists() && target.delete() && tmp.renameTo(target)) {
+                return
+            }
+            throw IOException("Failed to move ${tmp.name} to ${target.name}")
+        }
+    } catch (t: Throwable) {
+        tmp.delete()
+        throw t
+    }
 }
 
 internal fun toAssistantMessageParam(
@@ -351,12 +402,24 @@ class ChatStore(
 
     private fun Session.toSummary() = SessionSummary(id, title, createdAt, updatedAt)
 
+    private val writeLocks = ConcurrentHashMap<String, Any>()
+
+    private fun writeLockFor(sessionId: String): Any =
+        writeLocks.getOrPut(sessionId) { Any() }
+
+    private fun writeSessionSync(session: Session) {
+        synchronized(writeLockFor(session.id)) {
+            atomicWriteText(File(chatDir, "${session.id}.json"), json.encodeToString(session))
+        }
+    }
+
     private fun persist(sessionId: String) {
-        val session = _sessionCache.value[sessionId] ?: return
+        if (!_sessionCache.value.containsKey(sessionId)) return
         scope.launch(Dispatchers.IO) {
             try {
-                File(chatDir, "$sessionId.json").writeText(json.encodeToString(session))
-            } catch (e: Exception) {
+                val latest = _sessionCache.value[sessionId] ?: return@launch
+                writeSessionSync(latest)
+            } catch (_: Exception) {
                 // 保存失败：下次启动丢该会话的最新状态
             }
         }
@@ -670,19 +733,236 @@ class ChatStore(
         else if (layoutExts.contains(name.substringAfterLast('.', "").lowercase()))
             "rich_layout_recognition" else "user_data"
 
-    /** 把补传得到的 serverId 写回所有引用同一附件的 user 消息（ref saveUploadedFiles）。 */
-    private fun saveUploadedFiles(sessionId: String, uploads: Map<String, String>) {
+    private data class UploadedMeta(
+        val serverId: String,
+        val maxEdge: Int? = null,
+        val converted: Boolean? = null,
+    )
+
+    /** 把补传得到的 serverId 与图片尺寸元数据写回所有引用同一附件的 user 消息（ref saveUploadedFiles）。 */
+    private suspend fun saveUploadedFiles(sessionId: String, uploads: Map<String, UploadedMeta>) {
         if (uploads.isEmpty()) return
-        scope.launch {
-            updateSession(sessionId) { session ->
-                session.copy(messages = session.messages.map { m ->
-                    if (m is Message.User && m.files.any { uploads.containsKey(it.id) }) {
-                        m.copy(files = m.files.map { f ->
-                            uploads[f.id]?.let { f.copy(serverId = it) } ?: f })
-                    } else m
-                })
+        updateSession(sessionId) { session ->
+            session.copy(messages = session.messages.map { m ->
+                if (m is Message.User && m.files.any { uploads.containsKey(it.id) }) {
+                    m.copy(files = m.files.map { f ->
+                        uploads[f.id]?.let { meta ->
+                            f.copy(
+                                serverId = meta.serverId,
+                                serverImageMaxEdge = meta.maxEdge ?: f.serverImageMaxEdge,
+                                serverImageConverted = meta.converted ?: f.serverImageConverted,
+                            )
+                        } ?: f
+                    })
+                } else m
+            })
+        }
+        persist(sessionId)
+    }
+
+    /** 服务端判定 file_id 失效时，清除对应附件 serverId 以触发下一次重传。 */
+    private suspend fun clearInvalidatedFiles(sessionId: String, targetServerIds: Set<String>): Boolean {
+        if (targetServerIds.isEmpty()) return false
+        var cleared = false
+        updateSession(sessionId) { session ->
+            session.copy(messages = session.messages.map { m ->
+                if (m is Message.User && m.files.any { it.serverId != null && it.serverId in targetServerIds }) {
+                    cleared = true
+                    m.copy(files = m.files.map { f ->
+                        if (f.serverId != null && f.serverId in targetServerIds) {
+                            f.copy(serverId = null, serverImageMaxEdge = null, serverImageConverted = null)
+                        } else f
+                    })
+                } else m
+            })
+        }
+        if (cleared) persist(sessionId)
+        return cleared
+    }
+
+    private suspend fun uploadAttachmentWithPrep(
+        apiKey: String,
+        file: FileAttachment,
+        maxEdge: Int = MAX_IMAGE_EDGE,
+        forceConversion: Boolean = false,
+    ): UploadedMeta? {
+        val path = file.localPath?.takeIf { it.isNotEmpty() } ?: return null
+        val srcFile = File(path)
+        if (!srcFile.exists()) return null
+        if (!file.isImage) {
+            val id = uploadFile(apiKey, srcFile, file.name, file.mimeType, uploadPurpose(file.name, false))
+            return UploadedMeta(serverId = id)
+        }
+        var prepared = prepareImageForUpload(
+            source = srcFile,
+            cacheDir = context.cacheDir,
+            originalName = file.name,
+            originalMime = file.mimeType,
+            maxEdge = maxEdge,
+            forceConversion = forceConversion,
+        )
+        if (forceConversion && !prepared.converted) {
+            prepared.tempFile?.delete()
+            throw ApiError(ApiErrorKind.UPLOAD, Strings.get("uploadParseFailed"))
+        }
+        return try {
+            val id = uploadFile(apiKey, prepared.file, prepared.uploadName, prepared.mimeType, null)
+            UploadedMeta(
+                serverId = id,
+                maxEdge = prepared.maxEdge.takeIf { it > 0 },
+                converted = prepared.converted,
+            )
+        } catch (e: ApiError) {
+            if (!prepared.converted && prepared.maxEdge > 0 && isUploadParseFailed(e)) {
+                prepared.tempFile?.delete()
+                val fallback = prepareImageForUpload(
+                    source = srcFile,
+                    cacheDir = context.cacheDir,
+                    originalName = file.name,
+                    originalMime = file.mimeType,
+                    maxEdge = maxEdge,
+                    forceConversion = true,
+                )
+                if (!fallback.converted) {
+                    fallback.tempFile?.delete()
+                    throw e
+                }
+                prepared = fallback
+                val id = uploadFile(apiKey, fallback.file, fallback.uploadName, fallback.mimeType, null)
+                UploadedMeta(
+                    serverId = id,
+                    maxEdge = fallback.maxEdge.takeIf { it > 0 },
+                    converted = true,
+                )
+            } else {
+                throw e
+            }
+        } finally {
+            prepared.tempFile?.delete()
+        }
+    }
+
+    private fun refreshRequestSnapshot(
+        sessionId: String,
+        question: Message.User,
+        history: List<Message>,
+    ): Pair<Message.User, List<Message>> {
+        val byId = _sessionCache.value[sessionId]?.messages?.associateBy { it.id } ?: return question to history
+        val freshQ = (byId[question.id] as? Message.User) ?: question
+        val freshHist = history.map { m -> byId[m.id] ?: m }
+        return freshQ to freshHist
+    }
+
+    private suspend fun prepareRequestFiles(
+        sessionId: String,
+        question: Message.User,
+        history: List<Message>,
+        apiKey: String,
+    ): Pair<Message.User, List<Message>> {
+        var (curQ, curHist) = refreshRequestSnapshot(sessionId, question, history)
+
+        // 1. 当前提问待传附件：任一失败整体按 upload 报错，已成功的仍保留以供重试复用。
+        val qUploads = LinkedHashMap<String, UploadedMeta>()
+        var qFailure: ApiError? = null
+        for (file in curQ.files) {
+            if (file.serverId == null && !file.localPath.isNullOrEmpty()) {
+                try {
+                    uploadAttachmentWithPrep(apiKey, file, MAX_IMAGE_EDGE, false)?.let { qUploads[file.id] = it }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: ApiError) {
+                    if (qFailure == null) qFailure = ApiError(ApiErrorKind.UPLOAD, e.message ?: e.toString(), e.status, e.code)
+                } catch (e: Exception) {
+                    if (qFailure == null) qFailure = ApiError(ApiErrorKind.UPLOAD, e.message ?: e.toString())
+                }
             }
         }
+        if (qUploads.isNotEmpty()) {
+            saveUploadedFiles(sessionId, qUploads)
+        }
+        qFailure?.let { throw it }
+
+        val refreshed1 = refreshRequestSnapshot(sessionId, curQ, curHist)
+        curQ = refreshed1.first; curHist = refreshed1.second
+
+        // 2. 历史轮次中 serverId == null 的本地附件（如刚导入的 ZIP 会话）：从最新轮次往前补传，失败静默跳过。
+        val historyRounds = buildList {
+            var i = 0
+            while (i + 1 < curHist.size) {
+                val u = curHist[i]
+                val a = curHist[i + 1]
+                if (u is Message.User && isUsableReply(a)) {
+                    add(u)
+                    i++
+                }
+                i++
+            }
+        }
+        val seenIds = qUploads.keys.toMutableSet()
+        for (histUser in historyRounds.asReversed()) {
+            for (file in histUser.files) {
+                if (file.serverId != null || file.localPath.isNullOrEmpty() || !seenIds.add(file.id)) continue
+                currentCoroutineContext().ensureActive()
+                try {
+                    uploadAttachmentWithPrep(apiKey, file, MAX_IMAGE_EDGE, false)?.let { meta ->
+                        saveUploadedFiles(sessionId, mapOf(file.id to meta))
+                    }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    currentCoroutineContext().ensureActive()
+                }
+            }
+        }
+
+        val refreshed2 = refreshRequestSnapshot(sessionId, curQ, curHist)
+        curQ = refreshed2.first; curHist = refreshed2.second
+
+        // 3. 当次请求图片总数 >= 15 张时，API 要求单边不超过 4096（含历史图）。
+        val allImages = collectContextImages(curQ, curHist)
+        if (allImages.size >= MANY_IMAGES_COUNT) {
+            val oversized = LinkedHashMap<String, FileAttachment>()
+            for (img in allImages) {
+                if (!img.localPath.isNullOrEmpty() && File(img.localPath).exists() &&
+                    (img.serverImageConverted != true || (img.serverImageMaxEdge ?: Int.MAX_VALUE) > MANY_IMAGES_MAX_EDGE)
+                ) {
+                    oversized.putIfAbsent(img.id, img)
+                }
+            }
+            val shrunk = LinkedHashMap<String, UploadedMeta>()
+            var shrinkErr: ApiError? = null
+            for ((_, img) in oversized) {
+                try {
+                    uploadAttachmentWithPrep(apiKey, img, MANY_IMAGES_MAX_EDGE, true)?.let { shrunk[img.id] = it }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: ApiError) {
+                    if (shrinkErr == null) shrinkErr = ApiError(ApiErrorKind.UPLOAD, e.message ?: e.toString(), e.status, e.code)
+                } catch (e: Exception) {
+                    if (shrinkErr == null) shrinkErr = ApiError(ApiErrorKind.UPLOAD, e.message ?: e.toString())
+                }
+            }
+            if (shrunk.isNotEmpty()) saveUploadedFiles(sessionId, shrunk)
+            shrinkErr?.let { throw it }
+        }
+
+        return refreshRequestSnapshot(sessionId, curQ, curHist)
+    }
+
+    private fun collectContextImages(question: Message.User, history: List<Message>): List<FileAttachment> {
+        val out = ArrayList<FileAttachment>()
+        out.addAll(question.files.filter { it.isImage && !it.serverId.isNullOrEmpty() })
+        var i = 0
+        while (i + 1 < history.size) {
+            val u = history[i]
+            val a = history[i + 1]
+            if (u is Message.User && isUsableReply(a)) {
+                out.addAll(u.files.filter { it.isImage && !it.serverId.isNullOrEmpty() })
+                i++
+            }
+            i++
+        }
+        return out
     }
 
     /** 编辑一条 user 消息并重新生成其回答（产生新版本分支）。 */
@@ -704,95 +984,6 @@ class ChatStore(
 
     // ---------- 流式回复 ----------
 
-    private fun latestReminder(): String {
-        val locale = Locale.getDefault()
-        val date = SimpleDateFormat("yyyy-MM-dd", locale).format(Date())
-        val weekday = SimpleDateFormat("EEEE", locale).format(Date())
-        val language = if (locale.language == "zh") "中文" else "English"
-        return "$date,$weekday,,Web,$language"
-    }
-
-    private fun toUserParam(message: Message.User): JSONObject {
-        val obj = JSONObject().put("role", "user")
-        val blocks = message.files.mapNotNull { file ->
-            file.serverId?.let {
-                JSONObject()
-                    .put("type", if (file.isImage) "image" else "document")
-                    .put("source", JSONObject().put("type", "file").put("file_id", it))
-            }
-        }
-        if (blocks.isEmpty()) {
-            obj.put("content", message.content)
-        } else {
-            val array = JSONArray()
-            blocks.forEach { array.put(it) }
-            if (message.content.isNotEmpty()) {
-                array.put(JSONObject().put("type", "text").put("text", message.content))
-            }
-            obj.put("content", array)
-        }
-        return obj
-    }
-
-    private fun toAssistantParam(reply: Message.Assistant, prefix: Boolean = false, thinking: Boolean = false): JSONObject =
-        JSONObject(toAssistantMessageParam(reply, prefix, thinking).toString())
-
-    /** history → messages：只保留「提问+可用回答」成对轮次，latest_reminder 插到对应 user 前。 */
-    private fun toRequestMessages(
-        history: List<Message>,
-        question: Message.User,
-        latestReminder: String,
-        prefix: Message.Assistant? = null,
-    ): JSONArray {
-        val messages = JSONArray()
-        var previousReminder: String? = null
-        fun appendReminder(reminder: String?) {
-            if (reminder != null && reminder != previousReminder) {
-                messages.put(JSONObject().put("role", "latest_reminder").put("content", reminder))
-                previousReminder = reminder
-            }
-        }
-        var i = 0
-        while (i + 1 < history.size) {
-            val user = history[i]
-            val reply = history[i + 1]
-            if (user is Message.User && isUsableReply(reply)) {
-                reply as Message.Assistant
-                if (user.content.isNotEmpty() || user.files.any { it.serverId != null }) {
-                    appendReminder(reply.latestReminder)
-                    messages.put(toUserParam(user))
-                    messages.put(toAssistantParam(reply))
-                }
-                i++
-            }
-            i++
-        }
-        appendReminder(latestReminder)
-        messages.put(toUserParam(question))
-        // ref：续写时末尾带上前一条 assistant 作为 prefill；无有效正文则不发空 Prefill
-        if (prefix != null && prefix.prefix) {
-            val assistant = toAssistantParam(prefix, prefix = true, thinking = settings.thinking.value)
-            val content = assistant.optJSONArray("content")
-            var usable = false
-            if (content != null) {
-                var i = 0
-                while (i < content.length()) {
-                    val blk = content.getJSONObject(i)
-                    val blkType = blk.optString("type")
-                    if ((blkType == "text" && blk.optString("text").isNotBlank()) ||
-                        (blkType == "thinking" && blk.optString("thinking").isNotBlank())
-                    ) {
-                        usable = true
-                        break
-                    }
-                    i++
-                }
-            }
-            if (usable) messages.put(assistant)
-        }
-        return messages
-    }
-
     private fun updateReply(sessionId: String, reply: Message.Assistant) {
         scope.launch {
             updateSession(sessionId) { session ->
@@ -802,6 +993,16 @@ class ChatStore(
                     } else message
                 })
             }
+        }
+    }
+
+    private suspend fun updateReplySync(sessionId: String, reply: Message.Assistant) {
+        updateSession(sessionId) { session ->
+            session.copy(messages = session.messages.map { message ->
+                if (message.id == reply.id) {
+                    reply.copy(parentId = message.parentId, selectedChildId = message.selectedChildId)
+                } else message
+            })
         }
     }
 
@@ -820,118 +1021,191 @@ class ChatStore(
         val flushMutex = Mutex()
         var lastFlush = 0L
         try {
-            val reminder = latestReminder()
+            val reminder = prefix?.latestReminder ?: latestReminderText(Strings.isZh())
             reply = reply.copy(latestReminder = reminder)
-            updateReply(sessionId, reply)
-            // ref ensureUploadedFiles/prepareFiles: 发请求前补齐附件 serverId；
-            // 补传失败归 upload 错误（kind 'upload'，由 retryUpload 重试）。
-            val pending = question.files.filter { it.serverId == null && !it.localPath.isNullOrEmpty() }
-            var preparedQuestion = question
-            if (pending.isNotEmpty()) {
-                val uploads = HashMap<String, String>()
-                for (file in pending) {
-                    try {
-                        uploads[file.id] = uploadFile(
-                            settings.apiKey.value ?: "", File(file.localPath!!),
-                            file.name, file.mimeType, uploadPurpose(file.name, file.isImage))
-                    } catch (e: kotlinx.coroutines.CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        throw ApiError(ApiErrorKind.UPLOAD,
-                            (e as? ApiError)?.message ?: e.message ?: e.toString(),
-                            (e as? ApiError)?.status)
-                    }
-                }
-                saveUploadedFiles(sessionId, uploads)
-                preparedQuestion = question.copy(files = question.files.map { f ->
-                    uploads[f.id]?.let { f.copy(serverId = it) } ?: f })
-            }
-            val messages = toRequestMessages(history, preparedQuestion, reminder, prefix)
-            val tools = JSONArray().put(
-                JSONObject().put("type", "deepseek_read_url").put("name", "deepseek_read_url")
-            )
-            if (initial.search) {
-                tools.put(
-                    JSONObject().put("type", "deepseek_web_search").put("name", "deepseek_web_search")
-                )
-            }
-            val body = JSONObject()
-                .put("model", initial.model ?: MODEL)
-                .put("max_tokens", MAX_OUTPUT_TOKENS)
-                .put("system", SYSTEM_PROMPT)
-                .put("messages", messages)
-                .put("thinking", JSONObject().put("type", if (initial.thinking) "enabled" else "disabled"))
-                .put("safety_check", JSONObject().put("level", "high"))
-                .put("tools", tools)
-            if (titleSessions.contains(sessionId)) {
-                body.put("title", JSONObject().put("enabled", true))
-            }
+            updateReplySync(sessionId, reply)
+            persist(sessionId)
+
             val key = settings.apiKey.value ?: ""
-            var stream = try {
-                openMessageStream(key, body)
-            } catch (e: ApiError) {
-                // ref streamMessage：扩展模式在生成前拒绝长输入时，退回基础 Messages API。
-                val tooLong = e.kind == ApiErrorKind.HTTP && e.status == 400 &&
-                    Regex("user input too long, \\d+ tokens exceeds max 32768 tokens",
-                        RegexOption.IGNORE_CASE).containsMatchIn(e.message ?: "")
-                if (tooLong && (body.has("tools") || body.has("safety_check") || body.has("title"))) {
-                    val basic = JSONObject(body.toString())
-                    basic.remove("tools"); basic.remove("safety_check"); basic.remove("title")
-                    openMessageStream(key, basic)
-                } else throw e
+            val prefixThinking = prefix?.thinking ?: settings.thinking.value
+            val fallbackOutputCap = if (initial.thinking) {
+                FALLBACK_THINKING_OUTPUT_TOKENS
+            } else {
+                FALLBACK_NON_THINKING_OUTPUT_TOKENS
             }
-            activeStreams[sessionId] = stream
-            try {
-                val blockIndexes = mutableMapOf<Int, Int>()
-                while (true) {
-                    val event = stream.nextEvent() ?: throw ApiError(ApiErrorKind.INTERRUPTED, "")
-                    val (eventName, data) = event
-                    var payload: JSONObject? = null
+            var maxOutputCap = MAX_OUTPUT_TOKENS
+            var fileInvalidRetries = 0
+            var imageRepairRetries = 0
+            var transientRetries = 0
+
+            while (true) {
+                var preparing = false
+                var receivedContent = false
+                var lastBuilt: BuiltMessageRequest? = null
+                var preparedQuestion = question
+                var preparedHistory = history
+                try {
+                    preparing = true
+                    val preparedPair = prepareRequestFiles(sessionId, question, history, key)
+                    preparedQuestion = preparedPair.first
+                    preparedHistory = preparedPair.second
+                    preparing = false
+
+                    val built = buildCreateMessageRequest(
+                        model = initial.model ?: MODEL,
+                        systemPrompt = SYSTEM_PROMPT,
+                        history = preparedHistory,
+                        question = preparedQuestion,
+                        latestReminder = reminder,
+                        thinking = initial.thinking,
+                        search = initial.search,
+                        requestTitle = titleSessions.contains(sessionId),
+                        prefix = prefix,
+                        prefixThinking = prefixThinking,
+                        maxOutputTokensCap = maxOutputCap,
+                        includeExtensions = true,
+                    )
+                    lastBuilt = built
+                    val stream = try {
+                        openMessageStreamRaw(key, built.bodyJson, built.hasFiles)
+                    } catch (e: ApiError) {
+                        // ref streamMessage：扩展模式在生成前拒绝长输入时，退回基础 Messages API。
+                        if (isExtendedInputTooLong(e)) {
+                            val basic = buildCreateMessageRequest(
+                                model = initial.model ?: MODEL,
+                                systemPrompt = SYSTEM_PROMPT,
+                                history = preparedHistory,
+                                question = preparedQuestion,
+                                latestReminder = reminder,
+                                thinking = initial.thinking,
+                                search = initial.search,
+                                requestTitle = titleSessions.contains(sessionId),
+                                prefix = prefix,
+                                prefixThinking = prefixThinking,
+                                maxOutputTokensCap = maxOutputCap,
+                                includeExtensions = false,
+                            )
+                            lastBuilt = basic
+                            openMessageStreamRaw(key, basic.bodyJson, basic.hasFiles)
+                        } else throw e
+                    }
+                    activeStreams[sessionId] = stream
                     try {
-                        payload = JSONObject(data)
-                    } catch (e: Exception) {
-                        if (eventName == "error") {
-                            throw ApiError(ApiErrorKind.STREAM, data)
-                        }
-                    }
-                    val error = payload?.optJSONObject("error")
-                    if (error != null) {
-                        throw ApiError(ApiErrorKind.STREAM, error.optString("message"))
-                    }
-                    if (eventName == "error") {
-                        throw ApiError(ApiErrorKind.STREAM, data)
-                    }
-                    if (payload == null) continue
-                    val type = payload.optString("type")
-                    if (type.isEmpty()) continue
-                    reply = applyEvent(reply, type, payload, blockIndexes)
-                    // 标题生成
-                    if (type == "message_delta") {
-                        val delta = payload.optJSONObject("delta")
-                        val stopReason = delta?.optString("stop_reason")
-                        val title = delta?.optString("title")?.trim()
-                        if ((stopReason == "end_turn" || stopReason == "max_tokens") &&
-                            !title.isNullOrEmpty() && titleSessions.contains(sessionId)
-                        ) {
-                            updateSession(sessionId) { s ->
-                                if (s.title.isEmpty()) s.copy(title = title) else s
+                        val blockIndexes = mutableMapOf<Int, Int>()
+                        while (true) {
+                            val event = stream.nextEvent() ?: throw ApiError(ApiErrorKind.INTERRUPTED, "")
+                            val (eventName, data) = event
+                            var payload: JSONObject? = null
+                            try {
+                                payload = JSONObject(data)
+                            } catch (_: Exception) {
+                                if (eventName == "error") {
+                                    throw ApiError(ApiErrorKind.STREAM, data)
+                                }
                             }
-                            titleSessions.remove(sessionId)
+                            val error = payload?.optJSONObject("error")
+                            if (error != null) {
+                                val errCode = error.optString("code").takeIf { it.isNotEmpty() }
+                                    ?: error.optString("type").takeIf { it.isNotEmpty() }
+                                throw ApiError(ApiErrorKind.STREAM, error.optString("message"), code = errCode)
+                            }
+                            if (eventName == "error") {
+                                throw ApiError(ApiErrorKind.STREAM, data)
+                            }
+                            if (payload == null) continue
+                            val type = payload.optString("type")
+                            if (type.isEmpty()) continue
+                            if (type == "content_block_start") receivedContent = true
+                            reply = applyEvent(reply, type, payload, blockIndexes)
+                            // 标题生成
+                            if (type == "message_delta") {
+                                val delta = payload.optJSONObject("delta")
+                                val stopReason = delta?.optString("stop_reason")
+                                val title = delta?.optString("title")?.trim()
+                                if ((stopReason == "end_turn" || stopReason == "max_tokens") &&
+                                    !title.isNullOrEmpty() && titleSessions.contains(sessionId)
+                                ) {
+                                    updateSession(sessionId) { s ->
+                                        if (s.title.isEmpty()) s.copy(title = title) else s
+                                    }
+                                    titleSessions.remove(sessionId)
+                                }
+                            }
+                            if (type == "message_stop") {
+                                reply = settleReply(reply, ReplyStatus.DONE)
+                                break
+                            }
+                            val now = System.currentTimeMillis()
+                            if (now - lastFlush > 100) {
+                                lastFlush = now
+                                flushMutex.withLock { updateReply(sessionId, reply) }
+                            }
+                        }
+                    } finally {
+                        stream.close()
+                        activeStreams.remove(sessionId)
+                    }
+                    break
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: ApiError) {
+                    if (preparing || receivedContent) throw e
+
+                    if (isContextOverflow(e) && maxOutputCap > fallbackOutputCap) {
+                        maxOutputCap = fallbackOutputCap
+                        continue
+                    }
+                    if (getFileErrorCode(e) != null && fileInvalidRetries < FILE_RETRY_LIMIT) {
+                        val mentioned = extractFileIds(e.message)
+                        val targets = if (mentioned.isNotEmpty()) mentioned else buildSet {
+                            preparedQuestion.files.mapNotNullTo(this) { it.serverId }
+                            var i = 0
+                            while (i + 1 < preparedHistory.size) {
+                                val u = preparedHistory[i]
+                                val a = preparedHistory[i + 1]
+                                if (u is Message.User && isUsableReply(a)) {
+                                    u.files.mapNotNullTo(this) { it.serverId }
+                                    i++
+                                }
+                                i++
+                            }
+                        }
+                        if (clearInvalidatedFiles(sessionId, targets)) {
+                            delay(backoffDelayMs(fileInvalidRetries++))
+                            continue
                         }
                     }
-                    if (type == "message_stop") {
-                        reply = settleReply(reply, ReplyStatus.DONE)
-                        break
+                    val rejectedPos = getRejectedImagePosition(e)
+                    if (rejectedPos != null && imageRepairRetries < IMAGE_REPAIR_RETRY_LIMIT && lastBuilt != null) {
+                        val rejectedFileId = getRejectedFileIdAtPosition(
+                            lastBuilt.messages, rejectedPos.first, rejectedPos.second,
+                        )
+                        val images = collectContextImages(preparedQuestion, preparedHistory)
+                        val targetImg = rejectedFileId?.let { fid -> images.firstOrNull { it.serverId == fid } }
+                        val edgeCap = if (images.size >= MANY_IMAGES_COUNT) MANY_IMAGES_MAX_EDGE else MAX_IMAGE_EDGE
+                        if (targetImg != null &&
+                            !(targetImg.serverImageConverted == true && (targetImg.serverImageMaxEdge ?: Int.MAX_VALUE) <= edgeCap)
+                        ) {
+                            val repairedMeta = try {
+                                uploadAttachmentWithPrep(key, targetImg, maxEdge = edgeCap, forceConversion = true)
+                            } catch (ce: kotlinx.coroutines.CancellationException) {
+                                throw ce
+                            } catch (_: Exception) {
+                                null
+                            }
+                            if (repairedMeta != null) {
+                                saveUploadedFiles(sessionId, mapOf(targetImg.id to repairedMeta))
+                                imageRepairRetries++
+                                continue
+                            }
+                        }
                     }
-                    val now = System.currentTimeMillis()
-                    if (now - lastFlush > 100) {
-                        lastFlush = now
-                        flushMutex.withLock { updateReply(sessionId, reply) }
+                    if (isTransientRetryableError(e) && transientRetries < TRANSIENT_RETRY_LIMIT) {
+                        delay(backoffDelayMs(transientRetries++))
+                        continue
                     }
+                    throw e
                 }
-            } finally {
-                stream.close()
-                activeStreams.remove(sessionId)
             }
         } catch (e: kotlinx.coroutines.CancellationException) {
             reply = settleReply(reply, ReplyStatus.STOPPED)
@@ -956,7 +1230,9 @@ class ChatStore(
             reply = settleReply(reply, ReplyStatus.ERROR, ReplyError("protocol", e.message ?: e.toString()))
         } finally {
             titleSessions.remove(sessionId)
-            updateReply(sessionId, reply)
+            withContext(kotlinx.coroutines.NonCancellable) {
+                updateReplySync(sessionId, reply)
+            }
             _streaming.value = _streaming.value - sessionId
             streamJobs.remove(sessionId)
             persist(sessionId)
@@ -1112,7 +1388,7 @@ class ChatStore(
                     legacyCacheAttachesDir.listFiles()?.forEach { it.delete() }
                 }
                 for (s in newMap.values) {
-                    File(chatDir, "${s.id}.json").writeText(json.encodeToString(s))
+                    writeSessionSync(s)
                 }
                 settings.setPinnedSessions(parsed.pinnedIds.filter { it in newMap })
                 return@withContext ImportOutcome.Replace(newMap.size)
@@ -1158,7 +1434,7 @@ class ChatStore(
             }
             for (sid in persistedIds) {
                 val s = resultMap[sid] ?: continue
-                File(chatDir, "$sid.json").writeText(json.encodeToString(s))
+                writeSessionSync(s)
             }
             // 删除合并后未被引用的新解包图片文件
             val livePaths = buildSet {

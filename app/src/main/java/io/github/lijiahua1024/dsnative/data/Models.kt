@@ -27,6 +27,9 @@ data class FileAttachment(
     val mimeType: String = "",
     /** 本地原件路径；缺失时（导入无原件）只展示、不上传（ref FileAttachment 语义）。 */
     val localPath: String? = null,
+    /** 已上传图片的最大边长（px）及是否经客户端转码，用于 15+ 张图限制与失效修复。 */
+    val serverImageMaxEdge: Int? = null,
+    val serverImageConverted: Boolean? = null,
 )
 
 @Serializable

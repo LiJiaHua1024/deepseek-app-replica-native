@@ -45,6 +45,7 @@ class ApiError(
     val kind: ApiErrorKind,
     message: String,
     val status: Int? = null,
+    val code: String? = null,
 ) : Exception(message)
 
 /** 流式事件（Messages API，Anthropic 兼容）；payload 为原始 JSON。 */
@@ -70,13 +71,16 @@ private val oneShotClient = client.newBuilder()
     .callTimeout(15, TimeUnit.SECONDS)
     .build()
 
-private fun readErrorMessage(body: String, fallback: String): String {
-    if (body.isEmpty()) return fallback
+private fun readErrorDetail(body: String, fallback: String): Pair<String, String?> {
+    if (body.isEmpty()) return fallback to null
     return try {
-        val obj = JSONObject(body)
-        obj.optJSONObject("error")?.optString("message")?.takeIf { it.isNotEmpty() } ?: body
+        val err = JSONObject(body).optJSONObject("error")
+        val msg = err?.optString("message")?.takeIf { it.isNotEmpty() } ?: body
+        val code = err?.optString("code")?.takeIf { it.isNotEmpty() }
+            ?: err?.optString("type")?.takeIf { it.isNotEmpty() }
+        msg to code
     } catch (e: Exception) {
-        body
+        body to null
     }
 }
 
@@ -91,7 +95,8 @@ suspend fun verifyApiKey(apiKey: String): Unit = withContext(Dispatchers.IO) {
         oneShotClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 val body = response.body?.string().orEmpty()
-                throw ApiError(ApiErrorKind.HTTP, readErrorMessage(body, response.message), response.code)
+                val (msg, code) = readErrorDetail(body, response.message)
+                throw ApiError(ApiErrorKind.HTTP, msg, response.code, code)
             }
         }
     } catch (e: ApiError) {
@@ -132,7 +137,8 @@ suspend fun uploadFile(
     response.use {
         val body = it.body?.string().orEmpty()
         if (!it.isSuccessful) {
-            throw ApiError(ApiErrorKind.HTTP, readErrorMessage(body, it.message), it.code)
+            val (msg, code) = readErrorDetail(body, it.message)
+            throw ApiError(ApiErrorKind.HTTP, msg, it.code, code)
         }
         try {
             JSONObject(body).getString("id")
@@ -207,19 +213,20 @@ class StreamSession(val call: okhttp3.Call, reader: java.io.BufferedReader) {
 }
 
 /**
- * POST /anthropic/v1/messages（stream: true）。返回可逐个读事件的 StreamSession。
- * 调用方负责 close()。
+ * POST /anthropic/v1/messages（stream: true），返回可逐个读事件的 StreamSession；调用方负责 close()。
  */
-suspend fun openMessageStream(apiKey: String, body: JSONObject): StreamSession = withContext(Dispatchers.IO) {
-    val json = JSONObject(body.toString())
-    json.put("stream", true)
+suspend fun openMessageStreamRaw(
+    apiKey: String,
+    bodyJson: String,
+    hasFiles: Boolean,
+): StreamSession = withContext(Dispatchers.IO) {
     val request = Request.Builder()
         .url("${ApiOrigin.get()}/anthropic/v1/messages")
         .header("x-api-key", apiKey)
-        .apply { if (hasFile(json)) header("anthropic-beta", FILES_BETA) }
+        .apply { if (hasFiles) header("anthropic-beta", FILES_BETA) }
         .header("Content-Type", "application/json")
         .header("Accept", "text/event-stream")
-        .post(json.toString().toByteArray().toRequestBody("application/json".toMediaType()))
+        .post(bodyJson.toByteArray().toRequestBody("application/json".toMediaType()))
         .build()
     val call = client.newCall(request)
     val response = try {
@@ -230,14 +237,22 @@ suspend fun openMessageStream(apiKey: String, body: JSONObject): StreamSession =
     if (!response.isSuccessful) {
         val bodyText = response.body?.string().orEmpty()
         response.close()
-        throw ApiError(ApiErrorKind.HTTP, readErrorMessage(bodyText, response.message), response.code)
+        val (msg, code) = readErrorDetail(bodyText, response.message)
+        throw ApiError(ApiErrorKind.HTTP, msg, response.code, code)
     }
     val contentType = response.header("Content-Type") ?: ""
     val responseBody = response.body
     if (responseBody == null || !contentType.contains("text/event-stream")) {
         val text = responseBody?.string().orEmpty()
         response.close()
-        throw ApiError(ApiErrorKind.PROTOCOL, readErrorMessage(text, ""), response.code)
+        val (msg, code) = readErrorDetail(text, "")
+        throw ApiError(ApiErrorKind.PROTOCOL, msg, response.code, code)
     }
     StreamSession(call, responseBody.charStream().buffered())
 }
+
+suspend fun openMessageStream(apiKey: String, body: JSONObject): StreamSession =
+    JSONObject(body.toString()).run {
+        put("stream", true)
+        openMessageStreamRaw(apiKey, toString(), hasFile(this))
+    }
