@@ -12,6 +12,7 @@ import io.github.lijiahua1024.dsnative.data.orphanAttachmentPaths
 import io.github.lijiahua1024.dsnative.data.replyText
 import io.github.lijiahua1024.dsnative.data.toAssistantMessageParam
 import io.github.lijiahua1024.dsnative.data.visibleMessages
+import io.github.lijiahua1024.dsnative.ui.session.clampMenuTopPx
 import io.github.lijiahua1024.dsnative.ui.session.defaultThinkingExpanded
 import io.github.lijiahua1024.dsnative.ui.session.replyGrowthKey
 import io.github.lijiahua1024.dsnative.ui.session.shouldAutoReadOnDone
@@ -265,5 +266,32 @@ class AutoReadAndFoldThinkingTest {
         assertTrue(!defaultThinkingExpanded(foldThinking = true, hasResponse = true))
         assertTrue(defaultThinkingExpanded(foldThinking = false, hasResponse = false))
         assertTrue(defaultThinkingExpanded(foldThinking = false, hasResponse = true))
+    }
+}
+
+class BubbleMenuClampingTest {
+
+    @Test
+    fun clampsOverflowingBottomPositionAboveNavigationInset() {
+        val clamped = clampMenuTopPx(
+            rawTopPx = 2050f,
+            containerHeightPx = 2160,
+            menuHeightPx = 240,
+            bottomInsetPx = 64f,
+            marginPx = 16f,
+        )
+        assertEquals(2160f - 64f - 240f - 16f, clamped, 0.01f)
+    }
+
+    @Test
+    fun preservesNormalPositionWithinBounds() {
+        val clamped = clampMenuTopPx(
+            rawTopPx = 500f,
+            containerHeightPx = 2160,
+            menuHeightPx = 240,
+            bottomInsetPx = 64f,
+            marginPx = 16f,
+        )
+        assertEquals(500f, clamped, 0.01f)
     }
 }

@@ -324,11 +324,20 @@ fun SessionView(
     bubbleMenu?.let { (bmsg, rect, onEdit) ->
         val density = androidx.compose.ui.platform.LocalDensity.current
         var overlayPos by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+        var overlayH by remember { mutableIntStateOf(0) }
+        var menuH by remember { mutableIntStateOf(0) }
         val winW = androidx.compose.ui.platform.LocalView.current.width.toFloat()
         val endPad = with(density) { (winW - rect.right - 22f).coerceAtLeast(0f).toDp() }
-        val topPad = with(density) { (rect.top - overlayPos.y + 97f).coerceAtLeast(0f).toDp() }
+        val navBottomPx = WindowInsets.navigationBars.getBottom(density).toFloat()
+        val marginPx = with(density) { 8.dp.toPx() }
+        val topPad = with(density) {
+            clampMenuTopPx(rect.top - overlayPos.y + 97f, overlayH, menuH, navBottomPx, marginPx).toDp()
+        }
         Box(Modifier.fillMaxSize()
-            .onGloballyPositioned { overlayPos = it.localToRoot(androidx.compose.ui.geometry.Offset.Zero) }) {
+            .onGloballyPositioned {
+                overlayPos = it.localToRoot(androidx.compose.ui.geometry.Offset.Zero)
+                overlayH = it.size.height
+            }) {
             Box(Modifier.fillMaxSize().clickable(
                 indication = null,
                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { bubbleMenu = null })
@@ -338,7 +347,10 @@ fun SessionView(
                 // ref .menu: box-shadow 0 12px 32px rgba(0,0,0,.08) + 0 0 1px .2
                 shadowElevation = 16.dp,
                 modifier = Modifier.align(Alignment.TopEnd)
-                    .padding(end = endPad).offset(y = topPad).width(124.dp),
+                    .padding(end = endPad)
+                    .offset(y = topPad)
+                    .width(124.dp)
+                    .onGloballyPositioned { menuH = it.size.height },
             ) {
                 Column(Modifier.padding(4.dp)) {
                     MenuOption(Strings.get("copy"), R.drawable.ic_copy, c.labelPrimary) {
@@ -788,9 +800,10 @@ fun AssistantView(
                     val clipboard = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                     IconButton({
                         clipboard.setPrimaryClip(android.content.ClipData.newPlainText("reply",
-                            msg.error?.let { errorText(it) } ?: ""))
+                            msg.error?.let { errorText(it) } ?: Strings.get("unknownError")))
+                        DsToast.show(Strings.get("copied"))
                     }, modifier = Modifier.size(32.dp)) {
-                        Icon(painterResource(R.drawable.ic_copy), null, tint = c.labelTertiary, modifier = Modifier.size(16.dp))
+                        Icon(painterResource(R.drawable.ic_copy), Strings.get("copy"), tint = c.labelTertiary, modifier = Modifier.size(16.dp))
                     }
                     IconButton({ chatStore.regenerateReply(sessionId, msg.id) }, modifier = Modifier.size(32.dp)) {
                         Icon(painterResource(R.drawable.ic_refresh), null, tint = c.labelTertiary, modifier = Modifier.size(16.dp))
@@ -867,6 +880,19 @@ fun AssistantView(
         }
     }
     }
+}
+
+internal fun clampMenuTopPx(
+    rawTopPx: Float,
+    containerHeightPx: Int,
+    menuHeightPx: Int,
+    bottomInsetPx: Float,
+    marginPx: Float,
+): Float {
+    val safeMin = marginPx.coerceAtLeast(0f)
+    if (containerHeightPx <= 0 || menuHeightPx <= 0) return rawTopPx.coerceAtLeast(safeMin)
+    val safeMax = (containerHeightPx - bottomInsetPx - menuHeightPx - marginPx).coerceAtLeast(safeMin)
+    return rawTopPx.coerceIn(safeMin, safeMax)
 }
 
 internal fun replyGrowthKey(msg: Message.Assistant): Int =
