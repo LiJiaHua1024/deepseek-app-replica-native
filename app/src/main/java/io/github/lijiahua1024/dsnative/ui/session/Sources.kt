@@ -1,5 +1,6 @@
 package io.github.lijiahua1024.dsnative.ui.session
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,15 +20,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
@@ -37,11 +46,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.lijiahua1024.dsnative.R
 import io.github.lijiahua1024.dsnative.data.ReplyBlock
+import io.github.lijiahua1024.dsnative.data.ReplyStatus
 import io.github.lijiahua1024.dsnative.data.Source
 import io.github.lijiahua1024.dsnative.theme.DsTheme
 import io.github.lijiahua1024.dsnative.theme.Strings
-import org.json.JSONArray
-import org.json.JSONObject
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 
 /** 当前消息的搜索来源列表与打开来源面板的回调（面板挂在会话层） */
 val LocalSources = compositionLocalOf<List<Source>> { emptyList() }
@@ -51,47 +68,80 @@ private fun siteName(url: String): String = try {
     java.net.URL(url).host.removePrefix("www.")
 } catch (_: Exception) { "" }
 
-// org.json optString() can leak the literal "null" for explicit JSON null on
-// some versions; NULL-check opt() directly.
-private fun optStr(o: JSONObject?, k: String): String? =
-    o?.opt(k)?.takeIf { it != JSONObject.NULL }?.toString()?.trim()?.takeIf { it.isNotEmpty() }
+private fun JsonObject.str(key: String): String? {
+    val prim = get(key) as? JsonPrimitive ?: return null
+    if (prim is JsonNull) return null
+    return prim.contentOrNull?.trim()?.takeIf { it.isNotEmpty() }
+}
+
+private fun JsonObject.obj(key: String): JsonObject? = get(key) as? JsonObject
+
+private fun JsonObject.arr(key: String): JsonArray? = get(key) as? JsonArray
+
+private val SEARCH_TOOL_NAMES = setOf("search", "deep_search", "image_search", "deep_image_search")
+
+private fun isDeepSearchKind(kind: String): Boolean =
+    kind == "deep_search" || kind == "deep_image_search"
+
+private fun isImageSearchKind(kind: String): Boolean =
+    kind == "image_search" || kind == "deep_image_search"
 
 /** ref SourceRegistry：按出现顺序注册、按 url 去重 */
 private class Registry {
     val list = ArrayList<Source>()
     private val byUrl = HashMap<String, Source>()
 
-    fun add(url: String?, title: String?, publishedAt: String?, item: JSONObject?): Source {
+    fun add(url: String?, title: String?, publishedAt: String?, item: JsonObject?): Source {
         val u = url ?: ""
         val existing = byUrl[u]
         if (existing != null) {
-            if (existing.siteName == siteName(u) && item != null) {
-                val sn = optStr(item, "site_name")
+            var updated = existing
+            var changed = false
+            if (updated.siteName == siteName(u) && item != null) {
+                val sn = item.str("site_name")
                 if (sn != null) {
-                    val updated = existing.copy(siteName = sn)
-                    list[list.indexOf(existing)] = updated
-                    byUrl[u] = updated
+                    updated = updated.copy(siteName = sn)
+                    changed = true
                 }
             }
-            if (existing.siteIcon == null) {
-                val icon = optStr(item, "site_icon")
+            if (updated.siteIcon == null && item != null) {
+                val icon = item.str("site_icon")
                 if (icon != null) {
-                    val updated = existing.copy(siteIcon = icon)
-                    list[list.indexOf(existing)] = updated
-                    byUrl[u] = updated
+                    updated = updated.copy(siteIcon = icon)
+                    changed = true
                 }
             }
-            return byUrl[u]!!
+            if (updated.snippet == null && item != null) {
+                val snippet = item.str("snippet")
+                if (snippet != null) {
+                    updated = updated.copy(snippet = snippet)
+                    changed = true
+                }
+            }
+            if ((updated.title.isNullOrEmpty() || updated.title == u) && !title.isNullOrBlank()) {
+                updated = updated.copy(title = title.trim())
+                changed = true
+            }
+            if (updated.publishedAt == null && !publishedAt.isNullOrEmpty()) {
+                updated = updated.copy(publishedAt = publishedAt)
+                changed = true
+            }
+            if (changed) {
+                val idx = list.indexOf(existing)
+                if (idx >= 0) list[idx] = updated
+                byUrl[u] = updated
+            }
+            return updated
         }
-        val sn = optStr(item, "site_name") ?: siteName(u)
+        val sn = item?.str("site_name") ?: siteName(u)
         val s = Source(
             index = list.size + 1,
             url = u,
             title = title?.trim()?.takeIf { it.isNotEmpty() } ?: title,
             siteName = sn,
             publishedAt = publishedAt?.takeIf { it.isNotEmpty() },
-            snippet = optStr(item, "snippet"),
-            siteIcon = optStr(item, "site_icon"),
+            snippet = item?.str("snippet"),
+            siteIcon = item?.str("site_icon"),
         )
         list.add(s)
         byUrl[u] = s
@@ -102,37 +152,49 @@ private class Registry {
 /** ref view.ts：把 server_tool_use + 结果块、文本引用注册成来源列表 */
 fun searchSources(blocks: List<ReplyBlock>): List<Source> {
     val registry = Registry()
-    val results = HashMap<String, JSONObject>()
+    val results = HashMap<String, JsonObject>()
     for (b in blocks) {
         if (b is ReplyBlock.Tool) {
-            val p = JSONObject(b.payload.toString())
-            if (p.optString("type") == "web_search_tool_result") {
-                results[p.optString("tool_use_id")] = p
+            val p = b.payload
+            val t = p.str("type")
+            if (t == "web_search_tool_result" || t == "web_fetch_tool_result") {
+                p.str("tool_use_id")?.let { results[it] = p }
             }
         }
     }
     for (b in blocks) {
         when (b) {
             is ReplyBlock.Tool -> {
-                val p = JSONObject(b.payload.toString())
-                when (p.optString("type")) {
-                    "web_fetch_tool_result" -> {
-                        val content = p.optJSONObject("content") ?: continue
-                        if (content.optString("type") != "web_fetch_result") continue
-                        registry.add(optStr(content, "url"),
-                            optStr(content.optJSONObject("content"), "title"),
-                            optStr(content, "published_at"), null)
+                val p = b.payload
+                if (p.str("type") != "server_tool_use") continue
+                val r = p.str("id")?.let { results[it] } ?: continue
+                when (r.str("type")) {
+                    "web_search_tool_result" -> {
+                        val content = r.arr("content") ?: continue
+                        for (el in content) {
+                            val item = el as? JsonObject ?: continue
+                            if (item.str("type") != "web_search_result") continue
+                            registry.add(
+                                item.str("url") ?: "",
+                                item.str("title"),
+                                item.str("page_age"),
+                                item,
+                            )
+                        }
                     }
-                    "server_tool_use" -> {
-                        val input = p.optJSONObject("input") ?: continue
-                        if (input.optString("action") != "search") continue
-                        val result = results[p.optString("id")]
-                        val content = result?.optJSONArray("content") ?: continue
-                        for (i in 0 until content.length()) {
-                            val item = content.optJSONObject(i) ?: continue
-                            if (item.optString("type") != "web_search_result") continue
-                            registry.add(optStr(item, "url") ?: "", optStr(item, "title"),
-                                optStr(item, "page_age"), item)
+                    "web_fetch_tool_result" -> {
+                        val content = r.obj("content") ?: continue
+                        val kind = p.str("kind")
+                        val action = p.obj("input")?.str("action")
+                        if (content.str("type") == "web_fetch_result" &&
+                            (kind == "deep_search" || action == "open_page")
+                        ) {
+                            registry.add(
+                                content.str("url"),
+                                content.obj("content")?.str("title"),
+                                content.str("published_at"),
+                                null,
+                            )
                         }
                     }
                 }
@@ -162,9 +224,15 @@ fun withCitationMarkers(blocks: List<ReplyBlock>, sources: List<Source>): List<R
 
 /** 单个 server_tool_use 块对应一个搜索 step；返回(该次调用注册的来源, 是否已完成) */
 sealed class ToolStep {
-    data class Search(val sources: List<Source>, val status: ToolStatus) : ToolStep()
+    data class Search(
+        val sources: List<Source>,
+        val status: ToolStatus,
+        val kind: String = "search",
+        val queries: List<String> = emptyList(),
+    ) : ToolStep()
     data class Open(val sources: List<Source>, val status: ToolStatus) : ToolStep()
     data class Find(val pattern: String, val status: ToolStatus) : ToolStep()
+    data class ReadLink(val url: String, val title: String, val status: ToolStatus) : ToolStep()
 }
 
 enum class ToolStatus { WIP, DONE, FAILED }
@@ -175,57 +243,100 @@ private fun toolStatus(status: String?): ToolStatus = when (status) {
     else -> ToolStatus.FAILED
 }
 
-fun toolStep(block: ReplyBlock.Tool, allBlocks: List<ReplyBlock>, registry: List<Source>): ToolStep? {
-    val p = JSONObject(block.payload.toString())
-    if (p.optString("type") != "server_tool_use") return null
-    val input = p.optJSONObject("input") ?: return null
-    val byId = HashMap<String, JSONObject>()
+fun toolStep(
+    block: ReplyBlock.Tool,
+    allBlocks: List<ReplyBlock>,
+    registry: List<Source>,
+    streaming: Boolean = true,
+): ToolStep? {
+    val p = block.payload
+    if (p.str("type") != "server_tool_use") return null
+    val input = p.obj("input") ?: return null
+    val action = input.str("action") ?: ""
+    val kind = p.str("kind") ?: action.ifEmpty { "search" }
+    val byId = HashMap<String, JsonObject>()
     for (b in allBlocks) {
         if (b !is ReplyBlock.Tool) continue
-        val r = JSONObject(b.payload.toString())
-        val id = r.optString("tool_use_id")
-        if (id.isNotEmpty()) byId[id] = r
+        val r = b.payload
+        r.str("tool_use_id")?.let { byId[it] = r }
     }
-    return when (input.optString("action")) {
-        "search", "deep_search" -> {
-            val r = byId[p.optString("id")]
-            val found = ArrayList<Source>()
-            val status = when {
-                r == null -> ToolStatus.WIP
-                r.optString("status") == "error" -> ToolStatus.FAILED
-                else -> {
-                    val content = r.optJSONArray("content") ?: JSONArray()
-                    for (i in 0 until content.length()) {
-                        val item = content.optJSONObject(i) ?: continue
-                        if (item.optString("type") != "web_search_result") continue
-                        optStr(item, "url")?.let { url -> registry.find { it.url == url }?.let(found::add) }
+    val r = p.str("id")?.let { byId[it] }
+    val isSearch = action in SEARCH_TOOL_NAMES || (action.isEmpty() && kind in SEARCH_TOOL_NAMES)
+    if (isSearch) {
+        val queries = buildList {
+            input.arr("queries")?.forEach { el ->
+                (el as? JsonPrimitive)?.takeIf { it !is JsonNull }?.contentOrNull?.trim()
+                    ?.takeIf { it.isNotEmpty() }?.let(::add)
+            }
+            if (isEmpty()) input.str("query")?.let(::add)
+        }
+        val found = ArrayList<Source>()
+        val status = when {
+            r == null -> if (streaming) ToolStatus.WIP else ToolStatus.FAILED
+            r.str("status") == "error" -> ToolStatus.FAILED
+            else -> {
+                val content = r.arr("content") ?: JsonArray(emptyList())
+                val hasError = content.any { el ->
+                    (el as? JsonObject)?.str("type") == "web_search_tool_result_error"
+                }
+                if (hasError) {
+                    ToolStatus.FAILED
+                } else {
+                    for (el in content) {
+                        val item = el as? JsonObject ?: continue
+                        if (item.str("type") != "web_search_result") continue
+                        item.str("url")?.let { url ->
+                            registry.find { it.url == url }?.let { s ->
+                                if (s !in found) found.add(s)
+                            }
+                        }
                     }
                     ToolStatus.DONE
                 }
             }
-            ToolStep.Search(found, status)
         }
+        return ToolStep.Search(found, status, kind = kind, queries = queries)
+    }
+    return when (action) {
         "open_page" -> {
-            val r = byId[p.optString("id")]
             val found = ArrayList<Source>()
             val status = when {
-                r == null -> ToolStatus.WIP
-                r.optString("status") == "error" -> ToolStatus.FAILED
-                else -> {
-                    val content = r.optJSONObject("content")
-                    if (content != null) {
-                        val url = optStr(content, "url")
-                        if (url != null) registry.find { it.url == url }?.let(found::add)
+                r == null -> if (streaming) ToolStatus.WIP else ToolStatus.FAILED
+                r.str("status") == "error" -> ToolStatus.FAILED
+                r.obj("content")?.str("type") == "web_fetch_result" -> {
+                    r.obj("content")?.str("url")?.let { url ->
+                        registry.find { it.url == url }?.let(found::add)
                     }
                     ToolStatus.DONE
                 }
+                else -> ToolStatus.FAILED
             }
             ToolStep.Open(found, status)
         }
-        "find_pattern", "find" -> ToolStep.Find(
-            pattern = input.optString("pattern").ifEmpty { input.optString("query") },
-            status = byId[p.optString("id")]?.let { toolStatus(it.optString("status")) } ?: ToolStatus.WIP,
-        )
+        "read_link" -> {
+            val fetched = r?.obj("content")
+            val fetchedUrl = if (fetched?.str("type") == "web_fetch_result") fetched.str("url") else null
+            val url = input.str("url") ?: fetchedUrl ?: return null
+            val status = when {
+                r == null -> if (streaming) ToolStatus.WIP else ToolStatus.FAILED
+                r.str("status") == "error" -> ToolStatus.FAILED
+                fetched?.str("type") == "web_fetch_result" -> ToolStatus.DONE
+                else -> ToolStatus.FAILED
+            }
+            val title = fetched?.obj("content")?.str("title") ?: url
+            ToolStep.ReadLink(url = url, title = title, status = status)
+        }
+        "find_pattern", "find" -> {
+            val pattern = input.str("pattern") ?: input.str("query") ?: ""
+            val status = when {
+                r == null -> if (streaming) ToolStatus.WIP else ToolStatus.FAILED
+                r.str("status") == "error" -> ToolStatus.FAILED
+                r.str("type") == "web_fetch_tool_result" ->
+                    if (r.obj("content")?.str("type") == "web_fetch_result") ToolStatus.DONE else ToolStatus.FAILED
+                else -> toolStatus(r.str("status"))
+            }
+            ToolStep.Find(pattern = pattern, status = status)
+        }
         else -> null
     }
 }
@@ -240,10 +351,67 @@ fun formatSourceDate(iso: String?): String {
     } catch (_: Exception) { iso }
 }
 
-/** ref SiteLogo：favicon 加载失败/缺失时的链接占位图标 */
+private object SiteIconCache {
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(5, TimeUnit.SECONDS)
+        .readTimeout(5, TimeUnit.SECONDS)
+        .build()
+    private val cache = object : android.util.LruCache<String, ImageBitmap>(64) {}
+    private val failed = ConcurrentHashMap.newKeySet<String>()
+
+    fun cached(url: String): ImageBitmap? = synchronized(cache) { cache.get(url) }
+
+    suspend fun load(url: String): ImageBitmap? {
+        cached(url)?.let { return it }
+        if (url in failed) return null
+        if (!url.startsWith("http://") && !url.startsWith("https://")) return null
+        return withContext(Dispatchers.IO) {
+            cached(url)?.let { return@withContext it }
+            try {
+                val req = Request.Builder().url(url).build()
+                client.newCall(req).execute().use { resp ->
+                    if (!resp.isSuccessful) {
+                        failed.add(url)
+                        return@withContext null
+                    }
+                    val bytes = resp.body?.bytes() ?: return@withContext null
+                    val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+                    var sample = 1
+                    while (bounds.outWidth / sample > 128 || bounds.outHeight / sample > 128) sample *= 2
+                    val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }
+                    val bmp = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)
+                    if (bmp == null) {
+                        failed.add(url)
+                        return@withContext null
+                    }
+                    val img = bmp.asImageBitmap()
+                    synchronized(cache) { cache.put(url, img) }
+                    img
+                }
+            } catch (_: Exception) {
+                failed.add(url)
+                null
+            }
+        }
+    }
+}
+
+/** ref SiteLogo：优先加载 source.siteIcon，加载中/失败退回链接占位图标 */
 @Composable
-fun SiteLogo(size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
+fun SiteLogo(
+    size: androidx.compose.ui.unit.Dp,
+    modifier: Modifier = Modifier,
+    url: String? = null,
+) {
     val c = DsTheme.colors
+    val iconUrl = url?.trim()?.takeIf { it.isNotEmpty() }
+    val loaded by produceState<ImageBitmap?>(
+        initialValue = iconUrl?.let { SiteIconCache.cached(it) },
+        key1 = iconUrl,
+    ) {
+        value = if (iconUrl != null) SiteIconCache.load(iconUrl) else null
+    }
     Box(
         modifier
             .size(size)
@@ -251,8 +419,17 @@ fun SiteLogo(size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
             .background(c.markdownCitation),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(painterResource(R.drawable.ic_link), null,
-            tint = c.labelTertiary, modifier = Modifier.size(size * 0.7f))
+        if (loaded != null) {
+            Image(
+                bitmap = loaded!!,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            Icon(painterResource(R.drawable.ic_link), null,
+                tint = c.labelTertiary, modifier = Modifier.size(size * 0.7f))
+        }
     }
 }
 
@@ -260,11 +437,15 @@ fun SiteLogo(size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
 @Composable
 private fun SiteThumbnails(sources: List<Source>) {
     Row(Modifier.padding(start = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        sources.take(4).forEachIndexed { i, _ ->
+        sources.take(4).forEachIndexed { i, source ->
             val overlap = if (i == 0) 0.dp else (-4).dp
-            SiteLogo(16.dp, Modifier
-                .offset(x = overlap)
-                .border(1.dp, DsTheme.colors.bgBase, CircleShape))
+            SiteLogo(
+                size = 16.dp,
+                modifier = Modifier
+                    .offset(x = overlap)
+                    .border(1.dp, DsTheme.colors.bgBase, CircleShape),
+                url = source.siteIcon,
+            )
         }
     }
 }
@@ -295,11 +476,44 @@ fun SourcesSummary(sources: List<Source>, onClick: () -> Unit) {
     }
 }
 
-/** ref SearchRow：「已阅读 N 个网页」步骤行，点击打开来源面板 */
+/** ref SearchRow：「已阅读 N 个网页」或「搜索到 N 个网页」步骤行，点击打开来源面板 */
 @Composable
-fun SearchStepRow(step: ToolStep.Search, onOpen: (List<Source>) -> Unit) {
+fun SearchStepRow(
+    step: ToolStep.Search,
+    onOpen: (List<Source>) -> Unit,
+    stopped: Boolean = false,
+) {
     val c = DsTheme.colors
     val clickable = step.status == ToolStatus.DONE && step.sources.isNotEmpty()
+    var tick by remember(step.queries) { mutableIntStateOf(0) }
+    LaunchedEffect(step.status, step.queries.size) {
+        if (step.status == ToolStatus.WIP && step.queries.size > 1) {
+            while (isActive) {
+                delay(2000)
+                tick++
+            }
+        }
+    }
+    val isDeep = isDeepSearchKind(step.kind)
+    val label = when (step.status) {
+        ToolStatus.WIP -> when {
+            step.queries.isNotEmpty() ->
+                "${Strings.get("toolSearchIntro")} ${step.queries[tick % step.queries.size]}"
+            isImageSearchKind(step.kind) -> Strings.get("imageSearching")
+            else -> Strings.get("messageSearching")
+        }
+        ToolStatus.FAILED -> Strings.get(if (stopped) "searchStopped" else "toolSearchFail")
+        ToolStatus.DONE -> when {
+            step.sources.isEmpty() ->
+                Strings.get(if (isDeep) "toolSearchNoResult" else "messageSearchNoResult")
+            step.sources.size == 1 ->
+                Strings.get(if (isDeep) "toolSearch1Result" else "messageSearchResult")
+            else -> Strings.get(
+                if (isDeep) "toolSearchResults" else "messageSearchResults",
+                "count" to step.sources.size,
+            )
+        }
+    }
     Row(
         Modifier
             .height(34.dp)
@@ -309,19 +523,27 @@ fun SearchStepRow(step: ToolStep.Search, onOpen: (List<Source>) -> Unit) {
         Icon(painterResource(R.drawable.ic_search), null, tint = c.labelSecondary,
             modifier = Modifier.padding(1.dp).size(14.dp))
         Spacer(Modifier.width(6.dp))
-        val label = when (step.status) {
-            ToolStatus.WIP -> Strings.get("messageSearching")
-            ToolStatus.FAILED -> Strings.get("toolSearchFail")
-            ToolStatus.DONE -> when {
-                step.sources.isEmpty() -> Strings.get("messageSearchNoResult")
-                step.sources.size == 1 -> Strings.get("messageSearchResult")
-                else -> Strings.get("messageSearchResults").replace("{count}", step.sources.size.toString())
-            }
-        }
-        Text(label,
+        Text(
+            label,
             fontSize = 14.sp, lineHeight = 24.sp, color = c.labelSecondary,
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
         )
         if (clickable) SiteThumbnails(step.sources)
+    }
+}
+
+@Composable
+fun ReadLinkStepRow(step: ToolStep.ReadLink) {
+    val c = DsTheme.colors
+    Row(Modifier.height(34.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(painterResource(R.drawable.ic_link), null, tint = c.labelSecondary,
+            modifier = Modifier.padding(1.dp).size(14.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(
+            "${Strings.get("readingLink")} ${step.title}",
+            fontSize = 14.sp, lineHeight = 24.sp, color = c.labelSecondary,
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -448,7 +670,7 @@ fun SearchSourcesPanel(sources: List<Source>, numbered: Boolean, onClose: () -> 
                         .size(30.dp)
                         .clip(CircleShape)
                         .background(c.interactiveBgHover)
-                        .clickable(onClick = onClose),
+                        .clickable(onClick = requestClose),
                     contentAlignment = Alignment.Center,
                 ) {
                     // ref 内联 svg：两条 1.8px 描边对角线（20px viewBox）
@@ -499,7 +721,7 @@ private fun SourceItem(source: Source, numbered: Boolean, single: Boolean) {
         } catch (_: Exception) {}
     }) {
         Row(Modifier.fillMaxWidth().height(20.dp), verticalAlignment = Alignment.CenterVertically) {
-            SiteLogo(20.dp)
+            SiteLogo(20.dp, url = source.siteIcon)
             Spacer(Modifier.width(10.36.dp))
             // ref .meta: siteName/date flex-shrink, .number { margin-left: auto }
             Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
