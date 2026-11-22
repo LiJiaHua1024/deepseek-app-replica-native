@@ -64,7 +64,7 @@ internal fun showDisabledSend(
     voiceMode: Boolean,
     canSend: Boolean,
     isStreaming: Boolean,
-): Boolean = focused && !voiceMode && !canSend && !isStreaming
+): Boolean = false
 
 // Android composer per ChatInput.module.css [data-android] .wrapper: radius
 // 30px, font 16.75px, 1px border color-mix(currentColor 7%), shadow
@@ -314,7 +314,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
         Box(
             Modifier.fillMaxWidth()
                 .defaultMinSize(minHeight = 58.dp)
-                .padding(start = 17.dp, end = 17.dp, top = 14.dp, bottom = 10.dp)
+                .padding(start = 17.dp, end = 17.dp, top = 16.dp, bottom = 10.dp)
         ) {
             BasicTextField(
                 value = text,
@@ -432,7 +432,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                     }
                     .horizontalScroll(togglesScroll),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(7.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 TogglePill(Strings.get("thinkingSwitch"), thinking, { settings.setThinking(!thinking) }, R.drawable.ic_think)
                 TogglePill(Strings.get("search"), search, { settings.setSearch(!search) }, R.drawable.ic_globe)
@@ -515,7 +515,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                     Box(Modifier.size(25.dp).align(Alignment.Center)
                         .semantics { contentDescription = voiceDesc }) {}
                 }
-            } else {
+            } else if (!canSend && !isStreaming) {
                 Box(
                     Modifier.align(Alignment.CenterVertically).size(40.dp, 36.dp)
                         .clickable(voiceSrc, null) {
@@ -531,40 +531,28 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                             .background(DsTheme.pressTint(voicePressed, c.interactiveBgHover)))
                 }
             }
-            if (showDisabledSend(focused, voiceMode, canSend, isStreaming)) {
+            if (canSend || isStreaming) {
                 Box(
                     Modifier.align(Alignment.CenterVertically)
-                        .padding(start = 4.dp, end = 4.dp)
-                        .size(30.dp).clip(CircleShape)
-                        .clickable(enabled = false) {}
-                        .semantics { contentDescription = Strings.get("send") },
+                        .size(40.dp, 36.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        painterResource(R.drawable.ic_send),
-                        null,
-                        tint = Color(0xFFB3C5FF),
-                        modifier = Modifier.size(16.dp),
-                    )
-                }
-            } else if (canSend || isStreaming) {
-                Box(
-                    Modifier.align(Alignment.CenterVertically)
-                        .padding(start = 4.dp, end = 4.dp)
-                        .size(30.dp).clip(CircleShape)
-                        .background(c.buttonPrimaryFill)
-                        .clickable {
-                            if (isStreaming) chatStore.stopReply(activeId!!)
-                            else { chatStore.setDraft(activeId, text); chatStore.sendMessage(activeId); text = "" }
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        painterResource(if (isStreaming) R.drawable.ic_stop else R.drawable.ic_send),
-                        Strings.get(if (isStreaming) "stopGenerating" else "send"),
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp),
-                    )
+                    Box(
+                        Modifier.size(32.dp).clip(CircleShape)
+                            .background(c.buttonPrimaryFill)
+                            .clickable {
+                                if (isStreaming) chatStore.stopReply(activeId!!)
+                                else { chatStore.setDraft(activeId, text); chatStore.sendMessage(activeId); text = "" }
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            painterResource(if (isStreaming) R.drawable.ic_stop else R.drawable.ic_send),
+                            Strings.get(if (isStreaming) "stopGenerating" else "send"),
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
                 }
             }
         }
@@ -667,10 +655,10 @@ internal fun TogglePill(label: String, on: Boolean, onClick: () -> Unit, icon: I
     val scale by androidx.compose.animation.core.animateFloatAsState(
         if (pressed) 0.96f else 1f,
         androidx.compose.animation.core.tween(100), label = "togglePress")
-    val pillShape = RoundedCornerShape(16.dp)
+    val pillShape = RoundedCornerShape(18.dp)
     val bg = if (on) c.buttonGhostActiveFill else if (c.dark) c.inputMajor else Color.Transparent
     Row(
-        Modifier.height(31.dp)
+        Modifier.height(33.dp).defaultMinSize(minWidth = 100.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(pillShape)
             .background(bg)
@@ -681,13 +669,14 @@ internal fun TogglePill(label: String, on: Boolean, onClick: () -> Unit, icon: I
                 indication = null,
                 role = androidx.compose.ui.semantics.Role.Checkbox,
             ) { onClick() }
-            .padding(horizontal = 10.dp),
+            .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
     ) {
         Icon(painterResource(icon), null,
             tint = if (on) c.brandText else c.labelPrimary,
-            modifier = Modifier.size(15.dp))
-        Spacer(Modifier.width(4.dp))
+            modifier = Modifier.size(15.5.dp))
+        Spacer(Modifier.width(5.dp))
         Text(
             label,
             fontSize = 13.5.sp,

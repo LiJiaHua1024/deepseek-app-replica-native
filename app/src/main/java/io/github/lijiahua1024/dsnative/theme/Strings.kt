@@ -30,10 +30,10 @@ object Strings {
     )
 
     val coldStartWelcomeMessages = listOf(
-        "欢迎回来，想从哪里开始？",
-        "欢迎回来，随时开始吧",
-        "嗨！今天想聊些什么？",
-        "你好，我能帮什么忙吗？",
+        "早上好，有什么我能帮你的吗？",
+        "下午好，有什么我能帮你的吗？",
+        "晚上好，有什么我能帮你的吗？",
+        "你好，有什么我能帮你的吗？",
     )
 
     // debug builds: shot drivers pin the greeting so captures are deterministic
@@ -44,7 +44,19 @@ object Strings {
 
     fun welcomeGreeting(coldStart: Boolean = false): String {
         val messages = if (coldStart) coldStartWelcomeMessages else androidWelcomeMessages
-        return messages.getOrElse(GreetingDebug.index) { messages.random() }
+        val debugIdx = GreetingDebug.index
+        if (debugIdx in messages.indices) return messages[debugIdx]
+        if (coldStart) {
+            val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+            val idx = when (hour) {
+                in 5..11 -> 0
+                in 12..17 -> 1
+                in 18..23 -> 2
+                else -> 3
+            }
+            return messages[idx]
+        }
+        return messages.random()
     }
 
     fun get(key: String, vararg params: Pair<String, Any>): String {
@@ -314,6 +326,10 @@ object Strings {
             "mermaidSwitchLabel" -> pick("Mermaid 图表与代码切换", "Toggle between Mermaid diagram and code")
             "mermaidSave" -> pick("保存", "Save")
             "mermaidFullscreen" -> pick("全屏", "Full screen")
+            "tableLabel" -> pick("表格", "Table")
+            "tableExportCsv" -> pick("导出 CSV", "Export CSV")
+            "tableExported" -> pick("已保存 CSV 到下载目录", "Saved CSV to Downloads")
+            "tableExportFailed" -> pick("导出 CSV 失败", "Failed to export CSV")
             "toolSearchIntro" -> pick("搜索", "Searching for")
             "imageSearching" -> pick("图像搜索中...", "Searching by image...")
             "searchStopped" -> pick("搜索已停止", "Search stopped")

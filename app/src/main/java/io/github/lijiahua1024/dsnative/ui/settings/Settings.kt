@@ -322,7 +322,7 @@ fun AndroidSettings(
                                     },
                                     onLogout = { confirmLogout = true },
                                     onModalBlur = { frac ->
-                                        modalTargetBlurDp = 2.1f
+                                        modalTargetBlurDp = 0.40f
                                         modalBlurFraction = frac
                                     },
                                     onCheckUpdate = {
@@ -368,7 +368,7 @@ fun AndroidSettings(
                 else -> "system"
             },
             onProgress = {
-                modalTargetBlurDp = 2.1f
+                modalTargetBlurDp = 0.40f
                 modalBlurFraction = it
             },
             onConfirm = { v ->
@@ -400,7 +400,7 @@ fun AndroidSettings(
                 else -> "system"
             },
             onProgress = {
-                modalTargetBlurDp = 2.1f
+                modalTargetBlurDp = 0.40f
                 modalBlurFraction = it
             },
             onConfirm = { v ->
@@ -456,7 +456,7 @@ fun AndroidSettings(
             cancelText = Strings.get("cancel"),
             danger = true,
             onProgress = {
-                modalTargetBlurDp = 2.1f
+                modalTargetBlurDp = 0.40f
                 modalBlurFraction = it
             },
             onConfirm = {
@@ -478,7 +478,7 @@ fun AndroidSettings(
             cancelText = Strings.get("cancel"),
             danger = false,
             onProgress = {
-                modalTargetBlurDp = 2.1f
+                modalTargetBlurDp = 0.40f
                 modalBlurFraction = it
             },
             onConfirm = {
@@ -562,13 +562,7 @@ private fun SettingsRootPage(
             { Icon(painterResource(if (c.dark) R.drawable.ic_moon else R.drawable.ic_light), null, tint = c.labelPrimary, modifier = Modifier.size(20.dp)) },
             value = themeLabel(themePref)) { onPopup("theme") }
         SettingsRow(c, muted, Strings.get("settingsFontPage"),
-            {
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text("A", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = c.labelPrimary,
-                        modifier = Modifier.padding(bottom = 0.5.dp))
-                    Text("A", fontSize = 16.5.sp, fontWeight = FontWeight.Medium, color = c.labelPrimary)
-                }
-            }) { onPage("font") }
+            { Icon(painterResource(R.drawable.ic_font_size), null, tint = c.labelPrimary, modifier = Modifier.size(19.dp)) }) { onPage("font") }
         SettingsRow(c, muted, Strings.get("settingsPersonalizationPage"),
             { Icon(painterResource(R.drawable.ic_wand), null, tint = c.labelPrimary, modifier = Modifier.size(20.dp)) }) { onPage("personalization") }
     }
@@ -582,7 +576,7 @@ private fun SettingsRootPage(
             c,
             muted,
             Strings.get("settingsVersion"),
-            { InfoGlyph("i", c.labelPrimary) },
+            { Icon(painterResource(R.drawable.ic_info_circle), null, tint = c.labelPrimary, modifier = Modifier.size(19.dp)) },
             value = if (checkingUpdate) Strings.get("checkingForUpdate") else BuildConfig.VERSION_NAME,
             arrow = false,
             enabled = !checkingUpdate,

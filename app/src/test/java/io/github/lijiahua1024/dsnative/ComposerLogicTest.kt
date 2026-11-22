@@ -8,8 +8,8 @@ import org.junit.Test
 class ComposerLogicTest {
 
     @Test
-    fun disabledSendAppearsForFocusedEmptyOrWhitespaceIdleInput() {
-        assertTrue(showDisabledSend(focused = true, voiceMode = false, canSend = false, isStreaming = false))
+    fun disabledSendNeverCoexistsWithVoiceIcon() {
+        assertFalse(showDisabledSend(focused = true, voiceMode = false, canSend = false, isStreaming = false))
         assertFalse(showDisabledSend(focused = false, voiceMode = false, canSend = false, isStreaming = false))
         assertFalse(showDisabledSend(focused = true, voiceMode = true, canSend = false, isStreaming = false))
         assertFalse(showDisabledSend(focused = true, voiceMode = false, canSend = true, isStreaming = false))

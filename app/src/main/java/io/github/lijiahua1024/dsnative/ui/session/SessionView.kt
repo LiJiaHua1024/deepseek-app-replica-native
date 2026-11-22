@@ -559,13 +559,27 @@ fun SessionView(
 fun Welcome(modifier: Modifier = Modifier, coldStart: Boolean = false, identity: Any? = null) {
     val c = DsTheme.colors
     val greeting = remember(coldStart, identity) { Strings.welcomeGreeting(coldStart) }
-    Column(modifier = modifier.fillMaxWidth().offset(y = (-6).dp), verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(painterResource(R.drawable.whale), null, tint = c.brandPrimary,
-            modifier = Modifier.size(42.dp))
-        Spacer(Modifier.height(14.dp))
-        Text(greeting, fontSize = 21.sp, lineHeight = 28.sp, fontWeight = FontWeight.Medium,
-            color = c.labelPrimary)
+    Column(
+        modifier = modifier.fillMaxWidth().offset(y = (-8).dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            painterResource(R.drawable.whale),
+            null,
+            tint = c.brandPrimary,
+            modifier = Modifier.size(42.dp),
+        )
+        Spacer(Modifier.height(16.dp))
+        Text(
+            greeting,
+            fontSize = 21.sp,
+            lineHeight = 29.sp,
+            fontWeight = FontWeight.Medium,
+            color = c.labelPrimary,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.widthIn(max = 225.dp),
+        )
     }
 }
 
