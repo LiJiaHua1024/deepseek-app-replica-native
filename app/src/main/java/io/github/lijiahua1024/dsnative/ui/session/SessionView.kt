@@ -10,7 +10,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -77,12 +76,13 @@ fun SessionView(
     val streaming by chatStore.streaming.collectAsState()
     val listState = rememberLazyListState()
     var sourcesPanel by remember { mutableStateOf<List<Source>?>(null) }
-    // (msg, 气泡 boundsInWindow, edit 回调) —— 参照物菜单在页内 DOM，Popup 窗口
+    // (msg, 气泡 boundsInWindow) —— 参照物菜单在页内 DOM，Popup 窗口
     // 会把强制对比度的黑色导航栏区域刷白，必须用窗口内 overlay
-    var bubbleMenu by remember { mutableStateOf<Triple<Message.User, androidx.compose.ui.geometry.Rect, () -> Unit>?>(null) }
+    var bubbleMenu by remember { mutableStateOf<Pair<Message.User, androidx.compose.ui.geometry.Rect>?>(null) }
     var assistantMenu by remember { mutableStateOf<Pair<Message.Assistant, androidx.compose.ui.geometry.Rect>?>(null) }
     var feedbackTarget by remember { mutableStateOf<Pair<Message.Assistant, FeedbackSheetVariant>?>(null) }
     var shareSession by remember { mutableStateOf<Session?>(null) }
+    var editTarget by remember { mutableStateOf<Message.User?>(null) }
     val rootCtx = LocalContext.current
     val autoRead by settings.autoRead.collectAsState()
     val foldThinking by settings.foldThinking.collectAsState()
@@ -202,7 +202,7 @@ fun SessionView(
                 contentPadding = PaddingValues(bottom = 20.5.dp)) {
                 items(visible.size, key = { visible[it].id }) { index ->
                     when (val msg = visible[index]) {
-                        is Message.User -> session?.let { UserBubble(msg, it, chatStore) { m, r, e -> bubbleMenu = Triple(m, r, e) } }
+                        is Message.User -> session?.let { UserBubble(msg, it, chatStore) { m, r -> bubbleMenu = m to r } }
                         is Message.Assistant -> session?.let {
                             AssistantView(
                                 msg = msg,
@@ -320,7 +320,8 @@ fun SessionView(
     val voiceCanceling by VoiceInput.canceling.collectAsState()
     io.github.lijiahua1024.dsnative.ui.DrawerGestureBlocker(
         sourcesPanel != null || bubbleMenu != null || assistantMenu != null ||
-            feedbackTarget != null || shareSession != null || voiceStatus != VoiceInput.Status.IDLE
+            feedbackTarget != null || shareSession != null || editTarget != null ||
+            voiceStatus != VoiceInput.Status.IDLE
     )
     if (voiceStatus != VoiceInput.Status.IDLE) {
         VoiceOverlay(canceling = voiceCanceling) { VoiceInput.level() }
@@ -339,7 +340,7 @@ fun SessionView(
             )
         }
     }
-    bubbleMenu?.let { (bmsg, rect, onEdit) ->
+    bubbleMenu?.let { (bmsg, rect) ->
         val density = androidx.compose.ui.platform.LocalDensity.current
         var overlayPos by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
         var overlayH by remember { mutableIntStateOf(0) }
@@ -367,7 +368,7 @@ fun SessionView(
                 modifier = Modifier.align(Alignment.TopEnd)
                     .padding(end = endPad)
                     .offset(y = topPad)
-                    .width(124.dp)
+                    .width(136.dp)
                     .onGloballyPositioned { menuH = it.size.height },
             ) {
                 Column(Modifier.padding(4.dp)) {
@@ -378,7 +379,12 @@ fun SessionView(
                         bubbleMenu = null
                     }
                     MenuOption(Strings.get("androidEditMessage"), R.drawable.ic_edit, c.labelPrimary) {
-                        onEdit(); bubbleMenu = null
+                        bubbleMenu = null
+                        editTarget = bmsg
+                    }
+                    MenuOption(Strings.get("share"), R.drawable.ic_share, c.labelPrimary) {
+                        bubbleMenu = null
+                        session?.let { shareSession = it }
                     }
                 }
             }
@@ -499,6 +505,19 @@ fun SessionView(
     shareSession?.let { s ->
         MessageShareOverlay(session = s, onClose = { shareSession = null })
     }
+    editTarget?.let { target ->
+        val s = session
+        if (s != null) {
+            MessageEditOverlay(
+                sessionId = s.id,
+                msg = target,
+                settings = settings,
+                chatStore = chatStore,
+                isStreaming = streaming.contains(s.id),
+                onClose = { editTarget = null },
+            )
+        }
+    }
     }
     }
 }
@@ -596,11 +615,8 @@ fun BranchSwitcher(session: Session, msg: Message, chatStore: ChatStore) {
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun UserBubble(msg: Message.User, session: Session, chatStore: ChatStore,
-               onMenu: (Message.User, androidx.compose.ui.geometry.Rect, () -> Unit) -> Unit = { _, _, _ -> }) {
+               onMenu: (Message.User, androidx.compose.ui.geometry.Rect) -> Unit = { _, _ -> }) {
     val c = DsTheme.colors
-    val ctx = LocalContext.current
-    var editing by remember(msg.id) { mutableStateOf(false) }
-    var draft by remember(msg.id) { mutableStateOf(msg.content) }
     var bubbleRect by remember(msg.id) { mutableStateOf(androidx.compose.ui.geometry.Rect.Zero) }
     Column(Modifier.fillMaxWidth().padding(top = 22.dp)) {
         // ref .files: wrap 行右对齐 gap 10px mb 8px；混排文档时缩略图 64px
@@ -611,7 +627,7 @@ fun UserBubble(msg: Message.User, session: Session, chatStore: ChatStore,
                 Modifier.fillMaxWidth().padding(
                     start = 20.dp,
                     end = 20.dp,
-                    bottom = if (msg.content.isNotEmpty() || editing) 8.dp else 0.dp,
+                    bottom = if (msg.content.isNotEmpty()) 8.dp else 0.dp,
                 ),
                 horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -621,54 +637,27 @@ fun UserBubble(msg: Message.User, session: Session, chatStore: ChatStore,
                 }
             }
         }
-        if (editing) {
-            // ref .editor: width 100% of message column (20css px side margins),
-            // brand border r22, textarea 16/24 pad 10/16, actions gap 8 margin 6/10/10
-            Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp)
-                .border(1.dp, c.brandPrimary, RoundedCornerShape(22.dp))
-                .clip(RoundedCornerShape(22.dp))
-                .background(c.bgBase)) {
-                // editor body
-                BasicTextField(
-                    value = draft,
-                    onValueChange = { draft = it },
-                    textStyle = androidx.compose.ui.text.TextStyle(
-                        fontSize = 16.sp, lineHeight = 24.sp, color = c.labelPrimary),
-                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 13.3.dp, end = 16.dp, bottom = 11.4.dp)
-                )
-                Row(Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 6.dp, bottom = 11.2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    SmallOutlinedButton(Strings.get("cancel")) { editing = false }
-                    SmallPrimaryButton(Strings.get("send"), enabled = draft.trim().isNotEmpty()) {
-                        chatStore.editMessage(session.id, msg.id, draft.trim()); editing = false
-                    }
+        if (msg.content.isNotEmpty()) {
+            Box(Modifier.fillMaxWidth().padding(start = 48.dp, end = 16.dp)) {
+                Box(Modifier.align(Alignment.TopEnd)
+                    .onGloballyPositioned { val p = it.localToRoot(androidx.compose.ui.geometry.Offset.Zero); bubbleRect = androidx.compose.ui.geometry.Rect(p.x, p.y, p.x + it.size.width, p.y + it.size.height) }
+                    .clip(RoundedCornerShape(22.dp, 22.dp, 5.dp, 22.dp))
+                    .background(c.bubble)
+                    .combinedClickable(
+                        // ref .bubble 无 :active 变色：长按/点按都不显示 ripple，且仅通过长按菜单进入官方修改页
+                        indication = null,
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        onClick = {},
+                        onLongClick = { onMenu(msg, bubbleRect) })
+                    .padding(horizontal = 16.dp, vertical = 10.dp)) {
+                    Text(msg.content, fontSize = 16.sp, lineHeight = 24.sp, color = c.labelPrimary)
                 }
-            }
-        } else {
-            if (msg.content.isNotEmpty()) {
-                Box(Modifier.fillMaxWidth().padding(start = 48.dp, end = 16.dp)) {
-                    Box(Modifier.align(Alignment.TopEnd)
-                        .onGloballyPositioned { val p = it.localToRoot(androidx.compose.ui.geometry.Offset.Zero); bubbleRect = androidx.compose.ui.geometry.Rect(p.x, p.y, p.x + it.size.width, p.y + it.size.height) }
-                        .clip(RoundedCornerShape(22.dp, 22.dp, 5.dp, 22.dp))
-                        .background(c.bubble)
-                        .combinedClickable(
-                            // ref .bubble 无 :active 变色：长按/点按都不显示 ripple
-                            indication = null,
-                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                            onClick = { editing = true; draft = msg.content },
-                            onLongClick = { onMenu(msg, bubbleRect) { editing = true; draft = msg.content } })
-                        .padding(horizontal = 16.dp, vertical = 10.dp)) {
-                        Text(msg.content, fontSize = 16.sp, lineHeight = 24.sp, color = c.labelPrimary)
-                    }
-                }
-            }
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                BranchSwitcher(session, msg, chatStore)
             }
         }
-        // editing: ref's .editor-in-textWrap leaves ~6px less room below than the bubble
-        Spacer(Modifier.height(if (editing) 20.1.dp else 21.6.dp))
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+            BranchSwitcher(session, msg, chatStore)
+        }
+        Spacer(Modifier.height(21.6.dp))
     }
 }
 
@@ -803,31 +792,6 @@ private fun MenuOption(label: String, icon: Int, tint: Color, onClick: () -> Uni
         Spacer(Modifier.width(8.dp))
         Text(label, fontSize = 14.sp, lineHeight = 24.sp, color = tint)
     }
-}
-
-@Composable
-private fun SmallOutlinedButton(label: String, onClick: () -> Unit) {
-    val c = DsTheme.colors
-    Text(label, fontSize = 14.sp, lineHeight = 22.sp, color = c.labelPrimary,
-        modifier = Modifier.height(32.dp).defaultMinSize(minWidth = 58.dp)
-            .clip(RoundedCornerShape(100))
-            .border(1.dp, c.borderL2, RoundedCornerShape(100))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp)
-            .wrapContentHeight(Alignment.CenterVertically))
-}
-
-@Composable
-private fun SmallPrimaryButton(label: String, enabled: Boolean, onClick: () -> Unit) {
-    val c = DsTheme.colors
-    Text(label, fontSize = 14.sp, lineHeight = 22.sp,
-        color = if (enabled) c.labelPrimaryForeground else c.labelTertiary,
-        modifier = Modifier.height(32.dp).defaultMinSize(minWidth = 58.dp)
-            .clip(RoundedCornerShape(100))
-            .background(if (enabled) c.buttonPrimaryFill else c.interactiveBgHover)
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 14.dp)
-            .wrapContentHeight(Alignment.CenterVertically))
 }
 
 @Composable

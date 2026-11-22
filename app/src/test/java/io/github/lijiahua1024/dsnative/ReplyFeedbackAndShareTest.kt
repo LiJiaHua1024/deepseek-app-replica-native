@@ -3,9 +3,11 @@ package io.github.lijiahua1024.dsnative
 import io.github.lijiahua1024.dsnative.data.Message
 import io.github.lijiahua1024.dsnative.data.ReplyBlock
 import io.github.lijiahua1024.dsnative.data.ReplyStatus
+import io.github.lijiahua1024.dsnative.ui.session.canSubmitEditedMessage
 import io.github.lijiahua1024.dsnative.ui.session.formatShareTranscript
 import io.github.lijiahua1024.dsnative.ui.session.selectedShareGroupCount
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -38,5 +40,13 @@ class ReplyFeedbackAndShareTest {
         assertTrue(formatted.contains("DeepSeek:\n4"))
         assertTrue(!formatted.contains("2+2?"))
         assertTrue(!formatted.contains("hmm"))
+    }
+
+    @Test
+    fun editMessageSubmitRequiresNonBlankIdleDraft() {
+        assertFalse(canSubmitEditedMessage("", isStreaming = false))
+        assertFalse(canSubmitEditedMessage("   \n\t ", isStreaming = false))
+        assertFalse(canSubmitEditedMessage("edited", isStreaming = true))
+        assertTrue(canSubmitEditedMessage("edited question", isStreaming = false))
     }
 }

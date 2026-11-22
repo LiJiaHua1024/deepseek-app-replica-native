@@ -118,6 +118,8 @@ object Strings {
             "stopGenerating" -> pick("停止生成", "Stop")
             "editMessage" -> pick("编辑消息", "Edit message")
             "androidEditMessage" -> pick("修改", "Edit")
+            "editMessageTitle" -> pick("修改输入", "Edit message")
+            "discard" -> pick("放弃", "Discard")
             "regenerate" -> pick("重新生成", "Regenerate")
             "continueGenerating" -> pick("继续生成", "Continue")
             "changeApiKey" -> pick("更换 API Key", "Change API Key")

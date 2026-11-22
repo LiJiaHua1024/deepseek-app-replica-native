@@ -603,7 +603,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
 }
 
 @Composable
-private fun TogglePill(label: String, on: Boolean, onClick: () -> Unit, icon: Int) {
+internal fun TogglePill(label: String, on: Boolean, onClick: () -> Unit, icon: Int) {
     val c = DsTheme.colors
     // ref [data-android] .toggle:active -> transform: scale(.96), 100ms
     val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
