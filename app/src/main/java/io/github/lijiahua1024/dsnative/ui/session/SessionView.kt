@@ -466,7 +466,7 @@ fun UserBubble(msg: Message.User, session: Session, chatStore: ChatStore,
             Box(Modifier.fillMaxWidth().padding(start = 48.dp, end = 16.dp)) {
                 Box(Modifier.align(Alignment.TopEnd)
                     .onGloballyPositioned { val p = it.localToRoot(androidx.compose.ui.geometry.Offset.Zero); bubbleRect = androidx.compose.ui.geometry.Rect(p.x, p.y, p.x + it.size.width, p.y + it.size.height) }
-                    .clip(RoundedCornerShape(22.dp, 22.dp, 4.dp, 22.dp))
+                    .clip(RoundedCornerShape(22.dp, 22.dp, 5.dp, 22.dp))
                     .background(c.bubble)
                     .combinedClickable(
                         // ref .bubble 无 :active 变色：长按/点按都不显示 ripple

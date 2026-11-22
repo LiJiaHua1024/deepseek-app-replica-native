@@ -426,15 +426,18 @@ private fun SettingsRow(
     Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
         .background(if (pressed) DsTheme.pressTint(pressed, pressBg) else Color.Transparent)
         .clickable(src, null, onClick = onClick)
-        .padding(start = 16.dp, end = 15.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (icon != null) Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) { icon() }
+        .padding(start = 16.dp, end = 12.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        if (icon != null) {
+            Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) { icon() }
+            Spacer(Modifier.width(12.dp))
+        }
         Text(label, fontSize = 16.sp, color = if (danger) c.stateErrorPrimary else c.labelPrimary,
             modifier = Modifier.weight(1f))
         if (value != null) Text(value, fontSize = 16.sp, color = muted)
+        if (value != null && arrow) Spacer(Modifier.width(7.dp))
         if (arrow) Icon(painterResource(R.drawable.ic_chevron_right), null, tint = muted,
-            modifier = Modifier.size(14.dp))
+            modifier = Modifier.size(15.dp))
     }
 }
 
@@ -572,7 +575,7 @@ private fun PersonalizationPage(c: io.github.lijiahua1024.dsnative.theme.DsColor
             RefSwitch(foldThinking) { settings.setFoldThinking(it) }
         }
     }
-    Text(Strings.get("settingsAutoFoldCaption"), fontSize = 15.sp, lineHeight = 23.sp, color = muted,
+    Text(Strings.get("settingsAutoFoldCaption"), fontSize = 16.sp, lineHeight = 24.sp, color = muted,
         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 27.dp))
 }
 
