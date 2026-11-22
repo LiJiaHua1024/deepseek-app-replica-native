@@ -87,52 +87,52 @@ fun SessionView(
     CompositionLocalProvider(LocalOpenSources provides { sourcesPanel = it }) {
     Column(Modifier.fillMaxSize()) {
         // header: h52, padding 0 2 0 4
-        Row(Modifier.fillMaxWidth().height(52.dp).padding(start = 2.1.dp),
+        Row(Modifier.fillMaxWidth().height(52.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(44.8.dp).clickable(
-                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                    indication = null,
-                    onClick = onOpenDrawer,
-                ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(painterResource(R.drawable.ic_menu), Strings.get("expandSiderbarButton"), tint = c.labelPrimary, modifier = Modifier.size(22.4.dp))
-            }
+            NativeHeaderIconButton(
+                contentDescription = null,
+                sizeDp = 44.8f,
+                offsetXDp = 2.1409f,
+                offsetYDp = -1.8182f,
+                iconRes = R.drawable.ic_menu,
+                iconSizeDp = 22.4f,
+                iconTint = c.labelPrimary,
+                iconContentDescription = Strings.get("expandSiderbarButton"),
+                onClick = onOpenDrawer,
+            )
             val headerTitle = session?.title?.ifEmpty { Strings.get("untitledChat") } ?: ""
             Text(headerTitle, fontSize = 14.sp, lineHeight = 22.sp,
                 fontWeight = FontWeight.Medium, color = c.labelPrimary,
                 maxLines = 1, modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             val autoRead by settings.autoRead.collectAsState()
-            val ctx = LocalContext.current
-            IconButton(onClick = {
-                settings.setAutoRead(!autoRead)
-                DsToast.show(Strings.get(if (autoRead) "androidAutoReadDisabled" else "androidAutoReadEnabled"))
-            }, modifier = Modifier.size(48.dp).offset(x = 2.1.dp).toggleable(
-                value = autoRead,
-                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                indication = null,
-                role = androidx.compose.ui.semantics.Role.Checkbox,
-            ) {
-                settings.setAutoRead(!autoRead)
-                DsToast.show(Strings.get(if (autoRead) "androidAutoReadDisabled" else "androidAutoReadEnabled"))
-            }) {
-                Icon(
-                    painterResource(if (autoRead) R.drawable.ic_sound else R.drawable.ic_sound_muted),
-                    null, tint = c.labelPrimary, modifier = Modifier.size(22.4.dp))
-            }
+            NativeHeaderIconButton(
+                contentDescription = Strings.get("androidAutoRead"),
+                sizeDp = 44.8f,
+                offsetXDp = 1.7364f,
+                offsetYDp = -1.8182f,
+                iconRes = if (autoRead) R.drawable.ic_sound else R.drawable.ic_sound_muted,
+                iconSizeDp = 22.4f,
+                iconTint = c.labelPrimary,
+                checkable = true,
+                checked = autoRead,
+                onClick = {
+                    settings.setAutoRead(!autoRead)
+                    DsToast.show(Strings.get(if (autoRead) "androidAutoReadDisabled" else "androidAutoReadEnabled"))
+                },
+            )
             Spacer(Modifier.width(5.6.dp))
-            Box(
-                Modifier.size(44.8.dp).clickable(
-                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                    indication = null,
-                    onClick = { chatStore.newChat() },
-                ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(painterResource(R.drawable.ic_new_chat), Strings.get("newChat"), tint = c.labelPrimary, modifier = Modifier.size(22.4.dp))
-            }
+            NativeHeaderIconButton(
+                contentDescription = null,
+                sizeDp = 44.8f,
+                offsetXDp = 2.1409f,
+                offsetYDp = -1.8182f,
+                iconRes = R.drawable.ic_new_chat,
+                iconSizeDp = 22.4f,
+                iconTint = c.labelPrimary,
+                iconContentDescription = Strings.get("newChat"),
+                onClick = { chatStore.newChat() },
+            )
         }
 
         val visible = session?.let { visibleMessages(it) } ?: emptyList()
