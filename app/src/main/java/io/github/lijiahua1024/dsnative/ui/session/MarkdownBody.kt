@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextGeometricTransform
@@ -100,7 +101,6 @@ private val parser: Parser by lazy {
 }
 
 private val mathBlock = Regex("\\$\\$([\\s\\S]+?)\\$\\$")
-private val mathInline = Regex("\\$([^$\\n]+?)\\$")
 
 // Body text uses DsTheme.fontFamily: the ref WebView resolves its
 // `Roboto, 'Noto Sans CJK SC'` stack to the bundled SC face for latin AND CJK
@@ -208,7 +208,8 @@ fun MarkdownBody(text: String, modifier: Modifier = Modifier, streaming: Boolean
             }
         }
     }
-    val doc = remember(text) { parser.parse(text) }
+    val prep = remember(text) { preprocessMarkdownMath(text) }
+    val doc = remember(prep.markdown) { parser.parse(prep.markdown) }
     SelectionContainer {
         Column(modifier) {
             var node = doc.firstChild
@@ -217,7 +218,7 @@ fun MarkdownBody(text: String, modifier: Modifier = Modifier, streaming: Boolean
                 if (prev != null) {
                     Spacer(Modifier.height(maxOf(bottomMargin(prev, false), topMargin(node)).dp))
                 }
-                RenderBlock(node, c, uriHandler, streaming)
+                RenderBlock(node, c, uriHandler, streaming, prep.tokens)
                 prev = node
                 node = node.next
             }
@@ -231,9 +232,10 @@ private fun RenderBlock(
     c: io.github.lijiahua1024.dsnative.theme.DsColors,
     uriHandler: androidx.compose.ui.platform.UriHandler,
     streaming: Boolean = false,
+    mathTokens: Map<Int, ExtractedMathToken> = emptyMap(),
 ) {
     when (node) {
-        is Paragraph -> RenderParagraph(inlineText(node, c, uriHandler), c, streaming)
+        is Paragraph -> RenderParagraph(inlineText(node, c, uriHandler), c, streaming, mathTokens)
         is Heading -> {
             val (size, lh) = when (node.level) {
                 1 -> 24.sp to 34.sp
@@ -241,9 +243,13 @@ private fun RenderBlock(
                 3 -> 20.sp to 30.sp
                 else -> 16.sp to 28.sp
             }
-            Text(inlineText(node, c, uriHandler), fontSize = size,
+            val (hStr, hInline) = rememberInlineMathPrepared(
+                inlineText(node, c, uriHandler), c, mathTokens, fontSizeSp = size.value,
+            )
+            Text(hStr, fontSize = size,
                 lineHeight = lh, fontWeight = if (node.level <= 3) FontWeight.Bold else FontWeight.SemiBold,
-                style = cssLeading, color = c.labelPrimary)
+                style = cssLeading, color = c.labelPrimary,
+                inlineContent = chipPadContent + citeContent(c) + hInline)
         }
         is FencedCodeBlock, is IndentedCodeBlock -> {
             val literal = when (node) {
@@ -328,7 +334,7 @@ private fun RenderBlock(
                 Box(Modifier.width(2.dp).fillMaxHeight().background(c.labelCaption))
                 Column(Modifier.padding(start = 14.dp)) {
                     var ch = node.firstChild
-                    while (ch != null) { RenderBlock(ch, c, uriHandler, streaming); ch = ch.next }
+                    while (ch != null) { RenderBlock(ch, c, uriHandler, streaming, mathTokens); ch = ch.next }
                 }
             }
         }
@@ -344,7 +350,7 @@ private fun RenderBlock(
                             }
                             Column(Modifier.weight(1f)) {
                                 var ch = item.firstChild
-                                while (ch != null) { RenderBlock(ch, c, uriHandler, streaming); ch = ch.next }
+                                while (ch != null) { RenderBlock(ch, c, uriHandler, streaming, mathTokens); ch = ch.next }
                             }
                         }
                     }
@@ -363,7 +369,7 @@ private fun RenderBlock(
                                 style = cssLeading, modifier = Modifier.widthIn(min = 16.dp).padding(end = 4.dp))
                             Column(Modifier.weight(1f)) {
                                 var ch = item.firstChild
-                                while (ch != null) { RenderBlock(ch, c, uriHandler, streaming); ch = ch.next }
+                                while (ch != null) { RenderBlock(ch, c, uriHandler, streaming, mathTokens); ch = ch.next }
                             }
                         }
                         i++
@@ -372,7 +378,7 @@ private fun RenderBlock(
                 }
             }
         }
-        is TableBlock -> RenderTable(node, c, uriHandler)
+        is TableBlock -> RenderTable(node, c, uriHandler, mathTokens)
         is ThematicBreak -> {
             Box(Modifier.fillMaxWidth().height(1.dp).background(c.borderL2))
         }
@@ -382,27 +388,45 @@ private fun RenderBlock(
         }
         else -> {
             var ch = node.firstChild
-            while (ch != null) { RenderBlock(ch, c, uriHandler, streaming); ch = ch.next }
+            while (ch != null) { RenderBlock(ch, c, uriHandler, streaming, mathTokens); ch = ch.next }
         }
     }
 }
 
 @Composable
-private fun RenderParagraph(text: AnnotatedString, c: io.github.lijiahua1024.dsnative.theme.DsColors, streaming: Boolean) {
-    val segs = splitMath(text)
+private fun RenderParagraph(
+    text: AnnotatedString,
+    c: io.github.lijiahua1024.dsnative.theme.DsColors,
+    streaming: Boolean,
+    mathTokens: Map<Int, ExtractedMathToken>,
+) {
+    val segs = splitMath(text, mathTokens)
     if (segs.size == 1 && segs[0].second == null) {
-        ParagraphText(segs[0].first, c)
+        ParagraphText(segs[0].first, c, mathTokens)
         return
     }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         for ((str, math) in segs) {
             if (math != null) {
-                // ref MathBlock fallback: raw tex as a plain paragraph
-                KaTeXMath(math, streaming, c) {
-                    ParagraphText(AnnotatedString(it), c)
+                KaTeXMath(math, streaming, c) { fallbackTex ->
+                    val measurer = rememberTextMeasurer(cacheSize = 32)
+                    val density = androidx.compose.ui.platform.LocalDensity.current
+                    val measured = remember(fallbackTex, c.dark, density) {
+                        measureInlineLatexFormula(fallbackTex, 18f, c.labelPrimary, measurer, density)
+                    }
+                    val fbScroll = rememberScrollState()
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .then(if (fbScroll.maxValue > 0) Modifier.excludeFromDrawerGesture() else Modifier)
+                            .horizontalScroll(fbScroll),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        InlineLatexCanvas(measured)
+                    }
                 }
-            } else {
-                ParagraphText(str, c)
+            } else if (str.text.isNotBlank() || segs.size == 1) {
+                ParagraphText(str, c, mathTokens)
             }
         }
     }
@@ -412,10 +436,14 @@ private fun RenderParagraph(text: AnnotatedString, c: io.github.lijiahua1024.dsn
 // padding 0 5px. SpanStyle.background is a bare rect, so the chip is drawn
 // behind the text from layout-measured line boxes instead.
 @Composable
-private fun ParagraphText(str: AnnotatedString, c: io.github.lijiahua1024.dsnative.theme.DsColors) {
-    val styled = withInlineMath(str, c)
+private fun ParagraphText(
+    str: AnnotatedString,
+    c: io.github.lijiahua1024.dsnative.theme.DsColors,
+    mathTokens: Map<Int, ExtractedMathToken> = emptyMap(),
+) {
+    val (styled, mathInlineContent) = rememberInlineMathPrepared(str, c, mathTokens, fontSizeSp = 16f)
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
-    val inlineContent = chipPadContent + citeContent(c)
+    val inlineContent = chipPadContent + citeContent(c) + mathInlineContent
     Text(
         styled, fontSize = 16.sp, lineHeight = 28.sp, color = c.labelPrimary,
         fontFamily = DsTheme.fontFamily,
@@ -458,6 +486,7 @@ private fun RenderTable(
     table: TableBlock,
     c: io.github.lijiahua1024.dsnative.theme.DsColors,
     uriHandler: androidx.compose.ui.platform.UriHandler,
+    mathTokens: Map<Int, ExtractedMathToken> = emptyMap(),
 ) {
     val tableScroll = rememberScrollState()
     Column(
@@ -476,12 +505,16 @@ private fun RenderTable(
                         while (cell != null) {
                             if (cell is TableCell) {
                                 val line = if (header) c.borderL3 else c.borderL2
+                                val (cellStr, cellInline) = rememberInlineMathPrepared(
+                                    inlineText(cell, c, uriHandler), c, mathTokens, fontSizeSp = 15f,
+                                )
                                 Text(
-                                    inlineText(cell, c, uriHandler),
+                                    cellStr,
                                     fontSize = 15.sp, lineHeight = 25.sp,
                                     fontWeight = if (header) FontWeight.Medium else FontWeight.Normal,
                                     style = cssLeading,
                                     color = c.labelPrimary,
+                                    inlineContent = chipPadContent + citeContent(c) + cellInline,
                                     modifier = Modifier
                                         // CSS min-width:100px is content-box:
                                         // cell = max(100px, content) + padding
@@ -505,194 +538,135 @@ private fun RenderTable(
     }
 }
 
-/** Split a paragraph's text on $$...$$ display math; returns (styled, tex?) pairs. */
-private fun splitMath(styled: AnnotatedString): List<Pair<AnnotatedString, String?>> {
+/** 按块级公式占位符与 $$...$$ 拆分段落；返回 (styled, tex?) 列表。 */
+private fun splitMath(
+    styled: AnnotatedString,
+    mathTokens: Map<Int, ExtractedMathToken>,
+): List<Pair<AnnotatedString, String?>> {
     val plain = styled.text
-    val matches = mathBlock.findAll(plain).toList()
-    if (matches.isEmpty()) return listOf(styled to null)
+    val tokenMatches = BLOCK_TOKEN_REGEX.findAll(plain).toList()
+    if (tokenMatches.isEmpty()) {
+        val rawMatches = mathBlock.findAll(plain).toList()
+        if (rawMatches.isEmpty()) return listOf(styled to null)
+        val out = mutableListOf<Pair<AnnotatedString, String?>>()
+        var i = 0
+        for (m in rawMatches) {
+            if (m.range.first > i) out.add(styled.subSequence(androidx.compose.ui.text.TextRange(i, m.range.first)) to null)
+            out.add(AnnotatedString("") to sanitizeLatexDialect(m.groupValues[1].trim()))
+            i = m.range.last + 1
+        }
+        if (i < plain.length) out.add(styled.subSequence(androidx.compose.ui.text.TextRange(i, plain.length)) to null)
+        return out
+    }
     val out = mutableListOf<Pair<AnnotatedString, String?>>()
     var i = 0
-    for (m in matches) {
+    for (m in tokenMatches) {
         if (m.range.first > i) out.add(styled.subSequence(androidx.compose.ui.text.TextRange(i, m.range.first)) to null)
-        out.add(AnnotatedString("") to m.groupValues[1].trim())
+        val id = m.groupValues[1].toIntOrNull()
+        val tex = id?.let { mathTokens[it]?.sanitizedTex }
+        if (tex != null) {
+            out.add(AnnotatedString("") to tex)
+        } else {
+            out.add(styled.subSequence(androidx.compose.ui.text.TextRange(m.range.first, m.range.last + 1)) to null)
+        }
         i = m.range.last + 1
     }
     if (i < plain.length) out.add(styled.subSequence(androidx.compose.ui.text.TextRange(i, plain.length)) to null)
     return out
 }
 
-/**
- * Approximate KaTeX display math: \int_\sum big operators carry their
- * limits over/under the symbol, \frac{a}{b} stacks numerator over a rule
- * over denominator, other tokens render serif-italic like inline math.
- */
-private sealed interface TexSeg {
-    class Glyph(val tex: String) : TexSeg
-    class BigOp(val sym: String, val sub: String?, val sup: String?) : TexSeg
-    class Frac(val num: String, val den: String) : TexSeg
-}
-
-private fun texDisplay(tex: String): List<TexSeg> {
-    val segs = mutableListOf<TexSeg>()
-    var glyph = StringBuilder()
-    fun flush() { if (glyph.isNotEmpty()) { segs.add(TexSeg.Glyph(glyph.toString())); glyph = StringBuilder() } }
-    var i = 0
-    fun group(): String? {
-        while (i < tex.length && tex[i] == ' ') i++
-        if (i >= tex.length) return null
-        return if (tex[i] == '{') {
-            val end = tex.indexOf('}', i)
-            if (end < 0) null else { val g = tex.substring(i + 1, end); i = end + 1; g }
-        } else tex[i++].toString()
+@Composable
+private fun rememberInlineMathPrepared(
+    str: AnnotatedString,
+    c: io.github.lijiahua1024.dsnative.theme.DsColors,
+    mathTokens: Map<Int, ExtractedMathToken>,
+    fontSizeSp: Float,
+): Pair<AnnotatedString, Map<String, InlineTextContent>> {
+    val plain = str.text
+    if (!INLINE_TOKEN_REGEX.containsMatchIn(plain)) {
+        return str to emptyMap()
     }
-    while (i < tex.length) {
-        if (tex[i] == '\\') {
-            var j = i + 1
-            val name = StringBuilder()
-            while (j < tex.length && tex[j].isLetter()) name.append(tex[j++])
-            when (name.toString()) {
-                "int", "sum", "prod" -> {
-                    i = j
-                    var sub: String? = null; var sup: String? = null
-                    while (i < tex.length && (tex[i] == '_' || tex[i] == '^')) {
-                        val isSub = tex[i] == '_'; i++
-                        val g = group()
-                        if (isSub) sub = g else sup = g
-                    }
-                    flush()
-                    segs.add(TexSeg.BigOp(
-                        when (name.toString()) { "int" -> "\u222B"; "sum" -> "\u2211"; else -> "\u220F" },
-                        sub, sup))
-                    continue
+    val measurer = rememberTextMeasurer(cacheSize = 64)
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    return remember(str, c.dark, mathTokens, fontSizeSp, density) {
+        val inlineMap = HashMap<String, InlineTextContent>()
+        val built = buildAnnotatedString {
+            var cursor = 0
+            for (m in INLINE_TOKEN_REGEX.findAll(plain)) {
+                if (m.range.first > cursor) {
+                    append(str.subSequence(cursor, m.range.first))
                 }
-                "frac" -> {
-                    i = j
-                    val a = group(); val b = group()
-                    if (a != null && b != null) { flush(); segs.add(TexSeg.Frac(a, b)); continue }
-                }
-                "" -> {
-                    // \, \; \! etc: spacing escapes, consume both chars
-                    i = j
-                    if (i < tex.length) {
-                        when (tex[i]) {
-                            ',', ';', ':' -> glyph.append(' ')
-                            ' ' -> glyph.append(' ')
-                            else -> {}
-                        }
-                        i++
-                    }
-                    continue
-                }
-            }
-        }
-        glyph.append(tex[i++])
-    }
-    flush()
-    return segs
-}
-
-@androidx.compose.runtime.Composable
-private fun DisplayMath(tex: String, c: io.github.lijiahua1024.dsnative.theme.DsColors) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        for (seg in texDisplay(tex)) when (seg) {
-            is TexSeg.Glyph -> Text(texStyled(seg.tex), fontSize = 17.sp, lineHeight = 28.sp,
-                color = c.labelPrimary, style = cssLeading)
-            is TexSeg.BigOp -> Box(contentAlignment = Alignment.CenterEnd) {
-                Text(seg.sym, fontSize = 21.sp, lineHeight = 24.sp, fontFamily = FontFamily.Serif,
-                    color = c.labelPrimary)
-                if (seg.sup != null) Text(texStyled(seg.sup), fontSize = 9.sp, lineHeight = 9.sp,
-                    color = c.labelPrimary, modifier = Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-1.5).dp))
-                if (seg.sub != null) Text(texStyled(seg.sub), fontSize = 9.sp, lineHeight = 9.sp,
-                    color = c.labelPrimary, modifier = Modifier.align(Alignment.BottomEnd).offset(x = 4.dp, y = 4.5.dp))
-            }
-            is TexSeg.Frac -> Column(horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(horizontal = 3.dp)) {
-                Text(texStyled(seg.num), fontSize = 11.sp, lineHeight = 13.sp, color = c.labelPrimary)
-                Box(Modifier.width(12.dp).height(0.8.dp).background(c.labelPrimary))
-                Text(texStyled(seg.den), fontSize = 11.sp, lineHeight = 13.sp, color = c.labelPrimary)
-            }
-        }
-    }
-}
-
-/**
- * Approximate KaTeX inline math: serif italic base, ^ -> superscript,
- * _ -> subscript, braces consumed. \$...\$ segments inside a paragraph
- * become serif-styled spans; other styling (bold/italic/code) is preserved
- * via the incoming AnnotatedString.
- */
-private fun withInlineMath(text: AnnotatedString, c: io.github.lijiahua1024.dsnative.theme.DsColors): AnnotatedString {
-    val plain = text.text
-    if (!mathInline.containsMatchIn(plain)) return text
-    return buildAnnotatedString {
-        var i = 0
-        for (m in mathInline.findAll(plain)) {
-            if (m.range.first > i) append(text.subSequence(i, m.range.first))
-            append(texStyled(m.groupValues[1]))
-            i = m.range.last + 1
-        }
-        if (i < plain.length) append(text.subSequence(i, plain.length))
-    }
-}
-
-private fun texStyled(tex: String): AnnotatedString = buildAnnotatedString {
-    var i = 0
-    fun group(): String {
-        if (i < tex.length && tex[i] == '{') {
-            val end = tex.indexOf('}', i)
-            if (end > 0) { val g = tex.substring(i + 1, end); i = end + 1; return g }
-        }
-        return if (i < tex.length) tex[i++].toString() else ""
-    }
-    while (i < tex.length) {
-        when (tex[i]) {
-            '^' -> {
-                i++
-                val sup = group()
-                withStyle(SpanStyle(baselineShift = BaselineShift.Superscript, fontSize = 11.sp,
-                    fontFamily = FontFamily.Serif)) { append(sup) }
-            }
-            '_' -> {
-                i++
-                val sub = group()
-                withStyle(SpanStyle(baselineShift = BaselineShift.Subscript, fontSize = 11.sp,
-                    fontFamily = FontFamily.Serif)) { append(sub) }
-            }
-            '\\' -> {
-                i++
-                val name = StringBuilder()
-                while (i < tex.length && tex[i].isLetter()) name.append(tex[i++])
-                append(when (name.toString()) {
-                    "alpha" -> "α"; "beta" -> "β"; "gamma" -> "γ"; "delta" -> "δ"
-                    "theta" -> "θ"; "lambda" -> "λ"; "mu" -> "μ"; "pi" -> "π"
-                    "sigma" -> "σ"; "phi" -> "φ"; "omega" -> "ω"; "int" -> "∫"
-                    "sum" -> "∑"; "infty" -> "∞"; "sqrt" -> "√"; "pm" -> "±"
-                    "times" -> "×"; "cdot" -> "·"; "le" -> "≤"; "ge" -> "≥"; "ne" -> "≠"
-                    "approx" -> "≈"; "to" -> "→"; "rightarrow" -> "→"; "leftarrow" -> "←"
-                    "frac" -> {
-                        val a = group(); val b = group(); "$a/$b"
-                    }
-                    else -> name.toString()
-                })
-            }
-            '{', '}' -> i++
-            else -> {
-                val start = i
-                while (i < tex.length && tex[i] != '^' && tex[i] != '_' && tex[i] != '\\' && tex[i] != '{' && tex[i] != '}') i++
-                val seg = tex.substring(start, i)
-                // KaTeX puts thin spacing around binary operators and sets
-                // them upright; letters stay serif-italic.
-                val parts = seg.split(Regex("(?<=[+=<>−-])|(?=[+=<>−-])"))
-                for (p in parts) {
-                    if (p.matches(Regex("[+=<>−-]+"))) {
-                        withStyle(SpanStyle(fontFamily = FontFamily.Serif)) { append(" $p ") }
+                val id = m.groupValues[1].toIntOrNull()
+                val tok = id?.let { mathTokens[it] }
+                if (tok != null) {
+                    val ast = parseLatexInlineAst(tok.sanitizedTex)
+                    if (!ast.hasComplexLayout()) {
+                        append(simpleAstToAnnotatedString(ast))
                     } else {
-                        withStyle(SpanStyle(fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic)) { append(p) }
+                        val measured = measureInlineLatexFormula(tok.sanitizedTex, fontSizeSp, c.labelPrimary, measurer, density)
+                        val key = "dsm_${tok.id}"
+                        appendInlineContent(key, tok.rawTex)
+                        inlineMap[key] = InlineTextContent(
+                            Placeholder(
+                                width = measured.widthSp,
+                                height = measured.heightSp,
+                                placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
+                            ),
+                        ) {
+                            InlineLatexCanvas(measured)
+                        }
+                    }
+                } else {
+                    append(str.subSequence(m.range.first, m.range.last + 1))
+                }
+                cursor = m.range.last + 1
+            }
+            if (cursor < plain.length) {
+                append(str.subSequence(cursor, plain.length))
+            }
+        }
+        built to inlineMap
+    }
+}
+
+private fun simpleAstToAnnotatedString(node: LatexNode): AnnotatedString = buildAnnotatedString {
+    fun emit(n: LatexNode) {
+        when (n) {
+            is LatexNode.Seq -> n.children.forEach(::emit)
+            is LatexNode.Space -> if (n.em > 0.1f) append(' ')
+            is LatexNode.Text -> {
+                val style = when (n.style) {
+                    MathTextStyle.MATH_ITALIC -> SpanStyle(fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic)
+                    MathTextStyle.BOLD -> SpanStyle(fontFamily = FontFamily.Serif, fontWeight = FontWeight.Bold)
+                    MathTextStyle.MONO -> SpanStyle(fontFamily = FontFamily.Monospace)
+                    MathTextStyle.UPRIGHT, MathTextStyle.OPERATOR, MathTextStyle.BLACKBOARD, MathTextStyle.CALLIGRAPHIC ->
+                        SpanStyle(fontFamily = FontFamily.Serif, fontStyle = FontStyle.Normal)
+                }
+                withStyle(style) { append(n.text) }
+            }
+            is LatexNode.Script -> {
+                emit(n.base)
+                n.sub?.let { sub ->
+                    withStyle(SpanStyle(baselineShift = BaselineShift.Subscript, fontSize = 11.sp, fontFamily = FontFamily.Serif)) {
+                        append(simpleAstToAnnotatedString(sub))
+                    }
+                }
+                n.sup?.let { sup ->
+                    withStyle(SpanStyle(baselineShift = BaselineShift.Superscript, fontSize = 11.sp, fontFamily = FontFamily.Serif)) {
+                        append(simpleAstToAnnotatedString(sup))
                     }
                 }
             }
+            is LatexNode.Delimited -> {
+                if (n.left.isNotEmpty()) withStyle(SpanStyle(fontFamily = FontFamily.Serif)) { append(n.left) }
+                emit(n.body)
+                if (n.right.isNotEmpty()) withStyle(SpanStyle(fontFamily = FontFamily.Serif)) { append(n.right) }
+            }
+            is LatexNode.Colored -> emit(n.body)
+            else -> {}
         }
     }
+    emit(node)
 }
 
 private fun inlineText(

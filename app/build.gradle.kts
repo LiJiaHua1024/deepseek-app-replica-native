@@ -28,8 +28,12 @@ android {
         }
         release {
             buildConfigField("String", "API_ORIGIN", "\"https://api.deepseek.com\"")
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 

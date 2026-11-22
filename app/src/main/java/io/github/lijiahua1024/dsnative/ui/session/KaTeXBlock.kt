@@ -18,12 +18,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import io.github.lijiahua1024.dsnative.theme.DsColors
+import io.github.lijiahua1024.dsnative.ui.excludeFromDrawerGesture
 import org.json.JSONObject
 
 // ref MathFormula.tsx: display math runs the same KaTeX 0.16.22 bundle as the
-// webview reference inside an embedded WebView (throwOnError, strict:false,
-// displayMode). On error it falls back to the approximate native renderer;
-// while streaming a failed render keeps the last good output.
+// webview reference inside an embedded WebView (throwOnError:false + dialect
+// sanitizer, strict:false, displayMode). On error it falls back to the native
+// renderer; wide scrollable formulas exclude horizontal drawer gesture.
 // .ds-markdown-math margins (16px 0) are applied as Compose vertical padding.
 @Composable
 fun KaTeXMath(
@@ -35,22 +36,29 @@ fun KaTeXMath(
     var status by remember { mutableStateOf("loading") }
     // document height in WebView CSS px == dp (verified via webview_devtools)
     var heightPx by remember { mutableIntStateOf(0) }
+    var scrollable by remember { mutableStateOf(false) }
+    val cleanedTex = remember(tex) { sanitizeLatexDialect(tex) }
     val web = remember { KaTeXWebState() }
 
     fun requestRender(view: WebView) {
-        val key = "${c.dark} ${tex}"
+        val key = "${c.dark} $cleanedTex"
         if (!web.pageReady || web.renderedKey == key) return
         web.renderedKey = key
-        view.evaluateJavascript("render(${JSONObject.quote(tex)}, ${c.dark})", null)
+        view.evaluateJavascript("render(${JSONObject.quote(cleanedTex)}, ${c.dark})", null)
     }
 
     if (status == "error" && heightPx <= 0 && !streaming) {
-        fallback(tex)
+        fallback(cleanedTex)
         return
     }
 
     // ref .ds-markdown > * .ds-markdown-math { margin: 16px 0 }
-    Box(Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = 16.dp)
+            .then(if (scrollable) Modifier.excludeFromDrawerGesture() else Modifier),
+    ) {
         AndroidView(
             factory = { ctx ->
                 WebView(ctx).apply {
@@ -62,9 +70,10 @@ fun KaTeXMath(
                     setBackgroundColor(android.graphics.Color.TRANSPARENT)
                     addJavascriptInterface(object {
                         @JavascriptInterface
-                        fun onDone(px: Int) {
+                        fun onDone(px: Int, isScrollable: Boolean) {
                             post {
                                 heightPx = px
+                                scrollable = isScrollable
                                 status = "done"
                             }
                         }

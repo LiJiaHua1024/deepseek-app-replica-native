@@ -23,17 +23,109 @@
 <body>
 <span class="katex-display" id="d"><span class="katex" id="k"></span></span>
 <script>
-var seq = 0;
+function normalizeHexColor(c) {
+  var t = (c || '').trim();
+  if (/^[0-9a-fA-F]{6}$|^[0-9a-fA-F]{8}$|^(?=.*\d)[0-9a-fA-F]{3}$/.test(t)) return '#' + t;
+  return t;
+}
+function readBrace(s, i) {
+  while (i < s.length && /\s/.test(s[i])) i++;
+  if (i >= s.length || s[i] !== '{') return null;
+  i++;
+  var depth = 1, buf = '';
+  while (i < s.length && depth > 0) {
+    var ch = s[i];
+    if (ch === '\\' && i + 1 < s.length) { buf += ch + s[i + 1]; i += 2; continue; }
+    if (ch === '{') { depth++; buf += ch; i++; continue; }
+    if (ch === '}') { depth--; if (depth > 0) buf += ch; i++; continue; }
+    buf += ch; i++;
+  }
+  return depth === 0 ? [buf, i] : null;
+}
+function sanitizeLatex(tex) {
+  var out = '', i = 0;
+  while (i < tex.length) {
+    if (tex[i] !== '\\') { out += tex[i++]; continue; }
+    var j = i + 1;
+    while (j < tex.length && /[a-zA-Z]/.test(tex[j])) j++;
+    var cmd = tex.slice(i + 1, j);
+    if (cmd === 'scalebox') {
+      var fac = readBrace(tex, j);
+      if (fac) {
+        var idx = fac[1];
+        while (idx < tex.length && /\s/.test(tex[idx])) idx++;
+        if (tex[idx] === '[') {
+          idx++;
+          var bd = 1;
+          while (idx < tex.length && bd > 0) {
+            if (tex[idx] === '\\' && idx + 1 < tex.length) { idx += 2; continue; }
+            if (tex[idx] === '[') bd++;
+            else if (tex[idx] === ']') bd--;
+            idx++;
+          }
+        }
+        var body = readBrace(tex, idx);
+        if (body) { out += '{' + sanitizeLatex(body[0]) + '}'; i = body[1]; continue; }
+      }
+    } else if (cmd === 'resizebox') {
+      var w = readBrace(tex, j), h = w && readBrace(tex, w[1]), body2 = h && readBrace(tex, h[1]);
+      if (body2) { out += '{' + sanitizeLatex(body2[0]) + '}'; i = body2[1]; continue; }
+    } else if (cmd === 'fgcolor') {
+      var col = readBrace(tex, j), body3 = col && readBrace(tex, col[1]);
+      if (col && body3) {
+        out += '\\textcolor{' + normalizeHexColor(col[0]) + '}{' + sanitizeLatex(body3[0]) + '}';
+        i = body3[1]; continue;
+      }
+    } else if (cmd === 'bgcolor') {
+      var bcol = readBrace(tex, j);
+      if (bcol) {
+        var bbody = readBrace(tex, bcol[1]);
+        if (bbody) {
+          out += '\\colorbox{' + normalizeHexColor(bcol[0]) + '}{' + sanitizeLatex(bbody[0]) + '}';
+          i = bbody[1];
+        } else {
+          i = bcol[1];
+        }
+        continue;
+      }
+    } else if (cmd === 'color' || cmd === 'textcolor' || cmd === 'colorbox') {
+      var c1 = readBrace(tex, j);
+      if (c1) { out += '\\' + cmd + '{' + normalizeHexColor(c1[0]) + '}'; i = c1[1]; continue; }
+    } else if (cmd === 'fcolorbox') {
+      var fc1 = readBrace(tex, j), fc2 = fc1 && readBrace(tex, fc1[1]);
+      if (fc1 && fc2) {
+        out += '\\fcolorbox{' + normalizeHexColor(fc1[0]) + '}{' + normalizeHexColor(fc2[0]) + '}';
+        i = fc2[1]; continue;
+      }
+    }
+    out += tex.slice(i, j);
+    i = j;
+  }
+  return out;
+}
 function doRender(tex, dark) {
   try {
     var k = document.getElementById('k');
     var d = document.getElementById('d');
     d.style.color = dark ? '#F9FAFB' : '#0F0F0F';
-    var html = katex.renderToString(tex, { throwOnError: true, strict: false, displayMode: true });
+    var cleaned = sanitizeLatex(tex);
+    var html = katex.renderToString(cleaned, {
+      throwOnError: false,
+      strict: false,
+      displayMode: true,
+      errorColor: dark ? '#F87171' : '#DC2626'
+    });
     // ref MathFormula strips the outer wrapper and re-adds .katex itself
-    k.innerHTML = html.slice('<span class="katex-display"><span class="katex">'.length,
-                             -'</span></span>'.length);
-    Android.onDone(Math.ceil(Math.max(d.offsetHeight, document.body.scrollHeight, document.documentElement.scrollHeight)));
+    var prefix = '<span class="katex-display"><span class="katex">';
+    var suffix = '</span></span>';
+    if (html.indexOf(prefix) === 0 && html.slice(-suffix.length) === suffix) {
+      k.innerHTML = html.slice(prefix.length, -suffix.length);
+    } else {
+      k.innerHTML = html;
+    }
+    var h = Math.ceil(Math.max(d.offsetHeight, document.body.scrollHeight, document.documentElement.scrollHeight));
+    var scrollable = d.scrollWidth > d.clientWidth + 1;
+    Android.onDone(h, scrollable);
   } catch (e) {
     Android.onError('' + e);
   }
