@@ -325,7 +325,7 @@ fun toolStep(
             val title = fetched?.obj("content")?.str("title") ?: url
             ToolStep.ReadLink(url = url, title = title, status = status)
         }
-        "find_pattern", "find" -> {
+        "find_in_page", "find_pattern", "find" -> {
             val pattern = input.str("pattern") ?: input.str("query") ?: ""
             val status = when {
                 r == null -> if (streaming) ToolStatus.WIP else ToolStatus.FAILED

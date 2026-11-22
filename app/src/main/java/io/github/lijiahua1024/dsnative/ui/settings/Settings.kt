@@ -536,11 +536,40 @@ private fun AccountPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card:
     }
 }
 
+private fun formatImportOutcome(outcome: io.github.lijiahua1024.dsnative.data.ImportOutcome): Pair<String, Boolean> =
+    when (outcome) {
+        is io.github.lijiahua1024.dsnative.data.ImportOutcome.Failure ->
+            Strings.get(outcome.errorKey) to true
+        is io.github.lijiahua1024.dsnative.data.ImportOutcome.Replace ->
+            (if (outcome.count == 1) Strings.get("historyImportedOne")
+            else Strings.get("historyImported", "count" to outcome.count)) to false
+        is io.github.lijiahua1024.dsnative.data.ImportOutcome.Merge -> {
+            val (added, merged, unchanged) = outcome
+            val msg = when {
+                added == 0 && merged == 0 ->
+                    if (unchanged == 0) Strings.get("historyMergedEmpty")
+                    else Strings.get("historyMergedNoChange", "unchanged" to unchanged)
+                merged == 0 && unchanged == 0 ->
+                    if (added == 1) Strings.get("historyMergedAddedOne")
+                    else Strings.get("historyMergedAddedOnly", "added" to added)
+                added == 0 && unchanged == 0 ->
+                    if (merged == 1) Strings.get("historyMergedUpdatedOne")
+                    else Strings.get("historyMergedUpdatedOnly", "merged" to merged)
+                else -> Strings.get(
+                    "historyMergedSummary",
+                    "added" to added, "merged" to merged, "unchanged" to unchanged,
+                )
+            }
+            msg to false
+        }
+    }
+
 @Composable
 private fun DataPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Color, muted: Color, settings: SettingsStore, chatStore: ChatStore, onPage: (String) -> Unit) {
     var confirmDeleteAll by remember { mutableStateOf(false) }
-    var confirmImport by remember { mutableStateOf(false) }
-    var importResult by remember { mutableStateOf<Int?>(null) }
+    var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
+    var importMode by remember { mutableStateOf(io.github.lijiahua1024.dsnative.data.ArchiveImportMode.MERGE) }
+    var importOutcome by remember { mutableStateOf<io.github.lijiahua1024.dsnative.data.ImportOutcome?>(null) }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val ctx = LocalContext.current
@@ -548,13 +577,9 @@ private fun DataPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Co
     val importLauncher = rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
     ) { uri ->
-        if (uri == null || busy) return@rememberLauncherForActivityResult
-        scope.launch {
-            busy = true
-            importResult = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                chatStore.importArchive(ctx, uri)
-            }
-            busy = false
+        if (uri != null && !busy) {
+            importMode = io.github.lijiahua1024.dsnative.data.ArchiveImportMode.MERGE
+            pendingImportUri = uri
         }
     }
     // ref .caption above the groups: muted 13/21, underlined privacy-policy link
@@ -579,15 +604,18 @@ private fun DataPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Co
         SettingsRow(c, muted, Strings.get("settingsDeleteAll"), danger = true, arrow = false, enabled = !busy) { confirmDeleteAll = true }
     }
     SettingsGroup(null, card, muted) {
-        SettingsRow(c, muted, Strings.get("historyImport"), arrow = false, enabled = !busy) { confirmImport = true }
+        SettingsRow(c, muted, Strings.get("historyImport"), arrow = false, enabled = !busy) {
+            importLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*"))
+        }
     }
     if (busy) {
-        Text(Strings.get("exportBusy"), fontSize = 13.sp, lineHeight = 21.sp,
+        Text(Strings.get("historyImporting"), fontSize = 13.sp, lineHeight = 21.sp,
             color = muted, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 27.dp))
-    } else importResult?.let { count ->
-        Text(if (count >= 0) Strings.get("historyImported", "count" to count) else Strings.get("historyImportFailed"),
-            fontSize = 13.sp, lineHeight = 21.sp,
-            color = muted, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 27.dp))
+    } else importOutcome?.let { outcome ->
+        val (msg, isError) = formatImportOutcome(outcome)
+        Text(msg, fontSize = 13.sp, lineHeight = 21.sp,
+            color = if (isError) c.stateErrorPrimary else muted,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 27.dp))
     }
     if (confirmDeleteAll) {
         AlertDialog(onDismissRequest = { confirmDeleteAll = false },
@@ -600,17 +628,72 @@ private fun DataPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Co
             },
             dismissButton = { TextButton({ confirmDeleteAll = false }) { Text(Strings.get("cancel")) } })
     }
-    if (confirmImport) {
-        AlertDialog(onDismissRequest = { confirmImport = false },
+    pendingImportUri?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { if (!busy) pendingImportUri = null },
             title = { Text(Strings.get("historyImportConfirmTitle")) },
-            text = { Text(Strings.get("historyImportConfirmDescription")) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    val modes = listOf(
+                        io.github.lijiahua1024.dsnative.data.ArchiveImportMode.MERGE to "historyImportModeMerge",
+                        io.github.lijiahua1024.dsnative.data.ArchiveImportMode.REPLACE to "historyImportModeReplace",
+                    )
+                    modes.forEach { (m, labelKey) ->
+                        val checked = importMode == m
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (checked) c.interactiveBgHover else Color.Transparent)
+                                .clickable { importMode = m }
+                                .padding(horizontal = 8.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Box(
+                                Modifier.size(18.dp).clip(RoundedCornerShape(50))
+                                    .border(2.dp, if (checked) c.brandPrimary else muted, RoundedCornerShape(50)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (checked) Box(Modifier.size(9.dp).clip(RoundedCornerShape(50)).background(c.brandPrimary))
+                            }
+                            Text(Strings.get(labelKey), fontSize = 15.sp, color = c.labelPrimary)
+                        }
+                    }
+                    Text(
+                        Strings.get(
+                            if (importMode == io.github.lijiahua1024.dsnative.data.ArchiveImportMode.MERGE)
+                                "historyImportModeMergeDescription"
+                            else "historyImportModeReplaceDescription",
+                        ),
+                        fontSize = 13.sp, lineHeight = 19.sp, color = muted,
+                    )
+                }
+            },
             confirmButton = {
                 TextButton({
-                    confirmImport = false
-                    importLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*"))
-                }) { Text(Strings.get("historyImportConfirm")) }
+                    val chosenMode = importMode
+                    pendingImportUri = null
+                    scope.launch {
+                        busy = true
+                        importOutcome = chatStore.importArchive(ctx, uri, chosenMode)
+                        busy = false
+                    }
+                }) {
+                    Text(
+                        Strings.get(
+                            if (importMode == io.github.lijiahua1024.dsnative.data.ArchiveImportMode.MERGE)
+                                "historyImportMergeConfirm"
+                            else "historyImportReplaceConfirm",
+                        ),
+                        color = if (importMode == io.github.lijiahua1024.dsnative.data.ArchiveImportMode.REPLACE)
+                            c.stateErrorPrimary else c.brandPrimary,
+                    )
+                }
             },
-            dismissButton = { TextButton({ confirmImport = false }) { Text(Strings.get("cancel")) } })
+            dismissButton = {
+                TextButton({ pendingImportUri = null }) { Text(Strings.get("cancel")) }
+            },
+        )
     }
 }
 

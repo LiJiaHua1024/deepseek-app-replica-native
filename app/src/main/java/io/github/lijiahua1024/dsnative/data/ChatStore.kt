@@ -168,7 +168,7 @@ fun visibleMessages(session: Session): List<Message> {
     return path
 }
 
-private fun Session.normalized(): Session {
+internal fun Session.normalized(): Session {
     if (rootMessageId != null || messages.isEmpty()) {
         return if (rootMessageId != null) this
         else copy(rootMessageId = null)
@@ -1059,273 +1059,135 @@ class ChatStore(
 
     // ---------- 历史导出/导入（官方 App zip 格式 v3） ----------
 
-    private val isoFormat: java.text.SimpleDateFormat
-        get() = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply {
-            timeZone = java.util.TimeZone.getTimeZone("UTC")
-        }
-
-    private fun iso(millis: Long): String = isoFormat.format(java.util.Date(millis))
-
-    private fun parseIso(text: String?): Long = try {
-        if (text == null) 0L else isoFormat.parse(text)?.time ?: 0L
-    } catch (_: Exception) { 0L }
-
-    private fun sessionToArchive(session: Session): JSONObject {
-        val messages = JSONArray()
-        var index = 0
-        var previousId: Int? = null
-        var lastId: Int? = null
-        for (message in session.messages) {
-            index++
-            val obj = JSONObject()
-                .put("id", index)
-                .put("parent_id", previousId?.let { JSONObject.wrap(it) } ?: JSONObject.NULL)
-            when (message) {
-                is Message.User -> {
-                    obj.put("role", "USER")
-                    obj.put("status", "FINISHED")
-                    obj.put("thinking_enabled", false)
-                    obj.put("search_enabled", false)
-                    obj.put("inserted_at", iso(message.createdAt))
-                    obj.put("fragments", JSONArray().put(
-                        JSONObject().put("type", "REQUEST").put("content", message.content)))
-                }
-                is Message.Assistant -> {
-                    obj.put("role", "ASSISTANT")
-                    obj.put(
-                        "status",
-                        when (message.status) {
-                            ReplyStatus.DONE -> "FINISHED"
-                            ReplyStatus.STOPPED, ReplyStatus.PENDING, ReplyStatus.STREAMING -> "INCOMPLETE"
-                            ReplyStatus.ERROR -> if (message.stopReason == "refusal") "CONTENT_FILTER" else "FAILED"
-                        },
-                    )
-                    obj.put("thinking_enabled", message.thinking)
-                    obj.put("search_enabled", message.search)
-                    obj.put("inserted_at", iso(message.createdAt))
-                    val fragments = JSONArray()
-                    for (block in message.blocks) {
-                        when (block) {
-                            is ReplyBlock.Thinking -> fragments.put(
-                                JSONObject().put("type", "THINK").put("content", block.thinking)
-                                    .put("elapsed_secs",
-                                        block.elapsedSeconds?.let { JSONObject.wrap(it) }
-                                            ?: if (block.startedAt != null && block.endedAt != null)
-                                                JSONObject.wrap((block.endedAt - block.startedAt) / 1000)
-                                            else JSONObject.NULL))
-                            is ReplyBlock.Text -> fragments.put(
-                                JSONObject()
-                                    .put("type", if (block.isTemplate) "TEMPLATE_RESPONSE" else "RESPONSE")
-                                    .put("content", block.text))
-                            is ReplyBlock.Tool -> Unit // 工具块不导出（decisions.md residual）
-                        }
-                    }
-                    obj.put("fragments", fragments)
-                }
-            }
-            messages.put(obj)
-            previousId = index; lastId = index
-        }
-        return JSONObject()
-            .put("id", session.id)
-            .put("title", if (session.title.isEmpty()) JSONObject.NULL else session.title)
-            .put("pinned", settings.pinnedSessions.value.contains(session.id))
-            .put("current_message_id", lastId?.let { JSONObject.wrap(it) } ?: JSONObject.NULL)
-            .put("inserted_at", iso(session.createdAt))
-            .put("updated_at", iso(session.updatedAt))
-            .put("messages", messages)
-    }
-
-    /** 导出全部会话为官方 zip（manifest → 会话 JSON → index）。失败返回 false。 */
+    /** 导出全部会话（含全分支树、工具结果与本地图片原件）为官方 v3 zip。失败返回 false。 */
     fun exportArchive(context: Context, uri: android.net.Uri): Boolean {
         return try {
-            val sessions = _sessionCache.value.values.sortedBy { it.updatedAt }
+            val sessions = _sessionCache.value.values.toList()
+            val pinned = settings.pinnedSessions.value.toSet()
             val out = context.contentResolver.openOutputStream(uri) ?: return false
-            java.util.zip.ZipOutputStream(java.io.BufferedOutputStream(out)).use { zip ->
-                fun entry(name: String, text: String) {
-                    zip.putNextEntry(java.util.zip.ZipEntry(name))
-                    zip.write(text.toByteArray(Charsets.UTF_8))
-                    zip.closeEntry()
-                }
-                entry("manifest.json", JSONObject().put("export_format_version", 3).toString())
-                val index = JSONArray()
-                for (session in sessions) {
-                    entry("chat_sessions/${session.id}.json", sessionToArchive(session).toString())
-                    index.put(
-                        JSONObject()
-                            .put("id", session.id)
-                            .put("title", if (session.title.isEmpty()) JSONObject.NULL else session.title)
-                            .put("pinned", settings.pinnedSessions.value.contains(session.id))
-                            .put("message_count", session.messages.size)
-                            .put("inserted_at", iso(session.createdAt))
-                            .put("updated_at", iso(session.updatedAt)),
-                    )
-                }
-                entry("chat_session_index.json", index.toString())
-            }
+            out.use { stream -> writeSessionsArchive(sessions, pinned, stream) }
             true
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
     }
 
-    private fun archiveStatus(text: String?): ReplyStatus = when (text) {
-        "FINISHED" -> ReplyStatus.DONE
-        "INCOMPLETE", "WIP" -> ReplyStatus.STOPPED
-        else -> ReplyStatus.ERROR
-    }
+    /**
+     * 使用 ZipFile（支持 STORED + Data Descriptor）从官方导出的 v3 zip 导入历史会话，
+     * 恢复完整分支树、工具步骤与 `_files/` 原图，并支持 MERGE 深度树合并 / REPLACE 替换两种模式。
+     */
+    suspend fun importArchive(
+        context: Context,
+        uri: android.net.Uri,
+        mode: ArchiveImportMode = ArchiveImportMode.MERGE,
+    ): ImportOutcome = withContext(Dispatchers.IO) {
+        var tmpZip: File? = null
+        var bundle: ParsedArchiveBundle? = null
+        _importingHistory.value = true
+        try {
+            val input = context.contentResolver.openInputStream(uri)
+                ?: return@withContext ImportOutcome.Failure("backupUnrecognized")
+            tmpZip = input.use { copyStreamToTempZip(it, context.cacheDir) }
+            val parsed = readArchiveZipFile(tmpZip, attachesDir)
+            bundle = parsed
 
-    private fun archiveToSession(file: JSONObject, indexPinned: Map<String, Boolean>): Session? {
-        val sourceId = file.optString("id").ifEmpty { return null }
-        val index = file.optJSONArray("messages") ?: return null
-        val byId = HashMap<Int, JSONObject>()
-        for (i in 0 until index.length()) {
-            val m = index.optJSONObject(i) ?: continue
-            byId[m.optInt("id")] = m
-        }
-        // 从 current_message_id 沿 parent_id 回溯当前分支
-        val chain = ArrayList<JSONObject>()
-        var cursor: Int? = file.optInt("current_message_id").takeIf { !it.equals(0) || byId.containsKey(0) }
-        if (cursor == null && byId.isNotEmpty()) {
-            // current_message_id 缺失：找没有被任何 parent 指向的叶子的最后一条
-            val referenced = byId.values.mapNotNull { if (it.isNull("parent_id")) null else it.optInt("parent_id") }.toSet()
-            cursor = byId.keys.filter { it in referenced || byId.size == 1 }
-                .maxByOrNull { it } ?: byId.keys.maxOrNull()
-        }
-        var guard = 0
-        while (cursor != null && guard++ < byId.size + 1) {
-            val m = byId[cursor] ?: break
-            chain.add(m)
-            cursor = if (m.isNull("parent_id")) null else m.optInt("parent_id")
-        }
-        chain.reverse()
-
-        val newMessages = ArrayList<Message>()
-        var previousId: String? = null
-        for (m in chain) {
-            val id = createId()
-            val createdAt = parseIso(m.optString("inserted_at", null)).takeIf { it > 0 }
-                ?: System.currentTimeMillis()
-            val fragments = m.optJSONArray("fragments") ?: JSONArray()
-            when (m.optString("role")) {
-                "USER" -> {
-                    val content = StringBuilder()
-                    for (f in 0 until fragments.length()) {
-                        val frag = fragments.optJSONObject(f) ?: continue
-                        if (frag.optString("type") == "REQUEST") content.append(frag.optString("content"))
-                    }
-                    newMessages.add(
-                        Message.User(id = id, content = content.toString(), createdAt = createdAt,
-                            parentId = previousId),
-                    )
+            if (mode == ArchiveImportMode.REPLACE) {
+                streamJobs.values.forEach { it.cancel() }
+                streamJobs.clear()
+                titleSessions.clear()
+                val newMap = parsed.sessions.associateBy { it.id }
+                val keepFiles = parsed.extractedFiles.values.map { it.first }.toHashSet()
+                mutex.withLock {
+                    _sessionCache.value = newMap
+                    _sessions.value = sortSessions(newMap.values.map { it.toSummary() })
+                    _activeId.value = null
+                    _drafts.value = emptyMap()
+                    _draftAttachments.value = emptyMap()
                 }
-                "ASSISTANT" -> {
-                    val blocks = ArrayList<ReplyBlock>()
-                    for (f in 0 until fragments.length()) {
-                        val frag = fragments.optJSONObject(f) ?: continue
-                        when (frag.optString("type")) {
-                            "RESPONSE" -> blocks.add(ReplyBlock.Text(frag.optString("content")))
-                            "TEMPLATE_RESPONSE" -> blocks.add(
-                                ReplyBlock.Text(frag.optString("content"), isTemplate = true))
-                            "THINK" -> blocks.add(
-                                ReplyBlock.Thinking(
-                                    thinking = frag.optString("content"),
-                                    elapsedSeconds = if (frag.isNull("elapsed_secs")) null
-                                        else frag.optLong("elapsed_secs"),
-                                ),
-                            )
-                            else -> Unit // TOOL_* 等片段跳过（residual）
+                chatDir.listFiles()?.forEach { it.delete() }
+                attachesDir.listFiles()?.forEach { f ->
+                    if (f.absolutePath !in keepFiles) f.delete()
+                }
+                if (legacyCacheAttachesDir.exists()) {
+                    legacyCacheAttachesDir.listFiles()?.forEach { it.delete() }
+                }
+                for (s in newMap.values) {
+                    File(chatDir, "${s.id}.json").writeText(json.encodeToString(s))
+                }
+                settings.setPinnedSessions(parsed.pinnedIds.filter { it in newMap })
+                return@withContext ImportOutcome.Replace(newMap.size)
+            }
+
+            // MERGE: 深度树合并
+            var added = 0
+            var merged = 0
+            var unchanged = 0
+            val persistedIds = ArrayList<String>()
+            val newPinned = LinkedHashSet(settings.pinnedSessions.value)
+            val resultMap = LinkedHashMap<String, Session>()
+            mutex.withLock {
+                resultMap.putAll(_sessionCache.value)
+                for (incoming in parsed.sessions) {
+                    val existing = resultMap[incoming.id]
+                    if (existing == null) {
+                        val normalized = incoming.normalized()
+                        resultMap[incoming.id] = normalized
+                        persistedIds.add(incoming.id)
+                        if (incoming.id in parsed.pinnedIds) newPinned.add(incoming.id)
+                        added++
+                    } else {
+                        val res = mergeArchiveSession(existing, incoming)
+                        if (res.changed) {
+                            resultMap[incoming.id] = res.session
+                            persistedIds.add(incoming.id)
+                            if (incoming.id in parsed.pinnedIds) newPinned.add(incoming.id)
+                            merged++
+                        } else {
+                            if (incoming.id in parsed.pinnedIds && newPinned.add(incoming.id)) {
+                                merged++
+                            } else {
+                                unchanged++
+                            }
                         }
                     }
-                    newMessages.add(
-                        Message.Assistant(
-                            id = id, createdAt = createdAt,
-                            thinking = m.optBoolean("thinking_enabled"),
-                            search = m.optBoolean("search_enabled"),
-                            status = archiveStatus(m.optString("status")),
-                            blocks = blocks, parentId = previousId,
-                            stopReason = if (m.optString("status") == "CONTENT_FILTER") "refusal" else null,
-                        ),
-                    )
                 }
-                else -> continue
+                _sessionCache.value = resultMap
+                _sessions.value = sortSessions(resultMap.values.map { it.toSummary() })
+                val validIds = resultMap.keys
+                settings.setPinnedSessions(newPinned.filter { it in validIds })
             }
-            // 前一条 selectedChildId 指向本条
-            previousId?.let { prev ->
-                val i = newMessages.indexOfLast { it.id == prev }
-                if (i >= 0) {
-                    newMessages[i] = when (val pm = newMessages[i]) {
-                        is Message.User -> pm.copy(selectedChildId = id)
-                        is Message.Assistant -> pm.copy(selectedChildId = id)
+            for (sid in persistedIds) {
+                val s = resultMap[sid] ?: continue
+                File(chatDir, "$sid.json").writeText(json.encodeToString(s))
+            }
+            // 删除合并后未被引用的新解包图片文件
+            val livePaths = buildSet {
+                resultMap.values.forEach { s ->
+                    s.messages.forEach { m ->
+                        if (m is Message.User) m.files.mapNotNullTo(this) { it.localPath }
                     }
                 }
+                _draftAttachments.value.values.forEach { list -> list.forEach { add(it.localPath) } }
             }
-            previousId = id
-        }
-        val pinned = indexPinned[sourceId] ?: file.optBoolean("pinned", false)
-        val created = parseIso(file.optString("inserted_at", null)).takeIf { it > 0 }
-            ?: System.currentTimeMillis()
-        val updated = parseIso(file.optString("updated_at", null)).takeIf { it > 0 } ?: created
-        if (pinned && !settings.pinnedSessions.value.contains(sourceId)) {
-            settings.setPinnedSessions(settings.pinnedSessions.value + sourceId)
-        }
-        return Session(
-            id = sourceId.takeIf { !_sessionCache.value.containsKey(it) } ?: "${sourceId}-imported-${System.currentTimeMillis() % 100000}",
-            title = file.optString("title").takeIf { it.isNotEmpty() && it != "null" } ?: "",
-            createdAt = created, updatedAt = updated,
-            messages = newMessages,
-            rootMessageId = newMessages.firstOrNull()?.id,
-        )
-    }
-
-    /**
-     * 从官方导出的 zip 导入会话。返回导入条数；格式不合法返回 -1。
-     * 已存在的会话 id 加 -imported- 后缀，不覆盖。
-     */
-    fun importArchive(context: Context, uri: android.net.Uri): Int {
-        var imported = 0
-        try {
-            val files = HashMap<String, String>()
-            val input = context.contentResolver.openInputStream(uri) ?: return -1
-            java.util.zip.ZipInputStream(java.io.BufferedInputStream(input)).use { zip ->
-                var entry = zip.nextEntry
-                while (entry != null) {
-                    val name = entry.name
-                    if (!entry.isDirectory &&
-                        (name == "manifest.json" || name == "chat_session_index.json" ||
-                            (name.startsWith("chat_sessions/") && name.endsWith(".json") &&
-                                !name.contains("_files/")))
-                    ) {
-                        files[name] = zip.readBytes().toString(Charsets.UTF_8)
-                    }
-                    zip.closeEntry()
-                    entry = zip.nextEntry
+            parsed.extractedFiles.values.forEach { (p, _) ->
+                if (p !in livePaths && isManagedAttachPath(p)) {
+                    try { File(p).delete() } catch (_: Exception) {}
                 }
             }
-            val manifest = files["manifest.json"] ?: return -1
-            if (JSONObject(manifest).optInt("export_format_version", -1) != 3) return -1
-            val indexPinned = HashMap<String, Boolean>()
-            files["chat_session_index.json"]?.let {
-                val arr = JSONArray(it)
-                for (i in 0 until arr.length()) {
-                    val e = arr.optJSONObject(i) ?: continue
-                    indexPinned[e.optString("id")] = e.optBoolean("pinned")
-                }
+            ImportOutcome.Merge(added = added, merged = merged, unchanged = unchanged)
+        } catch (e: ArchiveBackupException) {
+            bundle?.extractedFiles?.values?.forEach { (p, _) ->
+                if (isManagedAttachPath(p)) try { File(p).delete() } catch (_: Exception) {}
             }
-            for ((path, text) in files) {
-                if (!path.startsWith("chat_sessions/") || !path.endsWith(".json")) continue
-                val session = try {
-                    archiveToSession(JSONObject(text), indexPinned)
-                } catch (_: Exception) { null } ?: continue
-                if (session.messages.isEmpty()) continue
-                _sessionCache.value = _sessionCache.value + (session.id to session)
-                persist(session.id)
-                imported++
+            ImportOutcome.Failure(e.errorKey)
+        } catch (_: Exception) {
+            bundle?.extractedFiles?.values?.forEach { (p, _) ->
+                if (isManagedAttachPath(p)) try { File(p).delete() } catch (_: Exception) {}
             }
-            _sessions.value = sortSessions(_sessionCache.value.values.map { it.toSummary() })
-        } catch (e: Exception) {
-            return if (imported > 0) imported else -1
+            ImportOutcome.Failure("historyImportFailed")
+        } finally {
+            tmpZip?.delete()
+            _importingHistory.value = false
         }
-        return imported
     }
 }
