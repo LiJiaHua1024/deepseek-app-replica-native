@@ -92,10 +92,10 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
                 }
             }
         } else {
-            // .search: h48 r24 bg-skeleton, padding 0 14, gap 8, search icon 16 tertiary
+            // .search: h48 r24, padding 0 14, gap 8, search icon 16 tertiary
             Box(
                 Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(24.dp))
-                    .background(if (c.dark) Color(0xFF292929) else c.bgSkeleton)
+                    .background(if (c.dark) Color(0xFF292929) else Color(0xFFF3F3F4))
             ) {
                 androidx.compose.foundation.text.BasicTextField(
                     value = query, onValueChange = { query = it },
@@ -116,21 +116,36 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
                     modifier = Modifier.align(Alignment.CenterStart).padding(start = 38.dp))
             }
         }
-        // .listWrap: margin-top 16, relative container for selectChats icon
-        Box(Modifier.weight(1f).padding(top = 16.dp)) {
+        // .listWrap: margin-top 10, relative container for selectChats icon + bottom fade
+        Box(Modifier.weight(1f).padding(top = 10.dp)) {
             // session groups
             LazyColumn(Modifier.fillMaxSize()
-                .nestedScroll(remember { io.github.lijiahua1024.dsnative.ui.ScrollTracker("sider") })) {
+                .nestedScroll(remember { io.github.lijiahua1024.dsnative.ui.ScrollTracker("sider") }),
+                contentPadding = PaddingValues(bottom = 18.dp)) {
             val filtered = groups.map { g ->
                 g.first to g.second.filter { s -> query.isBlank() || s.title.contains(query, true) }
             }.filter { it.second.isNotEmpty() }
             filtered.forEachIndexed { gi, (label, list) ->
                 item(key = "g-$label") {
-                    Box(Modifier.padding(top = (if (gi == 0) 2 else 12).dp, start = 6.dp, end = 6.dp).height(26.dp),
-                        contentAlignment = Alignment.CenterStart) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = (if (gi == 0) 2 else 12).dp, start = 6.dp, end = 6.dp).height(26.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Text(label, fontSize = 14.sp, color = c.labelTertiary, fontWeight = FontWeight.Normal,
                             style = androidx.compose.ui.text.TextStyle(
-                                platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)))
+                                platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)),
+                            modifier = Modifier.weight(1f))
+                        if (gi == 0 && !selectionMode) {
+                            Box(
+                                Modifier.offset(x = 5.dp).size(32.dp).clickable {
+                                    selectionMode = true; selected = emptySet()
+                                },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(painterResource(R.drawable.ic_select_chats), Strings.get("androidMultiSelect"), tint = c.labelPrimary,
+                                    modifier = Modifier.padding(7.dp))
+                            }
+                        }
                     }
                 }
                 items(list, key = { it.id }) { s ->
@@ -161,18 +176,14 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
                 }
             }
             }
-            // declared after LazyColumn so its touches win over the list
-            if (!selectionMode) {
-                Box(
-                    Modifier.align(Alignment.TopEnd).offset(y = 6.dp, x = (-1).dp).size(32.dp).clickable {
-                        selectionMode = true; selected = emptySet()
-                    },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(painterResource(R.drawable.ic_select_chats), Strings.get("androidMultiSelect"), tint = c.labelPrimary,
-                        modifier = Modifier.padding(7.dp))
-                }
-            }
+            Box(
+                Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(22.dp)
+                    .background(
+                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                            listOf(Color.Transparent, c.bgBase)
+                        )
+                    )
+            )
         }
 
         // .bottom: h64 padding-top 8; .settings padding 4px 0
@@ -197,17 +208,15 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
                 }
             }
         } else {
-            Row(Modifier.fillMaxWidth().padding(top = 6.dp).navigationBarsPadding().height(56.dp).clip(RoundedCornerShape(12.dp))
-                    .clickable(onClick = onNavigateSettings).padding(horizontal = 4.dp),
+            // Match official drawer footer: 62dp row, flush 16dp start, 32dp #E5E5E5 circle
+            // with concentric #A2A4A6 bust silhouette in both themes, 10dp gap, no trailing ellipsis.
+            Row(Modifier.fillMaxWidth().height(62.dp).clip(RoundedCornerShape(12.dp))
+                    .clickable(onClick = onNavigateSettings),
                 verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(44.dp).clip(androidx.compose.foundation.shape.CircleShape).background(c.bgSkeleton),
-                    contentAlignment = Alignment.Center) {
-                    Icon(painterResource(R.drawable.ic_profile), null, tint = androidx.compose.ui.graphics.Color(0xFFA2A5A8),
-                        modifier = Modifier.size(32.dp))
-                }
-                Spacer(Modifier.width(12.dp))
-                Text("API Key", fontSize = 16.sp, color = c.labelPrimary, modifier = Modifier.weight(1f))
-                Icon(painterResource(R.drawable.ic_ellipsis), null, tint = c.labelTertiary, modifier = Modifier.size(16.dp))
+                OfficialDefaultAvatar(Modifier.size(32.dp))
+                Spacer(Modifier.width(11.dp))
+                Text("API Key", fontSize = 16.sp, color = c.labelPrimary,
+                    modifier = Modifier.weight(1f).offset(y = (-1.5).dp))
             }
         }
     }
@@ -503,5 +512,32 @@ private fun SiderMenuOption(icon: Int, label: String, color: androidx.compose.ui
         Icon(painterResource(icon), null, tint = color, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(8.dp))
         Text(label, fontSize = 14.sp, lineHeight = 24.sp, color = color)
+    }
+}
+
+@Composable
+private fun OfficialDefaultAvatar(modifier: Modifier = Modifier) {
+    androidx.compose.foundation.Canvas(modifier.clip(androidx.compose.foundation.shape.CircleShape)) {
+        drawCircle(Color(0xFFE5E5E5))
+        val w = size.width
+        val h = size.height
+        val innerR = w * (10f / 24f)
+        val clip = androidx.compose.ui.graphics.Path().apply {
+            addOval(androidx.compose.ui.geometry.Rect(w / 2f - innerR, h / 2f - innerR, w / 2f + innerR, h / 2f + innerR))
+        }
+        drawContext.canvas.save()
+        drawContext.canvas.clipPath(clip)
+        val sil = Color(0xFFA2A4A6)
+        drawCircle(
+            color = sil,
+            radius = w * (3.75f / 24f),
+            center = androidx.compose.ui.geometry.Offset(w / 2f, h * (9.0f / 24f)),
+        )
+        drawOval(
+            color = sil,
+            topLeft = androidx.compose.ui.geometry.Offset(w * (4.0f / 24f), h * (14.5f / 24f)),
+            size = androidx.compose.ui.geometry.Size(w * (16.0f / 24f), h * (12.0f / 24f)),
+        )
+        drawContext.canvas.restore()
     }
 }
