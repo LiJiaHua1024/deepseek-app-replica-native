@@ -23,9 +23,12 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.put
 import kotlinx.serialization.encodeToString
 import org.json.JSONArray
 import org.json.JSONObject
@@ -37,6 +40,91 @@ import java.util.UUID
 
 /** sessions 排序：updatedAt 新→旧 */
 private fun sortSessions(sessions: List<SessionSummary>) = sessions.sortedByDescending { it.updatedAt }
+
+internal fun toAssistantMessageParam(
+    reply: Message.Assistant,
+    prefix: Boolean = false,
+    thinking: Boolean = false,
+): JsonObject {
+    val content = mutableListOf<JsonObject>()
+    val unsignedReadLinks = HashSet<String>()
+    for (block in reply.blocks) {
+        if (block !is ReplyBlock.Tool) continue
+        val payload = block.payload
+        val pType = (payload["type"] as? JsonPrimitive)?.content
+        val pKind = (payload["kind"] as? JsonPrimitive)?.content
+        val cObj = payload["content"] as? JsonObject
+        val cType = (cObj?.get("type") as? JsonPrimitive)?.content
+        val sig = (payload["signature"] as? JsonPrimitive)?.content
+        if (pType == "web_fetch_tool_result" && pKind == "read_link" && cType == "web_fetch_result" && sig.isNullOrBlank()) {
+            (payload["tool_use_id"] as? JsonPrimitive)?.content?.let { unsignedReadLinks.add(it) }
+        }
+    }
+    var pendingText: StringBuilder? = null
+    fun flushText() {
+        val sb = pendingText ?: return
+        pendingText = null
+        if (sb.isNotEmpty()) {
+            content.add(buildJsonObject {
+                put("type", "text")
+                put("text", sb.toString())
+            })
+        }
+    }
+    for (block in reply.blocks) {
+        if (prefix && block is ReplyBlock.Thinking && block.thinking.isBlank()) {
+            continue
+        }
+        when (block) {
+            is ReplyBlock.Text -> {
+                if (block.isTemplate) {
+                    flushText()
+                    continue
+                }
+                val sb = pendingText
+                if (sb != null) {
+                    sb.append(block.text)
+                } else if (block.text.isNotEmpty()) {
+                    val prevType = (content.lastOrNull()?.get("type") as? JsonPrimitive)?.content
+                    val joiner = if (prevType == "text") "\n\n" else ""
+                    pendingText = StringBuilder(joiner).append(block.text)
+                }
+            }
+            is ReplyBlock.Thinking -> {
+                flushText()
+                if (prefix && thinking) {
+                    content.add(buildJsonObject {
+                        put("type", "thinking")
+                        put("thinking", block.thinking)
+                        put("signature", block.signature ?: "")
+                    })
+                }
+            }
+            is ReplyBlock.Tool -> {
+                flushText()
+                val payload = block.payload
+                val pType = (payload["type"] as? JsonPrimitive)?.content
+                val pKind = (payload["kind"] as? JsonPrimitive)?.content
+                if (pType == "server_tool_use" && pKind == "read_link") {
+                    val id = (payload["id"] as? JsonPrimitive)?.content
+                    if (id == null || id !in unsignedReadLinks) {
+                        content.add(payload)
+                    }
+                } else if (pType == "web_fetch_tool_result" && pKind == "read_link") {
+                    val toolUseId = (payload["tool_use_id"] as? JsonPrimitive)?.content
+                    if (toolUseId == null || toolUseId !in unsignedReadLinks) {
+                        content.add(payload)
+                    }
+                }
+            }
+        }
+    }
+    flushText()
+    return buildJsonObject {
+        put("role", "assistant")
+        put("content", JsonArray(content))
+    }
+}
 
 /** 规范化：rootMessageId 非空时按分支链取当前可见路径 */
 fun visibleMessages(session: Session): List<Message> {
@@ -544,51 +632,8 @@ class ChatStore(
         return obj
     }
 
-    private fun toAssistantParam(reply: Message.Assistant): JSONObject {
-        val content = JSONArray()
-        var text: StringBuilder? = null
-        for (block in reply.blocks) {
-            when (block) {
-                is ReplyBlock.Text -> {
-                    if (block.isTemplate) {
-                        text = null
-                        continue
-                    }
-                    if (text != null) {
-                        text.append(block.text)
-                    } else {
-                        val prev = if (content.length() > 0) content.getJSONObject(content.length() - 1) else null
-                        val joiner = if (prev?.optString("type") == "text") "\n\n" else ""
-                        text = StringBuilder(joiner + block.text)
-                        content.put(JSONObject().put("type", "text").put("text", text.toString()))
-                    }
-                }
-                is ReplyBlock.Thinking -> text = null
-                is ReplyBlock.Tool -> {
-                    text = null
-                    val payload = block.payload
-                    val pType = (payload["type"] as? JsonPrimitive)?.content
-                    val pKind = (payload["kind"] as? JsonPrimitive)?.content
-                    if (pType == "server_tool_use" && pKind == "read_link") {
-                        content.put(JSONObject(payload.toString()))
-                    } else if (pType == "web_fetch_tool_result" && pKind == "read_link") {
-                        content.put(JSONObject(payload.toString()))
-                    }
-                }
-            }
-        }
-        // text 追加引用同一 JSONObject，直接更新其 text 字段
-        var i = 0
-        val rebuilt = JSONArray()
-        while (i < content.length()) {
-            val block = content.getJSONObject(i)
-            if (block.optString("type") == "text" && block.optString("text").isEmpty()) {
-                i++; continue
-            }
-            rebuilt.put(block); i++
-        }
-        return JSONObject().put("role", "assistant").put("content", rebuilt)
-    }
+    private fun toAssistantParam(reply: Message.Assistant, prefix: Boolean = false, thinking: Boolean = false): JSONObject =
+        JSONObject(toAssistantMessageParam(reply, prefix, thinking).toString())
 
     /** history → messages：只保留「提问+可用回答」成对轮次，latest_reminder 插到对应 user 前。 */
     private fun toRequestMessages(
@@ -624,13 +669,20 @@ class ChatStore(
         messages.put(toUserParam(question))
         // ref：续写时末尾带上前一条 assistant 作为 prefill；无有效正文则不发空 Prefill
         if (prefix != null && prefix.prefix) {
-            val assistant = toAssistantParam(prefix)
+            val assistant = toAssistantParam(prefix, prefix = true, thinking = settings.thinking.value)
             val content = assistant.optJSONArray("content")
             var usable = false
             if (content != null) {
                 var i = 0
                 while (i < content.length()) {
-                    if (content.getJSONObject(i).optString("text").isNotBlank()) { usable = true; break }
+                    val blk = content.getJSONObject(i)
+                    val blkType = blk.optString("type")
+                    if ((blkType == "text" && blk.optString("text").isNotBlank()) ||
+                        (blkType == "thinking" && blk.optString("thinking").isNotBlank())
+                    ) {
+                        usable = true
+                        break
+                    }
                     i++
                 }
             }

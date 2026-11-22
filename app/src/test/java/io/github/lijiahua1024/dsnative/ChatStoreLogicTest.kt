@@ -7,8 +7,15 @@ import io.github.lijiahua1024.dsnative.data.Session
 import io.github.lijiahua1024.dsnative.data.SessionSummary
 import io.github.lijiahua1024.dsnative.data.groupSessions
 import io.github.lijiahua1024.dsnative.data.replyText
+import io.github.lijiahua1024.dsnative.data.toAssistantMessageParam
 import io.github.lijiahua1024.dsnative.data.visibleMessages
 import io.github.lijiahua1024.dsnative.ui.session.thinkingDurationSeconds
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -112,5 +119,80 @@ class ThinkingDurationTest {
     fun returnsNullWhenBothElapsedSecondsAndStartedAtMissing() {
         val block = ReplyBlock.Thinking(thinking = "t", startedAt = null, endedAt = null)
         assertNull(thinkingDurationSeconds(block, now = 1_795_000_000_000L))
+    }
+}
+
+class AssistantParamSerializationTest {
+
+    @Test
+    fun concatenatesConsecutiveTextBlocksInSingleJsonBlock() {
+        val msg = Message.Assistant(
+            id = "a1",
+            createdAt = 0,
+            status = ReplyStatus.DONE,
+            blocks = listOf(
+                ReplyBlock.Thinking("hmm"),
+                ReplyBlock.Text("hello "),
+                ReplyBlock.Text("world"),
+                ReplyBlock.Text("!"),
+            ),
+        )
+        val param = toAssistantMessageParam(msg)
+        val content = param["content"]!!.jsonArray
+        assertEquals(1, content.size)
+        val first = content[0].jsonObject
+        assertEquals("text", first["type"]!!.jsonPrimitive.content)
+        assertEquals("hello world!", first["text"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun skipsTemplateBlocksAndPreservesSignedReadLink() {
+        val signedUse = ReplyBlock.Tool(buildJsonObject {
+            put("type", "server_tool_use")
+            put("id", "tu1")
+            put("kind", "read_link")
+            put("name", "read_link")
+            putJsonObject("input") { put("url", "https://example.com") }
+        })
+        val signedRes = ReplyBlock.Tool(buildJsonObject {
+            put("type", "web_fetch_tool_result")
+            put("tool_use_id", "tu1")
+            put("kind", "read_link")
+            put("signature", "sig-ok")
+            putJsonObject("content") { put("type", "web_fetch_result") }
+        })
+        val unsignedUse = ReplyBlock.Tool(buildJsonObject {
+            put("type", "server_tool_use")
+            put("id", "tu2")
+            put("kind", "read_link")
+            put("name", "read_link")
+            putJsonObject("input") { put("url", "https://unsigned.com") }
+        })
+        val unsignedRes = ReplyBlock.Tool(buildJsonObject {
+            put("type", "web_fetch_tool_result")
+            put("tool_use_id", "tu2")
+            put("kind", "read_link")
+            putJsonObject("content") { put("type", "web_fetch_result") }
+        })
+        val msg = Message.Assistant(
+            id = "a2",
+            createdAt = 0,
+            status = ReplyStatus.DONE,
+            blocks = listOf(
+                ReplyBlock.Text("tpl", isTemplate = true),
+                ReplyBlock.Text("part1"),
+                signedUse,
+                signedRes,
+                unsignedUse,
+                unsignedRes,
+                ReplyBlock.Text("part2"),
+            ),
+        )
+        val content = toAssistantMessageParam(msg)["content"]!!.jsonArray
+        assertEquals(4, content.size)
+        assertEquals("part1", content[0].jsonObject["text"]!!.jsonPrimitive.content)
+        assertEquals("tu1", content[1].jsonObject["id"]!!.jsonPrimitive.content)
+        assertEquals("tu1", content[2].jsonObject["tool_use_id"]!!.jsonPrimitive.content)
+        assertEquals("part2", content[3].jsonObject["text"]!!.jsonPrimitive.content)
     }
 }
