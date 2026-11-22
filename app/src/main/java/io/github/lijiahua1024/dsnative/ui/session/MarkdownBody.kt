@@ -41,7 +41,9 @@ import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.BaselineShift
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextGeometricTransform
+import io.github.lijiahua1024.dsnative.ui.excludeFromDrawerGesture
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -49,6 +51,8 @@ import io.github.lijiahua1024.dsnative.theme.Strings
 import androidx.compose.ui.unit.sp
 import io.github.lijiahua1024.dsnative.theme.DsTheme
 import org.commonmark.ext.autolink.AutolinkExtension
+import org.commonmark.ext.gfm.strikethrough.Strikethrough
+import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension
 import org.commonmark.ext.gfm.tables.TableBlock
 import org.commonmark.ext.gfm.tables.TableBody
 import org.commonmark.ext.gfm.tables.TableCell
@@ -88,6 +92,7 @@ private val parser: Parser by lazy {
         .extensions(
             listOf(
                 TablesExtension.create(),
+                StrikethroughExtension.create(),
                 AutolinkExtension.create(),
             )
         )
@@ -253,6 +258,7 @@ private fun RenderBlock(
                         fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 22.sp,
                         style = cssLeading,
                         modifier = Modifier.fillMaxWidth()
+                            .excludeFromDrawerGesture()
                             .horizontalScroll(rememberScrollState()),
                     )
                 }
@@ -301,6 +307,7 @@ private fun RenderBlock(
                 Box(
                     Modifier.fillMaxWidth()
                         .background(c.markdownCodeBlockBanner)
+                        .excludeFromDrawerGesture()
                         .horizontalScroll(rememberScrollState())
                 ) {
                     Text(
@@ -351,7 +358,7 @@ private fun RenderBlock(
                     if (item is ListItem) {
                         Row(Modifier.fillMaxWidth().padding(start = 2.dp)) {
                             Text("$i.", fontSize = 16.sp, lineHeight = 28.sp, color = c.labelSecondary,
-                                style = cssLeading, modifier = Modifier.width(16.dp))
+                                style = cssLeading, modifier = Modifier.widthIn(min = 16.dp).padding(end = 4.dp))
                             Column(Modifier.weight(1f)) {
                                 var ch = item.firstChild
                                 while (ch != null) { RenderBlock(ch, c, uriHandler, streaming); ch = ch.next }
@@ -450,7 +457,7 @@ private fun RenderTable(
     c: io.github.lijiahua1024.dsnative.theme.DsColors,
     uriHandler: androidx.compose.ui.platform.UriHandler,
 ) {
-    Column(Modifier.horizontalScroll(rememberScrollState())) {
+    Column(Modifier.excludeFromDrawerGesture().horizontalScroll(rememberScrollState())) {
         var section = table.firstChild
         while (section != null) {
             val header = section is TableHead
@@ -672,7 +679,7 @@ private fun texStyled(tex: String): AnnotatedString = buildAnnotatedString {
                 val parts = seg.split(Regex("(?<=[+=<>−-])|(?=[+=<>−-])"))
                 for (p in parts) {
                     if (p.matches(Regex("[+=<>−-]+"))) {
-                        withStyle(SpanStyle(fontFamily = FontFamily.Serif)) { append("\u200A\u200A$p\u200A\u200A") }
+                        withStyle(SpanStyle(fontFamily = FontFamily.Serif)) { append(" $p ") }
                     } else {
                         withStyle(SpanStyle(fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic)) { append(p) }
                     }
@@ -712,6 +719,11 @@ private fun inlineText(
             // double-slant, so FontStyle stays Normal here.
             is Emphasis -> withStyle(SpanStyle(
                 textGeometricTransform = TextGeometricTransform(skewX = -0.25f),
+            )) {
+                append(inlineText(ch, c, uriHandler))
+            }
+            is Strikethrough -> withStyle(SpanStyle(
+                textDecoration = TextDecoration.LineThrough,
             )) {
                 append(inlineText(ch, c, uriHandler))
             }

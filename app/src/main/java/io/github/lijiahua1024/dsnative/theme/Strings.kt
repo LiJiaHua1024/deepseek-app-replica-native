@@ -139,6 +139,7 @@ object Strings {
             "apiKeyPlaceholder" -> pick("请输入 API Key", "Enter API Key")
             "apiKeyVerifying" -> pick("正在验证...", "Verifying...")
             "confirm" -> pick("确认", "Confirm")
+            "jumpToBottom" -> pick("回到底部", "Jump to bottom")
             "apiKeyInvalid" -> pick("API Key 无效，请检查后重试", "Invalid API Key")
             "apiKeyStorageFailed" -> pick("无法在此设备上保存 API Key", "Cannot save API Key")
             "apiKeyVerificationFailed" -> pick("校验失败：{message}", "Verification failed: {message}")

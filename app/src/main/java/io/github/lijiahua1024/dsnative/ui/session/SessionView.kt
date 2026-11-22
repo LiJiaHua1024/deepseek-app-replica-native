@@ -50,6 +50,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import io.github.lijiahua1024.dsnative.data.visibleMessages
 import io.github.lijiahua1024.dsnative.theme.DsTheme
 import io.github.lijiahua1024.dsnative.theme.Strings
+import io.github.lijiahua1024.dsnative.theme.softShadow
 import io.github.lijiahua1024.dsnative.ui.input.ChatInput
 import io.github.lijiahua1024.dsnative.ui.input.VoiceInput
 import io.github.lijiahua1024.dsnative.ui.input.VoiceOverlay
@@ -142,7 +143,20 @@ fun SessionView(
                 identity = if (activeId == null) greetingIdentity else activeId,
             )
         } else {
-            LazyColumn(state = listState, modifier = Modifier.weight(1f)
+            val scope = rememberCoroutineScope()
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val jumpThreshPx = with(density) { 44.8f.dp.toPx() }
+            val showJump by remember {
+                derivedStateOf {
+                    val info = listState.layoutInfo
+                    if (info.totalItemsCount == 0) return@derivedStateOf false
+                    val last = info.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf true
+                    last.index < info.totalItemsCount - 1 ||
+                        (last.offset + last.size - info.viewportEndOffset) > jumpThreshPx
+                }
+            }
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+            LazyColumn(state = listState, modifier = Modifier.fillMaxSize()
                 .nestedScroll(remember { io.github.lijiahua1024.dsnative.ui.ScrollTracker("chat") }),
                 contentPadding = PaddingValues(bottom = 20.5.dp)) {
                 items(visible.size, key = { visible[it].id }) { index ->
@@ -153,6 +167,44 @@ fun SessionView(
                         }
                     }
                 }
+            }
+            androidx.compose.animation.AnimatedVisibility(
+                visible = showJump,
+                enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(150)),
+                exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(150)),
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 14.dp, bottom = 15.dp),
+            ) {
+                val jSrc = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                Box(
+                    Modifier.size(44.dp)
+                        .clickable(jSrc, null) {
+                            scope.launch {
+                                val msgs = session?.let { visibleMessages(it) } ?: return@launch
+                                if (msgs.isNotEmpty()) {
+                                    listState.animateScrollToItem(msgs.size - 1, Int.MAX_VALUE)
+                                }
+                            }
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        Modifier.size(30.dp)
+                            .softShadow(15.dp, blurRadius = 3.dp, offsetY = 0.5.dp,
+                                color = Color.Black.copy(alpha = if (c.dark) 0.35f else 0.14f))
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(if (c.dark) Color(0xFF2C2C2E) else c.bgBase)
+                            .border(0.6.dp, c.borderL1, androidx.compose.foundation.shape.CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            painterResource(R.drawable.ic_chevron_right),
+                            Strings.get("jumpToBottom"),
+                            tint = c.labelPrimary,
+                            modifier = Modifier.size(14.dp).rotate(90f),
+                        )
+                    }
+                }
+            }
             }
             // Sticky-follow per MessageList.tsx: within STICKY_THRESHOLD(40px)
             // of the bottom stays following; scrolling up stops; re-approach
@@ -694,22 +746,21 @@ fun AssistantView(msg: Message.Assistant, session: Session, chatStore: ChatStore
             else -> {}
         }
         if (msg.status == ReplyStatus.DONE || msg.status == ReplyStatus.STOPPED) {
-            // 6px main-content padding-bottom + 12px .bottom padding-top；
-            // ref .bottom { left:-6px }——整行向左偏 6css px
-            // 列总高差 ~10dp（底对齐下整体下移 28px）：补在 .bottom 顶部（实测 18.5 对齐最佳）
-            Row(Modifier.fillMaxWidth().offset(x = (-8).dp).padding(top = 12.dp, bottom = 10.dp),
+            Row(Modifier.fillMaxWidth().offset(x = (-6).dp).padding(top = 8.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 BranchSwitcher(session, msg, chatStore)
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp),
+                Row(modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically) {
                 val clipboard = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                 val scope = androidx.compose.runtime.rememberCoroutineScope()
                 val audioManager = ctx.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+                val iconTint = if (c.dark) c.labelTertiary else Color(0xFF8E9094)
                 IconButton({
                     clipboard.setPrimaryClip(android.content.ClipData.newPlainText("reply", replyText(msg)))
                     DsToast.show(Strings.get("copied"))
-                }, modifier = Modifier.size(32.dp)) {
-                    Icon(painterResource(R.drawable.ic_copy), Strings.get("copy"), tint = c.labelTertiary, modifier = Modifier.size(16.dp))
+                }, modifier = Modifier.size(34.dp)) {
+                    Icon(painterResource(R.drawable.ic_copy), Strings.get("copy"), tint = iconTint, modifier = Modifier.size(18.dp))
                 }
                 run {
                     // ref ReadAloudButton + ReadingBars: loading/playing 竖条动画,
@@ -726,23 +777,24 @@ fun AssistantView(msg: Message.Assistant, session: Session, chatStore: ChatStore
                             { key -> DsToast.show(Strings.get(key)) },
                             { if (audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) == 0) DsToast.show(Strings.get("readAloudLowVolume")) },
                         )
-                    }, modifier = Modifier.size(32.dp)) {
+                    }, modifier = Modifier.size(34.dp)) {
                         if (reading) {
                             ReadingBars(readStatus ==
                                 io.github.lijiahua1024.dsnative.data.ReadAloud.Status.PLAYING)
                         } else {
                             Icon(painterResource(R.drawable.ic_speaker), Strings.get("ttsPlay"),
-                                tint = c.labelTertiary, modifier = Modifier.size(16.dp))
+                                tint = iconTint, modifier = Modifier.size(18.dp))
                         }
                     }
                 }
-                IconButton({ chatStore.regenerateReply(sessionId, msg.id) }, modifier = Modifier.size(32.dp)) {
-                    Icon(painterResource(R.drawable.ic_refresh), Strings.get("regenerate"), tint = c.labelTertiary, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.weight(1f))
+                IconButton({ chatStore.regenerateReply(sessionId, msg.id) }, modifier = Modifier.size(34.dp)) {
+                    Icon(painterResource(R.drawable.ic_refresh), Strings.get("regenerate"), tint = iconTint, modifier = Modifier.size(18.dp))
                 }
                 }
                 // ref .continueButton：outlined s（h32 pill 1px l2 border 14/22 w400），margin-left:auto
                 if (isLast && chatStore.canContinueReply(msg)) {
-                    Spacer(Modifier.weight(1f))
+                    Spacer(Modifier.width(8.dp))
                     Row(
                         Modifier.height(32.dp).widthIn(min = 58.dp)
                             .clip(RoundedCornerShape(50))
@@ -828,7 +880,7 @@ fun ThinkingBlock(block: ReplyBlock.Thinking, msg: Message.Assistant) {
                 androidx.compose.animation.core.tween(220, easing = discEase))
                 + androidx.compose.animation.fadeOut(
                     androidx.compose.animation.core.tween(160))) {
-            Row {
+            Row(Modifier.height(IntrinsicSize.Min)) {
                 Box(Modifier.padding(start = 7.5.dp, top = 4.dp).width(1.dp).fillMaxHeight().background(c.thinkingLine))
                 Column(Modifier.padding(start = 24.dp)) {
                     Text(block.thinking, fontSize = 14.sp, color = c.thinkingText)

@@ -15,7 +15,8 @@
     overflow-x: auto;
     overflow-y: hidden;
     max-width: 100%;
-    padding: 4px;
+    margin: 0;
+    padding: 8px 4px;
   }
 </style>
 </head>
@@ -32,7 +33,7 @@ function doRender(tex, dark) {
     // ref MathFormula strips the outer wrapper and re-adds .katex itself
     k.innerHTML = html.slice('<span class="katex-display"><span class="katex">'.length,
                              -'</span></span>'.length);
-    Android.onDone(d.offsetHeight);
+    Android.onDone(Math.ceil(Math.max(d.offsetHeight, document.body.scrollHeight, document.documentElement.scrollHeight)));
   } catch (e) {
     Android.onError('' + e);
   }
