@@ -9,6 +9,7 @@ import io.github.lijiahua1024.dsnative.data.groupSessions
 import io.github.lijiahua1024.dsnative.data.replyText
 import io.github.lijiahua1024.dsnative.data.toAssistantMessageParam
 import io.github.lijiahua1024.dsnative.data.visibleMessages
+import io.github.lijiahua1024.dsnative.ui.session.replyGrowthKey
 import io.github.lijiahua1024.dsnative.ui.session.thinkingDurationSeconds
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
@@ -194,5 +195,20 @@ class AssistantParamSerializationTest {
         assertEquals("tu1", content[1].jsonObject["id"]!!.jsonPrimitive.content)
         assertEquals("tu1", content[2].jsonObject["tool_use_id"]!!.jsonPrimitive.content)
         assertEquals("part2", content[3].jsonObject["text"]!!.jsonPrimitive.content)
+    }
+}
+
+class ReplyGrowthKeyTest {
+
+    @Test
+    fun keyIncreasesOnThinkingAndTextDeltas() {
+        val t1 = Message.Assistant(
+            id = "a", createdAt = 0, status = ReplyStatus.STREAMING,
+            blocks = listOf(ReplyBlock.Thinking("step 1")),
+        )
+        val t2 = t1.copy(blocks = listOf(ReplyBlock.Thinking("step 1, step 2")))
+        val t3 = t2.copy(blocks = t2.blocks + ReplyBlock.Text("answer"))
+        assertTrue(replyGrowthKey(t2) > replyGrowthKey(t1))
+        assertTrue(replyGrowthKey(t3) > replyGrowthKey(t2))
     }
 }

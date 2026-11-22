@@ -233,7 +233,7 @@ fun SessionView(
                     val msgs = session?.let { visibleMessages(it) } ?: emptyList()
                     val last = msgs.lastOrNull() as? Message.Assistant
                     Triple(msgs.size,
-                        last?.let { replyText(it).length + it.blocks.size } ?: 0,
+                        last?.let { replyGrowthKey(it) } ?: 0,
                         listState.layoutInfo.viewportEndOffset)
                 }.collect {
                     val msgs = session?.let { visibleMessages(it) } ?: return@collect
@@ -814,6 +814,15 @@ fun AssistantView(msg: Message.Assistant, session: Session, chatStore: ChatStore
     }
     }
 }
+
+internal fun replyGrowthKey(msg: Message.Assistant): Int =
+    msg.blocks.sumOf { block ->
+        when (block) {
+            is ReplyBlock.Text -> block.text.length
+            is ReplyBlock.Thinking -> block.thinking.length
+            is ReplyBlock.Tool -> block.payload.toString().length
+        }
+    } + msg.blocks.size
 
 internal fun thinkingDurationSeconds(
     block: ReplyBlock.Thinking,
