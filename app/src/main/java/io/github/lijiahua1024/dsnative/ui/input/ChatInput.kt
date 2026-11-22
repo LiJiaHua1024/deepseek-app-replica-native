@@ -5,13 +5,14 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.material3.Icon
@@ -23,7 +24,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -35,6 +39,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -53,6 +58,13 @@ import io.github.lijiahua1024.dsnative.theme.DsTheme
 import io.github.lijiahua1024.dsnative.theme.Strings
 import io.github.lijiahua1024.dsnative.theme.softShadow
 import kotlinx.coroutines.launch
+
+internal fun showDisabledSend(
+    focused: Boolean,
+    voiceMode: Boolean,
+    canSend: Boolean,
+    isStreaming: Boolean,
+): Boolean = focused && !voiceMode && !canSend && !isStreaming
 
 // Android composer per ChatInput.module.css [data-android] .wrapper: radius
 // 30px, font 16.75px, 1px border color-mix(currentColor 7%), shadow
@@ -126,18 +138,22 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     val photos by produceState<List<RecentPhoto>>(emptyList(), showAttachments, mediaGranted) {
         value = if (showAttachments && mediaGranted) queryRecentPhotos(context) else emptyList()
     }
-    val addFiles: (List<android.net.Uri>) -> Unit = { uris ->
+    val addFiles: (List<android.net.Uri>, Boolean) -> Unit = { uris, focusAfter ->
         inputScope.launch {
             val items = uris.mapNotNull { importToDraft(context, it) }
             if (items.isNotEmpty()) chatStore.addDraftAttachments(activeId, items)
+            if (focusAfter) chatStore.requestFocusComposer()
         }
     }
     val pickImages = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.PickMultipleVisualMedia()
-    ) { uris -> if (uris.isNotEmpty()) addFiles(uris) }
+    ) { uris ->
+        if (uris.isNotEmpty()) addFiles(uris, true)
+        else chatStore.requestFocusComposer()
+    }
     val openDocs = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.OpenMultipleDocuments()
-    ) { uris -> if (uris.isNotEmpty()) addFiles(uris) }
+    ) { uris -> if (uris.isNotEmpty()) addFiles(uris, false) }
     val openWeChatDocs = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -149,7 +165,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                 }
                 if (isEmpty()) data?.data?.let(::add)
             }
-            if (uris.isNotEmpty()) addFiles(uris)
+            if (uris.isNotEmpty()) addFiles(uris, false)
         }
     }
     val focusRequests by chatStore.focusComposerRequests.collectAsState()
@@ -307,13 +323,14 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                     lineHeight = 24.sp, fontFamily = DsTheme.fontFamily),
                 cursorBrush = SolidColor(c.brandText),
                 singleLine = false,
-                maxLines = 6,
-                keyboardOptions = KeyboardOptions(autoCorrectEnabled = true, capitalization = KeyboardCapitalization.Sentences),
-                keyboardActions = KeyboardActions(onSend = {
-                    if (canSend) { chatStore.setDraft(activeId, text); chatStore.sendMessage(activeId); text = "" }
-                }),
+                maxLines = 7,
+                keyboardOptions = KeyboardOptions(
+                    autoCorrectEnabled = true,
+                    capitalization = KeyboardCapitalization.Sentences,
+                    imeAction = ImeAction.Default,
+                ),
                 decorationBox = { inner ->
-                    Box(Modifier.fillMaxWidth()) {
+                    Box(Modifier.fillMaxWidth().heightIn(max = 172.dp)) {
                         if (text.isEmpty()) {
                             Text(
                                 Strings.get(if (focused) "androidMessageHint" else "androidHoldHint"),
@@ -373,15 +390,54 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
             }
         }
         }
+        val togglesScroll = rememberScrollState()
         Row(
             Modifier.fillMaxWidth()
-                .padding(start = 15.dp, end = 11.dp, top = if (voiceMode) 10.dp else 0.dp, bottom = 11.dp),
+                .padding(start = 12.dp, end = 10.dp, top = if (voiceMode) 10.dp else 0.dp, bottom = 11.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TogglePill(Strings.get("thinkingSwitch"), thinking, { settings.setThinking(!thinking) }, R.drawable.ic_think)
-            Spacer(Modifier.width(8.dp))
-            TogglePill(Strings.get("search"), search, { settings.setSearch(!search) }, R.drawable.ic_globe)
-            Spacer(Modifier.weight(1f))
+            Row(
+                Modifier.weight(1f)
+                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                    .drawWithContent {
+                        drawContent()
+                        val overflow = togglesScroll.maxValue > 0
+                        val fadeLeft = overflow && togglesScroll.value > 1
+                        val fadeRight = overflow && togglesScroll.value < togglesScroll.maxValue - 1
+                        if (fadeLeft) {
+                            val fadeW = 16.dp.toPx()
+                            drawRect(
+                                brush = Brush.horizontalGradient(
+                                    listOf(Color.Transparent, Color.Black),
+                                    startX = 0f,
+                                    endX = fadeW,
+                                ),
+                                size = Size(fadeW, size.height),
+                                blendMode = BlendMode.DstIn,
+                            )
+                        }
+                        if (fadeRight) {
+                            val fadeW = 20.dp.toPx()
+                            drawRect(
+                                brush = Brush.horizontalGradient(
+                                    listOf(Color.Black, Color.Transparent),
+                                    startX = size.width - fadeW,
+                                    endX = size.width,
+                                ),
+                                topLeft = Offset(size.width - fadeW, 0f),
+                                size = Size(fadeW, size.height),
+                                blendMode = BlendMode.DstIn,
+                            )
+                        }
+                    }
+                    .horizontalScroll(togglesScroll),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(7.dp),
+            ) {
+                TogglePill(Strings.get("thinkingSwitch"), thinking, { settings.setThinking(!thinking) }, R.drawable.ic_think)
+                TogglePill(Strings.get("search"), search, { settings.setSearch(!search) }, R.drawable.ic_globe)
+            }
+            Spacer(Modifier.width(6.dp))
             val attSrc = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
             val attPressed by attSrc.collectIsPressedAsState()
             Box(
@@ -475,7 +531,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                             .background(DsTheme.pressTint(voicePressed, c.interactiveBgHover)))
                 }
             }
-            if (focused && text.isNotEmpty() && !canSend && !isStreaming) {
+            if (showDisabledSend(focused, voiceMode, canSend, isStreaming)) {
                 Box(
                     Modifier.align(Alignment.CenterVertically)
                         .padding(start = 4.dp, end = 4.dp)
@@ -614,7 +670,7 @@ internal fun TogglePill(label: String, on: Boolean, onClick: () -> Unit, icon: I
     val pillShape = RoundedCornerShape(16.dp)
     val bg = if (on) c.buttonGhostActiveFill else if (c.dark) c.inputMajor else Color.Transparent
     Row(
-        Modifier.height(32.dp)
+        Modifier.height(31.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(pillShape)
             .background(bg)
@@ -625,15 +681,21 @@ internal fun TogglePill(label: String, on: Boolean, onClick: () -> Unit, icon: I
                 indication = null,
                 role = androidx.compose.ui.semantics.Role.Checkbox,
             ) { onClick() }
-            .padding(horizontal = 11.dp),
+            .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(painterResource(icon), null,
             tint = if (on) c.brandText else c.labelPrimary,
             modifier = Modifier.size(15.dp))
         Spacer(Modifier.width(4.dp))
-        Text(label, fontSize = 14.sp, lineHeight = 20.sp,
+        Text(
+            label,
+            fontSize = 13.5.sp,
+            lineHeight = 19.sp,
+            maxLines = 1,
+            softWrap = false,
             fontWeight = if (on) FontWeight.Medium else FontWeight.Normal,
-            color = if (on) c.brandText else c.labelPrimary)
+            color = if (on) c.brandText else c.labelPrimary,
+        )
     }
 }
