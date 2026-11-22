@@ -1,6 +1,12 @@
 package io.github.lijiahua1024.dsnative.theme
 
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 
 /** DeepSeek design tokens, mirrored from src/app/theme.css of the WebView reference. */
 data class DsColors(
@@ -103,7 +109,7 @@ val LightColors = DsColors(
     buttonContrastFill = Color(0xFF61666B),
     buttonElevatedFill = Color(0xFFFFFFFF),
     buttonGhostActiveFill = Color(0xFFEDF3FE),
-    buttonGhostActiveBorder = Color(0xFFCFDFFF),
+    buttonGhostActiveBorder = Color(0xFFD3E2FF),
     buttonGhostActiveHover = Color(0xFFE4EDFD),
     markdownCitation = Color(0xFFEBEEF2),
     markdownCodeBlockBanner = Color(0xFFF9FAFB),
@@ -135,8 +141,8 @@ val LightColors = DsColors(
 val DarkColors = DsColors(
     dark = true,
     bgBase = Color(0xFF0F0F0F),
-    bgLayer2 = Color(0xFF2C2C2E),
-    bgLayer3 = Color(0xFF353638),
+    bgLayer2 = Color(0xFF242424),
+    bgLayer3 = Color(0xFF3C3C3D),
     bgSkeleton = Color(0x14FFFFFF),
     borderL1 = Color(0x0FFFFFFF),
     borderL2 = Color(0x1FFFFFFF),
@@ -177,12 +183,12 @@ val DarkColors = DsColors(
     searchResultDate = Color(0xFF8E9094),
     searchResultSnippet = Color(0xFF8E9094),
     searchResultNumber = Color(0xFFB9BABB),
-    bubble = Color(0xFF2C2C2E),
-    inputMajor = Color(0xFF2C2C2E),
+    bubble = Color(0xFF333333),
+    inputMajor = Color(0xFF242424),
     loginInput = Color(0xFF1B1B1C),
-    menu = Color(0xFF353638),
-    selector = Color(0xFF43454A),
-    sidebarFill = Color(0xFF1B1B1C),
+    menu = Color(0xFF2C2C2E),
+    selector = Color(0xFF3C3C3D),
+    sidebarFill = Color(0xFF141414),
     sidebarNavItemActiveAccent = Color(0xFF353638),
     sidebarNavItemHover = Color(0xFF2C2C2E),
     thinkingText = Color(0xFFADB2B8),
@@ -221,22 +227,35 @@ object DsTheme {
         ).value
 }
 
-// The ref WebView resolves `Roboto, 'Noto Sans CJK SC', sans-serif` to the
-// Noto Sans CJK SC face for latin AND CJK (measured: latin advances ~5% wider
-// than Android's Roboto fallback). The SC face is bundled in assets because
-// faces inside the system .ttc are not selectable via createFromFile.
+/** Draw a diffused CSS-like Gaussian drop shadow outside a rounded rectangle without clipping. */
+fun Modifier.softShadow(
+    cornerRadius: Dp,
+    blurRadius: Dp,
+    offsetY: Dp = 0.dp,
+    offsetX: Dp = 0.dp,
+    color: Color = Color.Black.copy(alpha = 0.08f),
+): Modifier = if (color.alpha <= 0f) this else this.drawBehind {
+    drawIntoCanvas { canvas ->
+        val paint = androidx.compose.ui.graphics.Paint()
+        val fw = paint.asFrameworkPaint()
+        fw.isAntiAlias = true
+        fw.color = color.toArgb()
+        fw.maskFilter = android.graphics.BlurMaskFilter(
+            blurRadius.toPx().coerceAtLeast(1f),
+            android.graphics.BlurMaskFilter.Blur.NORMAL,
+        )
+        val dx = offsetX.toPx()
+        val dy = offsetY.toPx()
+        val r = cornerRadius.toPx()
+        canvas.drawRoundRect(dx, dy, size.width + dx, size.height + dy, r, r, paint)
+    }
+}
+
 @androidx.compose.runtime.Composable
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 fun DsTheme(colors: DsColors, content: @androidx.compose.runtime.Composable () -> Unit) {
-    val assets = androidx.compose.ui.platform.LocalContext.current.assets
-    val fontFamily = androidx.compose.runtime.remember {
-        androidx.compose.ui.text.font.FontFamily(
-            androidx.compose.ui.text.font.Font(
-                path = "fonts/NotoSansSC-Regular.otf",
-                assetManager = assets,
-            )
-        )
-    }
+    // Use system default variable sans-serif so Medium/SemiBold/Bold weights render accurately on real devices.
+    val fontFamily = androidx.compose.ui.text.font.FontFamily.Default
     androidx.compose.runtime.CompositionLocalProvider(
         LocalDsColors provides colors,
         LocalDsFontFamily provides fontFamily,
