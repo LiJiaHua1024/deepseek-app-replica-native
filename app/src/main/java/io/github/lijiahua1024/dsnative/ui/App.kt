@@ -10,8 +10,10 @@ import androidx.compose.foundation.gestures.awaitHorizontalTouchSlopOrCancellati
 import androidx.compose.foundation.gestures.horizontalDrag
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
@@ -134,29 +136,70 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
                 val p = (effectiveSettingsT / 0.35f).coerceIn(0f, 1f)
                 -40f * outEase.transform(p)
             }
-            Box(Modifier.fillMaxSize().graphicsLayer {
+            BoxWithConstraints(Modifier.fillMaxSize().graphicsLayer {
                 if (settingsMounted) translationX = with(contentDensity) { parentShiftDp.dp.toPx() }
             }) {
-                DrawerFrame(
-                    nav = nav,
-                    dark = dark,
-                    freePan = freePan,
-                    closeImmediately = false,
-                    onNavigate = { nav = it },
-                    siderContent = { close ->
-                        Sider(settings, chatStore,
-                            onNavigateSettings = { nav = NavState.Settings; close() },
-                            onClose = close)
-                    },
-                ) { open ->
-                    SessionView(
-                        settings,
-                        chatStore,
-                        onOpenDrawer = open,
-                        onOpenSettings = { nav = NavState.Settings },
-                        coldStartWelcome = coldStartWelcome,
-                        greetingIdentity = newChatRequests,
-                    )
+                val wideLayout = maxWidth >= 768.dp
+                val siderCollapsed by settings.siderCollapsed.collectAsState()
+                if (wideLayout) {
+                    Row(Modifier.fillMaxSize()) {
+                        if (!siderCollapsed) {
+                            Box(
+                                Modifier.width(260.dp)
+                                    .fillMaxHeight()
+                                    .background(DsTheme.colors.bgBase),
+                            ) {
+                                Sider(
+                                    settings = settings,
+                                    chatStore = chatStore,
+                                    onNavigateSettings = { nav = NavState.Settings },
+                                    onClose = {},
+                                    isWideLayout = true,
+                                    onCollapseWide = { settings.setSiderCollapsed(true) },
+                                )
+                            }
+                            Box(
+                                Modifier.width(1.dp)
+                                    .fillMaxHeight()
+                                    .background(DsTheme.colors.borderL1),
+                            )
+                        }
+                        Box(Modifier.weight(1f).fillMaxHeight()) {
+                            SessionView(
+                                settings,
+                                chatStore,
+                                onOpenDrawer = { settings.setSiderCollapsed(false) },
+                                onOpenSettings = { nav = NavState.Settings },
+                                coldStartWelcome = coldStartWelcome,
+                                greetingIdentity = newChatRequests,
+                                showMenuButton = siderCollapsed,
+                                isWideCollapsed = siderCollapsed,
+                            )
+                            io.github.lijiahua1024.dsnative.ui.session.DsToastHost()
+                        }
+                    }
+                } else {
+                    DrawerFrame(
+                        nav = nav,
+                        dark = dark,
+                        freePan = freePan,
+                        closeImmediately = false,
+                        onNavigate = { nav = it },
+                        siderContent = { close ->
+                            Sider(settings, chatStore,
+                                onNavigateSettings = { nav = NavState.Settings; close() },
+                                onClose = close)
+                        },
+                    ) { open ->
+                        SessionView(
+                            settings,
+                            chatStore,
+                            onOpenDrawer = open,
+                            onOpenSettings = { nav = NavState.Settings },
+                            coldStartWelcome = coldStartWelcome,
+                            greetingIdentity = newChatRequests,
+                        )
+                    }
                 }
             }
             if (settingsMounted) {
@@ -167,6 +210,7 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
                     onRootBackProgress = { settingsDragBack = it },
                     onBack = { nav = NavState.Chat },
                 )
+                io.github.lijiahua1024.dsnative.ui.session.DsToastHost()
             }
         }
         }

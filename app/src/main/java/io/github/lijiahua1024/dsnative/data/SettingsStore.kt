@@ -9,6 +9,19 @@ import org.json.JSONArray
 enum class ThemePreference { LIGHT, DARK, SYSTEM }
 enum class LocalePreference { SYSTEM, ZH_CN, EN_US }
 
+private const val MAX_USERNAME_LENGTH = 40
+private val AVATAR_DATA_URL_RE = Regex("^data:image/(webp|png|jpeg);base64,[A-Za-z0-9+/=\\s]+$")
+
+data class AccountProfile(
+    val username: String = "",
+    val avatarDataUrl: String? = null,
+)
+
+fun normalizeAccountProfile(profile: AccountProfile): AccountProfile = AccountProfile(
+    username = profile.username.trim().take(MAX_USERNAME_LENGTH),
+    avatarDataUrl = profile.avatarDataUrl?.trim()?.takeIf { AVATAR_DATA_URL_RE.matches(it) },
+)
+
 /**
  * App settings backed by SharedPreferences "settings".
  * Keys mirror src/services/settings.ts of the WebView reference.
@@ -60,6 +73,25 @@ class SettingsStore(context: Context) {
 
     private val _ttsVoice = MutableStateFlow(prefs.getString("tts-voice", "stella") ?: "stella")
     val ttsVoice: StateFlow<String> = _ttsVoice
+
+    private val _siderCollapsed = MutableStateFlow(prefs.getBoolean("sider-collapsed", false))
+    val siderCollapsed: StateFlow<Boolean> = _siderCollapsed
+
+    private val _accountProfile = MutableStateFlow(readAccountProfile())
+    val accountProfile: StateFlow<AccountProfile> = _accountProfile
+
+    private fun readAccountProfile(): AccountProfile = try {
+        val raw = prefs.getString("account-profile", null) ?: return AccountProfile()
+        val obj = org.json.JSONObject(raw)
+        normalizeAccountProfile(
+            AccountProfile(
+                username = obj.optString("username", ""),
+                avatarDataUrl = obj.optString("avatar", "").takeIf { it.isNotEmpty() },
+            )
+        )
+    } catch (_: Exception) {
+        AccountProfile()
+    }
 
     private fun readPinned(): List<String> = try {
         val array = JSONArray(prefs.getString("pinned-sessions", "[]") ?: "[]")
@@ -145,5 +177,27 @@ class SettingsStore(context: Context) {
     fun setPinnedSessions(value: List<String>) {
         prefs.edit { putString("pinned-sessions", JSONArray(value).toString()) }
         _pinnedSessions.value = value
+    }
+
+    fun setSiderCollapsed(value: Boolean) {
+        prefs.edit { putBoolean("sider-collapsed", value) }
+        _siderCollapsed.value = value
+    }
+
+    fun setAccountProfile(profile: AccountProfile): Boolean {
+        val clean = normalizeAccountProfile(profile)
+        val encoded = if (clean.username.isEmpty() && clean.avatarDataUrl == null) {
+            null
+        } else {
+            org.json.JSONObject().apply {
+                put("username", clean.username)
+                if (clean.avatarDataUrl != null) put("avatar", clean.avatarDataUrl)
+            }.toString()
+        }
+        val ok = prefs.edit().apply {
+            if (encoded == null) remove("account-profile") else putString("account-profile", encoded)
+        }.commit()
+        if (ok) _accountProfile.value = clean
+        return ok
     }
 }

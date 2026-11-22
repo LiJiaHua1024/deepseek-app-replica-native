@@ -154,6 +154,9 @@ fun AndroidSettings(
     var page by remember { mutableStateOf("root") }
     var popup by remember { mutableStateOf<String?>(null) }
     var confirmLogout by remember { mutableStateOf(false) }
+    var checkingUpdate by remember { mutableStateOf(false) }
+    var updateDialog by remember { mutableStateOf<io.github.lijiahua1024.dsnative.data.UpdateCheckResult.UpdateAvailable?>(null) }
+    val updateScope = rememberCoroutineScope()
     val ctx = LocalContext.current
 
     // 2-phase settings motion per androidSettingsMotion.ts: handoff=0.35, 40dp slide + opacity.
@@ -253,7 +256,27 @@ fun AndroidSettings(
                     onHelp = { io.github.lijiahua1024.dsnative.SourceBrowserActivity.open(
                         ctx, "https://static.deepseek.com/faq/index.html", c.dark, "") },
                     onLogout = { confirmLogout = true },
-                    themePref = themePref, localePref = localePref)
+                    themePref = themePref, localePref = localePref,
+                    checkingUpdate = checkingUpdate,
+                    onCheckUpdate = {
+                        if (!checkingUpdate) {
+                            checkingUpdate = true
+                            updateScope.launch {
+                                try {
+                                    when (val res = io.github.lijiahua1024.dsnative.data.UpdateChecker.checkLatestRelease(BuildConfig.VERSION_NAME)) {
+                                        io.github.lijiahua1024.dsnative.data.UpdateCheckResult.UpToDate ->
+                                            DsToast.show(Strings.get("updateCurrent"))
+                                        is io.github.lijiahua1024.dsnative.data.UpdateCheckResult.UpdateAvailable ->
+                                            updateDialog = res
+                                    }
+                                } catch (_: Exception) {
+                                    DsToast.show(Strings.get("updateCheckFailed"))
+                                } finally {
+                                    checkingUpdate = false
+                                }
+                            }
+                        }
+                    })
                 "account" -> AccountPage(c, card, muted, settings)
                 "data" -> DataPage(c, card, muted, settings, chatStore, onPage = { page = it })
                 "font" -> FontPage(c, card, muted, settings)
@@ -325,6 +348,29 @@ fun AndroidSettings(
             },
             dismissButton = { TextButton({ confirmLogout = false }) { Text(Strings.get("cancel")) } })
     }
+    updateDialog?.let { avail ->
+        AlertDialog(
+            onDismissRequest = { updateDialog = null },
+            title = { Text(Strings.get("updateAvailableTitle", "version" to avail.version)) },
+            text = { Text(Strings.get("updateAvailableBody")) },
+            confirmButton = {
+                TextButton({
+                    val targetUrl = avail.downloadUrl ?: avail.releaseUrl
+                    updateDialog = null
+                    try {
+                        ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl)))
+                    } catch (_: android.content.ActivityNotFoundException) {
+                        DsToast.show(Strings.get("updateCheckFailed"))
+                    }
+                }) {
+                    Text(Strings.get("updateOpenReleases"), color = c.brandPrimary)
+                }
+            },
+            dismissButton = {
+                TextButton({ updateDialog = null }) { Text(Strings.get("cancel")) }
+            },
+        )
+    }
 }
 
 @Composable
@@ -336,6 +382,8 @@ private fun SettingsRootPage(
     onHelp: () -> Unit, onLogout: () -> Unit,
     themePref: io.github.lijiahua1024.dsnative.data.ThemePreference,
     localePref: io.github.lijiahua1024.dsnative.data.LocalePreference,
+    checkingUpdate: Boolean = false,
+    onCheckUpdate: () -> Unit = {},
 ) {
     SettingsGroup(Strings.get("settingsGroupAccount"), card, muted) {
         SettingsRow(c, muted, Strings.get("settingsAccountPage"), { ProfileGlyph(c.labelPrimary) }) { onPage("account") }
@@ -365,9 +413,16 @@ private fun SettingsRootPage(
             arrow = false) { onPopup("voice") }
     }
     SettingsGroup(Strings.get("settingsGroupAbout"), card, muted) {
-        SettingsRow(c, muted, Strings.get("settingsVersion"),
-            { InfoGlyph("i", c.labelPrimary) }, value = BuildConfig.VERSION_NAME, arrow = false) {
-            DsToast.show(Strings.get("updateCurrent"))
+        SettingsRow(
+            c,
+            muted,
+            Strings.get("settingsVersion"),
+            { InfoGlyph("i", c.labelPrimary) },
+            value = if (checkingUpdate) Strings.get("checkingForUpdate") else BuildConfig.VERSION_NAME,
+            arrow = false,
+            enabled = !checkingUpdate,
+        ) {
+            onCheckUpdate()
         }
         SettingsRow(c, muted, Strings.get("settingsAgreementsPage"),
             { Icon(painterResource(R.drawable.ic_doc_edit), null, tint = c.labelPrimary, modifier = Modifier.size(20.dp)) }) { onPage("agreements") }
@@ -464,13 +519,106 @@ private fun SettingsRow(
 
 @Composable
 private fun AccountPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Color, muted: Color, settings: SettingsStore) {
+    val savedProfile by settings.accountProfile.collectAsState()
+    var draftName by remember(savedProfile) { mutableStateOf(savedProfile.username) }
+    var draftAvatar by remember(savedProfile) { mutableStateOf(savedProfile.avatarDataUrl) }
+    var loadingAvatar by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf(false) }
     var verifying by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val ctx = LocalContext.current
+    val avatarPicker = rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        loadingAvatar = true
+        scope.launch {
+            val encoded = encodeProfileAvatarFromUri(ctx, uri)
+            loadingAvatar = false
+            if (encoded != null) draftAvatar = encoded
+            else DsToast.show(Strings.get("profileAvatarInvalid"))
+        }
+    }
     val open = { url: String ->
         ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+    }
+    val profileChanged = draftName.trim() != savedProfile.username || draftAvatar != savedProfile.avatarDataUrl
+    SettingsGroup(Strings.get("settingsAccountPage"), card, muted) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            ProfileAvatarView(draftAvatar, Modifier.size(48.dp))
+            Row(
+                Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    Strings.get(if (draftAvatar != null) "profileChangeAvatar" else "profileChooseAvatar"),
+                    fontSize = 14.sp,
+                    color = c.labelPrimary,
+                    modifier = Modifier.clip(RoundedCornerShape(16.dp))
+                        .border(1.dp, c.borderL2, RoundedCornerShape(16.dp))
+                        .clickable(enabled = !loadingAvatar) {
+                            avatarPicker.launch(
+                                androidx.activity.result.PickVisualMediaRequest(
+                                    androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+                                )
+                            )
+                        }
+                        .padding(horizontal = 12.dp, vertical = 7.dp),
+                )
+                if (draftAvatar != null) {
+                    Text(
+                        Strings.get("profileRemoveAvatar"),
+                        fontSize = 14.sp,
+                        color = c.labelSecondary,
+                        modifier = Modifier.clip(RoundedCornerShape(16.dp))
+                            .border(1.dp, c.borderL2, RoundedCornerShape(16.dp))
+                            .clickable(enabled = !loadingAvatar) { draftAvatar = null }
+                            .padding(horizontal = 12.dp, vertical = 7.dp),
+                    )
+                }
+            }
+        }
+        Row(
+            Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(Strings.get("profileUsername"), fontSize = 15.sp, color = muted)
+            androidx.compose.foundation.text.BasicTextField(
+                value = draftName,
+                onValueChange = { if (it.length <= 40) draftName = it },
+                singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 16.sp, color = c.labelPrimary),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(c.brandPrimary),
+                modifier = Modifier.weight(1f),
+                decorationBox = { inner ->
+                    if (draftName.isEmpty()) Text(Strings.get("profileDefaultUsername"), fontSize = 16.sp, color = muted)
+                    inner()
+                },
+            )
+            Text(
+                Strings.get("profileSave"),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color = if (profileChanged && !loadingAvatar) c.brandPrimary else muted,
+                modifier = Modifier.clickable(enabled = profileChanged && !loadingAvatar) {
+                    val saved = io.github.lijiahua1024.dsnative.data.AccountProfile(draftName.trim(), draftAvatar)
+                    if (settings.setAccountProfile(saved)) {
+                        draftName = settings.accountProfile.value.username
+                        DsToast.show(Strings.get("profileSaved"))
+                    } else {
+                        DsToast.show(Strings.get("profileSaveFailed"))
+                    }
+                },
+            )
+        }
     }
     // ref account page: 账户 group -> masked-key row + 开放平台 + 开放平台帮助 links
     SettingsGroup(Strings.get("settingsGroupAccount"), card, muted) {
@@ -709,8 +857,7 @@ private fun AgreementsPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, ca
         SettingsRow(c, muted, Strings.get("agreementThirdParty")) { open("$policies/third-party-info-sharing-list.html") }
         SettingsRow(c, muted, Strings.get("agreementPersonal")) { open("$policies/collected-personal-information.html") }
         SettingsRow(c, muted, Strings.get("agreementPermissions")) {
-            ctx.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                Uri.parse("package:${ctx.packageName}")))
+            open("$policies/app-permissions.html")
         }
     }
 }

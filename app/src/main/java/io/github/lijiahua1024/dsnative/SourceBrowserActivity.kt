@@ -179,7 +179,9 @@ class SourceBrowserActivity : Activity() {
             }
 
             override fun onPageFinished(view: WebView, url: String) {
-                if (!failed) hideLoading()
+                if (!failed) {
+                    view.postDelayed({ if (!failed) hideLoading() }, 3000)
+                }
             }
 
             override fun onReceivedError(
@@ -221,7 +223,6 @@ class SourceBrowserActivity : Activity() {
         loadingLayout.addView(loadingLabel, loadingLabelLayout)
         contentLayout.addView(loadingLayout, FrameLayout.LayoutParams(-1, -1))
         loading = loadingLayout
-        web.postDelayed({ hideLoading() }, 3000)
 
         val failureLayout = LinearLayout(this)
         failureLayout.orientation = LinearLayout.VERTICAL
@@ -299,6 +300,7 @@ class SourceBrowserActivity : Activity() {
 
     private fun showLoading() {
         failed = false
+        page?.visibility = View.VISIBLE
         failureMessage?.text = null
         failure?.visibility = View.GONE
         loading?.visibility = View.VISIBLE

@@ -39,7 +39,14 @@ import kotlinx.coroutines.launch
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () -> Unit, onClose: () -> Unit) {
+fun Sider(
+    settings: SettingsStore,
+    chatStore: ChatStore,
+    onNavigateSettings: () -> Unit,
+    onClose: () -> Unit,
+    isWideLayout: Boolean = false,
+    onCollapseWide: () -> Unit = {},
+) {
     val c = DsTheme.colors
     val sessions by chatStore.sessions.collectAsState()
     val activeId by chatStore.activeId.collectAsState()
@@ -100,6 +107,64 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
 
     DrawerGestureBlocker(menuFor != null || renameFor != null || deleteFor != null || pinning != null || deletingSel != null)
     Column(Modifier.fillMaxSize().statusBarsPadding().imePadding().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 0.dp)) {
+        if (isWideLayout && !selectionMode) {
+            Row(
+                Modifier.fillMaxWidth().height(40.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    Strings.get("appName"),
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = c.labelPrimary,
+                    modifier = Modifier.weight(1f),
+                )
+                Box(
+                    Modifier.size(34.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .clickable(onClick = onCollapseWide),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painterResource(R.drawable.ic_sidebar_panel),
+                        Strings.get("collapseSiderbarButton"),
+                        tint = c.labelPrimary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            Row(
+                Modifier.fillMaxWidth()
+                    .height(42.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (c.dark) Color(0xFF292929) else Color(0xFFF3F3F4))
+                    .clickable {
+                        if (!chatStore.tryStartNewChat()) {
+                            io.github.lijiahua1024.dsnative.ui.session.DsToast.show(
+                                Strings.get("androidAlreadyInNewChat")
+                            )
+                        }
+                    }
+                    .padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    painterResource(R.drawable.ic_new_chat),
+                    null,
+                    tint = c.labelPrimary,
+                    modifier = Modifier.size(18.dp),
+                )
+                Text(
+                    Strings.get("newChat"),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = c.labelPrimary,
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+        }
         if (selectionMode) {
             // .selectionHeader h48: label left + close IconButton right
             Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -257,15 +322,25 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
                 }
             }
         } else {
-            // Match official drawer footer: 62dp row, flush 16dp start, 32dp #E5E5E5 circle
-            // with concentric #A2A4A6 bust silhouette in both themes, 10dp gap, no trailing ellipsis.
+            // Match official drawer footer: 62dp row, flush 16dp start, 32dp avatar + username
+            val profile by settings.accountProfile.collectAsState()
+            val displayName = profile.username.ifBlank { Strings.get("profileDefaultUsername") }
             Row(Modifier.fillMaxWidth().height(62.dp).clip(RoundedCornerShape(12.dp))
                     .clickable(onClick = onNavigateSettings),
                 verticalAlignment = Alignment.CenterVertically) {
-                OfficialDefaultAvatar(Modifier.size(32.dp))
+                io.github.lijiahua1024.dsnative.ui.settings.ProfileAvatarView(
+                    avatarDataUrl = profile.avatarDataUrl,
+                    modifier = Modifier.size(32.dp),
+                )
                 Spacer(Modifier.width(11.dp))
-                Text("API Key", fontSize = 16.sp, color = c.labelPrimary,
-                    modifier = Modifier.weight(1f).offset(y = (-1.5).dp))
+                Text(
+                    displayName,
+                    fontSize = 16.sp,
+                    color = c.labelPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f).offset(y = (-1.5).dp),
+                )
             }
         }
     }
@@ -569,32 +644,5 @@ private fun SiderMenuOption(icon: Int, label: String, color: androidx.compose.ui
         Icon(painterResource(icon), null, tint = color, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(8.dp))
         Text(label, fontSize = 14.sp, lineHeight = 24.sp, color = color)
-    }
-}
-
-@Composable
-private fun OfficialDefaultAvatar(modifier: Modifier = Modifier) {
-    androidx.compose.foundation.Canvas(modifier.clip(androidx.compose.foundation.shape.CircleShape)) {
-        drawCircle(Color(0xFFE5E5E5))
-        val w = size.width
-        val h = size.height
-        val innerR = w * (10f / 24f)
-        val clip = androidx.compose.ui.graphics.Path().apply {
-            addOval(androidx.compose.ui.geometry.Rect(w / 2f - innerR, h / 2f - innerR, w / 2f + innerR, h / 2f + innerR))
-        }
-        drawContext.canvas.save()
-        drawContext.canvas.clipPath(clip)
-        val sil = Color(0xFFA2A4A6)
-        drawCircle(
-            color = sil,
-            radius = w * (3.75f / 24f),
-            center = androidx.compose.ui.geometry.Offset(w / 2f, h * (9.0f / 24f)),
-        )
-        drawOval(
-            color = sil,
-            topLeft = androidx.compose.ui.geometry.Offset(w * (4.0f / 24f), h * (14.5f / 24f)),
-            size = androidx.compose.ui.geometry.Size(w * (16.0f / 24f), h * (12.0f / 24f)),
-        )
-        drawContext.canvas.restore()
     }
 }

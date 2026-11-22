@@ -66,6 +66,8 @@ fun SessionView(
     onOpenSettings: () -> Unit = {},
     coldStartWelcome: Boolean = false,
     greetingIdentity: Any? = null,
+    showMenuButton: Boolean = true,
+    isWideCollapsed: Boolean = false,
 ) {
     val c = DsTheme.colors
     val activeId by chatStore.activeId.collectAsState()
@@ -101,20 +103,27 @@ fun SessionView(
         // Official top bar: 52dp below status bar, 48dp buttons with 24dp icons.
         Row(Modifier.fillMaxWidth().height(52.dp).padding(start = 2.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(48.dp).clickable(
-                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                    indication = null,
-                    onClick = onOpenDrawer,
-                ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(painterResource(R.drawable.ic_menu), Strings.get("expandSiderbarButton"), tint = c.labelPrimary, modifier = Modifier.size(24.dp))
+            if (showMenuButton) {
+                Box(
+                    Modifier.size(48.dp).clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null,
+                        onClick = onOpenDrawer,
+                    ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painterResource(if (isWideCollapsed) R.drawable.ic_sidebar_panel else R.drawable.ic_menu),
+                        Strings.get("expandSiderbarButton"),
+                        tint = c.labelPrimary,
+                        modifier = Modifier.size(if (isWideCollapsed) 20.dp else 24.dp),
+                    )
+                }
             }
             val headerTitle = session?.title?.ifEmpty { Strings.get("untitledChat") } ?: ""
             Text(headerTitle, fontSize = 17.sp, lineHeight = 22.sp,
                 fontWeight = FontWeight.Medium, color = c.labelPrimary,
-                maxLines = 1, modifier = Modifier.weight(1f).padding(start = 10.dp, end = 8.dp),
+                maxLines = 1, modifier = Modifier.weight(1f).padding(start = if (showMenuButton) 10.dp else 16.dp, end = 8.dp),
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             val readStatus by io.github.lijiahua1024.dsnative.data.ReadAloud.status.collectAsState()
             val reading = readStatus != io.github.lijiahua1024.dsnative.data.ReadAloud.Status.IDLE
@@ -141,7 +150,11 @@ fun SessionView(
                 Modifier.size(48.dp).clickable(
                     interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                     indication = null,
-                    onClick = { chatStore.newChat() },
+                    onClick = {
+                        if (!chatStore.tryStartNewChat()) {
+                            DsToast.show(Strings.get("androidAlreadyInNewChat"))
+                        }
+                    },
                 ),
                 contentAlignment = Alignment.Center,
             ) {

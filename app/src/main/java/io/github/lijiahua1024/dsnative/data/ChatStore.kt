@@ -482,6 +482,12 @@ class ChatStore(
         _newChatRequests.value += 1
     }
 
+    fun tryStartNewChat(): Boolean {
+        if (_activeId.value == null) return false
+        newChat()
+        return true
+    }
+
     fun requestFocusComposer() {
         _focusComposerRequests.value += 1
     }
