@@ -1,7 +1,13 @@
 package io.github.lijiahua1024.dsnative.ui.input
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.media.AudioFormat
+import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.os.SystemClock
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -48,16 +54,78 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.Call
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileOutputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
+import kotlin.math.min
 import kotlin.math.pow
+import kotlin.math.sqrt
+
+internal object WavAudio {
+    const val SAMPLE_RATE = 16000
+    const val MAX_RECORD_SECONDS = 120
+    const val MAX_PCM_BYTES = SAMPLE_RATE * 2 * MAX_RECORD_SECONDS
+
+    fun wavHeader(pcmLength: Int, sampleRate: Int = SAMPLE_RATE): ByteArray {
+        val header = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN)
+        header.put("RIFF".toByteArray(Charsets.US_ASCII))
+        header.putInt(36 + pcmLength)
+        header.put("WAVEfmt ".toByteArray(Charsets.US_ASCII))
+        header.putInt(16) // PCM fmt chunk size
+        header.putShort(1) // AudioFormat = PCM
+        header.putShort(1) // NumChannels = Mono
+        header.putInt(sampleRate)
+        header.putInt(sampleRate * 2) // ByteRate = sampleRate * channels * bytesPerSample
+        header.putShort(2) // BlockAlign
+        header.putShort(16) // BitsPerSample
+        header.put("data".toByteArray(Charsets.US_ASCII))
+        header.putInt(pcmLength)
+        return header.array()
+    }
+
+    fun writeWav(file: File, pcm: ByteArray, sampleRate: Int = SAMPLE_RATE) {
+        FileOutputStream(file).use { out ->
+            out.write(wavHeader(pcm.size, sampleRate))
+            out.write(pcm)
+        }
+    }
+
+    fun pcmRmsLevel(samples: ShortArray, count: Int): Float {
+        if (count <= 0) return 0f
+        var sumSquares = 0.0
+        for (i in 0 until count) {
+            val s = samples[i].toDouble()
+            sumSquares += s * s
+        }
+        return (sqrt(sumSquares / count) / 4000.0).toFloat().coerceIn(0f, 1f)
+    }
+
+    fun encodePcm16Le(samples: ShortArray, count: Int, out: ByteArray) {
+        for (i in 0 until count) {
+            val v = samples[i].toInt()
+            out[i * 2] = (v and 0xFF).toByte()
+            out[i * 2 + 1] = ((v ushr 8) and 0xFF).toByte()
+        }
+    }
+
+    fun asrErrorKey(httpCode: Int?): String = when (httpCode) {
+        401 -> "apiKeyInvalidRetry"
+        402 -> "insufficientBalance"
+        429 -> "rateLimited"
+        else -> "voiceInputFailed"
+    }
+}
 
 /**
  * 语音输入状态机，对应参照物 useVoiceInput + useVoiceMode：
@@ -74,7 +142,7 @@ object VoiceInput {
 
     var apiKey: () -> String? = { null }
     var onText: ((String) -> Unit)? = null
-    var onError: ((Int?) -> Unit)? = null
+    var onError: ((String) -> Unit)? = null
 
     // 调试用（BuildConfig.DEBUG）：0 完整遮罩、1 无 DstIn 遮罩、
     // 2 无渐变、3 仅文字。用于在会段错误的模拟器 GPU 上二分定位。
@@ -85,8 +153,46 @@ object VoiceInput {
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
         .build()
-    private var recorder: MediaRecorder? = null
+
+    private class AsrHttpException(val code: Int, message: String) : Exception(message)
+
+    private class PcmCapture(val record: AudioRecord) {
+        val pcm = ByteArrayOutputStream()
+        @Volatile var running = true
+        @Volatile var level = 0f
+        var hitLimit = false
+        val thread = Thread({
+            val samples = ShortArray(1024)
+            val block = ByteArray(samples.size * 2)
+            while (running && pcm.size() < WavAudio.MAX_PCM_BYTES) {
+                val maxShorts = min(samples.size, (WavAudio.MAX_PCM_BYTES - pcm.size()) / 2)
+                if (maxShorts <= 0) break
+                val count = record.read(samples, 0, maxShorts)
+                if (count <= 0) break
+                WavAudio.encodePcm16Le(samples, count, block)
+                pcm.write(block, 0, count * 2)
+                level = WavAudio.pcmRmsLevel(samples, count)
+            }
+            if (running && pcm.size() >= WavAudio.MAX_PCM_BYTES) {
+                hitLimit = true
+                running = false
+                scope.launch {
+                    if (activeCapture === this@PcmCapture && status.value == Status.RECORDING) {
+                        autoFinishedByLimit = true
+                        onError?.invoke("voiceInputLimitReached")
+                        finishInternal(fromLimit = true)
+                    }
+                }
+            }
+        }, "DeepSeekMic")
+    }
+
+    private var activeCapture: PcmCapture? = null
     private var outFile: File? = null
+    private var activeCall: Call? = null
+    private var operationId = 0
+    private var timerJob: kotlinx.coroutines.Job? = null
+    private var autoFinishedByLimit = false
 
     // 模拟器 goldfish 音频捕获会直接杀死 QEMU（实测），无真麦时跳过真实录音，
     // 转写阶段照常走 ASR（mock 不校验内容）。真机不受影响。
@@ -95,91 +201,192 @@ object VoiceInput {
 
     fun start(context: Context) {
         if (status.value != Status.IDLE) return
+        autoFinishedByLimit = false
         canceling.value = false
-        val file = File(context.cacheDir, "voice-${System.currentTimeMillis()}.m4a")
-        if (fakeRecorder) {
-            outFile = file
-            seconds.value = 0
-            status.value = Status.RECORDING
-            scope.launch {
-                while (status.value == Status.RECORDING) {
-                    delay(1000); seconds.value += 1
+        seconds.value = 0
+        val file = File(context.cacheDir, "voice-${System.currentTimeMillis()}.wav")
+        if (!fakeRecorder) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) !=
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                onError?.invoke("androidMicPermissionDenied")
+                return
+            }
+            val minBuf = AudioRecord.getMinBufferSize(
+                WavAudio.SAMPLE_RATE,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+            )
+            if (minBuf <= 0) {
+                onError?.invoke("voiceInputNoDevice")
+                return
+            }
+            var record: AudioRecord? = null
+            try {
+                record = AudioRecord(
+                    MediaRecorder.AudioSource.MIC,
+                    WavAudio.SAMPLE_RATE,
+                    AudioFormat.CHANNEL_IN_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT,
+                    maxOf(minBuf * 2, 4096),
+                )
+                if (record.state != AudioRecord.STATE_INITIALIZED) {
+                    record.release()
+                    onError?.invoke("voiceInputFailed")
+                    return
+                }
+                record.startRecording()
+                if (record.recordingState != AudioRecord.RECORDSTATE_RECORDING) {
+                    record.release()
+                    onError?.invoke("voiceInputFailed")
+                    return
+                }
+            } catch (_: SecurityException) {
+                record?.release()
+                onError?.invoke("androidMicPermissionDenied")
+                return
+            } catch (_: IllegalArgumentException) {
+                record?.release()
+                onError?.invoke("voiceInputFailed")
+                return
+            } catch (_: IllegalStateException) {
+                record?.release()
+                onError?.invoke("voiceInputFailed")
+                return
+            }
+            val capture = PcmCapture(record)
+            activeCapture = capture
+            capture.thread.start()
+        }
+        outFile = file
+        status.value = Status.RECORDING
+        val startedAt = SystemClock.elapsedRealtime()
+        timerJob?.cancel()
+        timerJob = scope.launch {
+            while (status.value == Status.RECORDING) {
+                delay(500)
+                if (status.value == Status.RECORDING) {
+                    seconds.value = ((SystemClock.elapsedRealtime() - startedAt) / 1000).toInt()
                 }
             }
-            return
         }
-        val r = MediaRecorder().apply {
-            setAudioSource(MediaRecorder.AudioSource.MIC)
-            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-            setAudioSamplingRate(16000)
-            setAudioChannels(1)
-            setOutputFile(file.absolutePath)
-            prepare()
-            start()
+    }
+
+    fun level(): Float = activeCapture?.level ?: 0f
+
+    private fun stopRecorder(keep: Boolean): ByteArray? {
+        timerJob?.cancel()
+        timerJob = null
+        val capture = activeCapture
+        activeCapture = null
+        val file = outFile
+        if (fakeRecorder) {
+            if (!keep) {
+                file?.delete()
+                return null
+            }
+            return ByteArray(1600)
         }
-        recorder = r
-        outFile = file
-        seconds.value = 0
-        status.value = Status.RECORDING
-        scope.launch {
-            while (status.value == Status.RECORDING) {
-                delay(1000); seconds.value += 1
+        if (capture == null) {
+            if (!keep) file?.delete()
+            return null
+        }
+        capture.running = false
+        try {
+            capture.record.stop()
+        } catch (_: IllegalStateException) {
+        }
+        try {
+            capture.thread.join(1000)
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+        } finally {
+            try {
+                capture.record.release()
+            } catch (_: Exception) {
             }
         }
-    }
-
-    fun level(): Float {
-        val amp = recorder?.maxAmplitude ?: 0
-        return (amp / 32767f).coerceIn(0f, 1f)
-    }
-
-    private fun stopRecorder(keep: Boolean): File? {
-        val r = recorder; recorder = null
-        val file = outFile
-        if (fakeRecorder && keep) {
-            // 模拟器无真实音频：写最小静音 WAV 让转写路径照常执行
-            try {
-                file?.writeBytes(ByteArray(44))
-            } catch (_: Exception) { }
+        if (!keep || capture.thread.isAlive || capture.pcm.size() == 0) {
+            if (!keep) file?.delete()
+            return null
         }
-        if (r != null) {
-            try { r.stop() } catch (_: Exception) { }
-            try { r.release() } catch (_: Exception) { }
-        }
-        if (!keep) file?.delete()
-        return if (keep) file else null
+        return capture.pcm.toByteArray()
     }
 
     fun cancel() {
-        if (status.value == Status.IDLE) return
-        stopRecorder(false)
+        operationId++
+        autoFinishedByLimit = false
+        activeCall?.cancel()
+        activeCall = null
+        if (status.value != Status.IDLE || activeCapture != null || outFile != null) {
+            stopRecorder(false)
+            outFile = null
+        }
         canceling.value = false
         status.value = Status.IDLE
     }
 
     fun finish() {
-        if (status.value != Status.RECORDING) { cancel(); return }
-        val file = stopRecorder(true)
+        finishInternal(fromLimit = false)
+    }
+
+    private fun finishInternal(fromLimit: Boolean) {
+        if (status.value != Status.RECORDING) {
+            if (!fromLimit && autoFinishedByLimit && status.value == Status.TRANSCRIBING) {
+                autoFinishedByLimit = false
+                return
+            }
+            cancel()
+            return
+        }
+        if (!fromLimit) autoFinishedByLimit = false
+        val file = outFile
+        outFile = null
+        val pcm = stopRecorder(true)
         canceling.value = false
-        if (file == null || file.length() == 0L) { status.value = Status.IDLE; return }
+        if (file == null || pcm == null || pcm.isEmpty()) {
+            file?.delete()
+            status.value = Status.IDLE
+            return
+        }
         status.value = Status.TRANSCRIBING
         val key = apiKey()
+        if (key.isNullOrBlank()) {
+            file.delete()
+            status.value = Status.IDLE
+            onError?.invoke("apiKeyInvalidRetry")
+            return
+        }
+        val op = ++operationId
         scope.launch {
+            var errorKey: String? = null
             val text = try {
-                if (key == null) null else transcribe(key, file)
-            } catch (e: Exception) {
+                transcribe(key, file, pcm)
+            } catch (e: AsrHttpException) {
+                errorKey = WavAudio.asrErrorKey(e.code)
+                null
+            } catch (_: Exception) {
+                errorKey = "voiceInputFailed"
                 null
             } finally {
-                file.delete()
+                withContext(Dispatchers.IO) { file.delete() }
+                activeCall = null
             }
+            if (op != operationId) return@launch
+            autoFinishedByLimit = false
             status.value = Status.IDLE
-            if (text != null) onText?.invoke(text)
-            else onError?.invoke(null)
+            if (text != null) {
+                val trimmed = text.trim()
+                if (trimmed.isNotEmpty()) onText?.invoke(trimmed)
+                else onError?.invoke("androidVoiceInputEmpty")
+            } else {
+                onError?.invoke(errorKey ?: "voiceInputFailed")
+            }
         }
     }
 
-    private suspend fun transcribe(key: String, file: File): String = withContext(Dispatchers.IO) {
+    private suspend fun transcribe(key: String, file: File, pcm: ByteArray): String = withContext(Dispatchers.IO) {
+        WavAudio.writeWav(file, pcm)
         val body = MultipartBody.Builder().setType(MultipartBody.FORM)
             .addFormDataPart("file", "recording.wav",
                 file.asRequestBody("audio/wav".toMediaType()))
@@ -189,10 +396,16 @@ object VoiceInput {
             .header("Authorization", "Bearer $key")
             .post(body)
             .build()
-        client.newCall(req).execute().use { res ->
+        val call = client.newCall(req)
+        activeCall = call
+        call.execute().use { res ->
             val raw = res.body?.string().orEmpty()
-            if (!res.isSuccessful) throw Exception("asr ${res.code}")
-            JSONObject(raw).getString("text")
+            if (!res.isSuccessful) throw AsrHttpException(res.code, raw)
+            val obj = JSONObject(raw)
+            if (!obj.has("text") || obj.isNull("text")) {
+                throw IllegalStateException("Missing text field")
+            }
+            obj.getString("text")
         }
     }
 }

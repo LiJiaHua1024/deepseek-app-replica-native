@@ -83,6 +83,15 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        if (io.github.lijiahua1024.dsnative.ui.input.VoiceInput.status.value ==
+            io.github.lijiahua1024.dsnative.ui.input.VoiceInput.Status.RECORDING
+        ) {
+            io.github.lijiahua1024.dsnative.ui.input.VoiceInput.cancel()
+        }
+    }
+
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
         DrawerGestureBus.dispatch(ev)
         return super.dispatchTouchEvent(ev)

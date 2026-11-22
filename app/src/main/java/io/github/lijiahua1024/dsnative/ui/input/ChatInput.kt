@@ -151,6 +151,9 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
         chatStore.sendMessage(activeId)
         text = ""
     }
+    VoiceInput.onError = { key ->
+        io.github.lijiahua1024.dsnative.ui.session.DsToast.show(Strings.get(key))
+    }
     val micPermission = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
     ) { granted ->
