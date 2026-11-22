@@ -3,6 +3,7 @@ package io.github.lijiahua1024.dsnative.ui.session
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,6 +28,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -369,13 +371,12 @@ fun FindStepRow(step: ToolStep.Find) {
 @Composable
 fun SearchSourcesPanel(sources: List<Source>, numbered: Boolean, onClose: () -> Unit) {
     val c = DsTheme.colors
-    // ref AndroidSearchPanel.module.css: scrim opacity 0->0.32 与 sheet
-    // translateY(100%)->0 共用 240ms cubic-bezier(0.2,0,0,1)；关闭同样 240ms
     val panelEase = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
     val prog = remember { androidx.compose.animation.core.Animatable(0f) }
     val panelScope = androidx.compose.runtime.rememberCoroutineScope()
     var closing by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     var sheetH by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(1) }
+    var dragOffsetY by remember { mutableStateOf(0f) }
     LaunchedEffect(Unit) {
         prog.animateTo(1f, androidx.compose.animation.core.tween(240, easing = panelEase))
     }
@@ -389,7 +390,6 @@ fun SearchSourcesPanel(sources: List<Source>, numbered: Boolean, onClose: () -> 
         }
         Unit
     }
-    // Popup in its own window: above caveat text, a11y-visible, back/outside dismiss
     val popupPositionProvider = androidx.compose.runtime.remember {
         object : androidx.compose.ui.window.PopupPositionProvider {
             override fun calculatePosition(
@@ -406,12 +406,12 @@ fun SearchSourcesPanel(sources: List<Source>, numbered: Boolean, onClose: () -> 
             focusable = true, dismissOnBackPress = true, dismissOnClickOutside = true),
         onDismissRequest = requestClose,
     ) {
-    // ref 面板底部对齐到 safe.bottom（nav inset + button-nav 余量≈75px@440dpi）
     BoxWithConstraints(Modifier.fillMaxSize().navigationBarsPadding().padding(bottom = 6.5.dp)) {
+        val dragFrac = if (sheetH > 1) (dragOffsetY / sheetH).coerceIn(0f, 1f) else 0f
         Box(
             Modifier
                 .fillMaxSize()
-                .background(androidx.compose.ui.graphics.Color(0x52000000).copy(alpha = 0x52 / 255f * prog.value))
+                .background(androidx.compose.ui.graphics.Color(0x52000000).copy(alpha = 0x52 / 255f * prog.value * (1f - dragFrac)))
                 .clickable(interactionSource = rememberMutableInteraction(),
                     indication = null) { requestClose() }
         )
@@ -421,9 +421,21 @@ fun SearchSourcesPanel(sources: List<Source>, numbered: Boolean, onClose: () -> 
                 .fillMaxWidth()
                 .heightIn(max = this.maxHeight - 44.dp)
                 .onGloballyPositioned { sheetH = it.size.height }
-                .offset { androidx.compose.ui.unit.IntOffset(0, ((1f - prog.value) * sheetH).toInt()) }
+                .offset { androidx.compose.ui.unit.IntOffset(0, ((1f - prog.value) * sheetH + dragOffsetY).toInt()) }
                 .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                 .background(if (c.dark) androidx.compose.ui.graphics.Color(0xFF292929) else c.bgBase)
+                .pointerInput(sheetH) {
+                    detectVerticalDragGestures(
+                        onDragEnd = {
+                            if (dragOffsetY > sheetH * 0.25f || dragOffsetY > 120.dp.toPx()) requestClose()
+                            else dragOffsetY = 0f
+                        },
+                        onDragCancel = { dragOffsetY = 0f },
+                        onVerticalDrag = { _, dy ->
+                            dragOffsetY = (dragOffsetY + dy).coerceAtLeast(0f)
+                        },
+                    )
+                }
         ) {
             // ref .header: 56px, 16.75px/600 居中标题 + 右侧 30px 圆形关闭
             Box(Modifier.fillMaxWidth().height(56.dp), contentAlignment = Alignment.Center) {

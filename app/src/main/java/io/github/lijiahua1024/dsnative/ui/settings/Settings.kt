@@ -5,6 +5,8 @@ import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import io.github.lijiahua1024.dsnative.ui.excludeFromDrawerGesture
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
@@ -38,6 +40,7 @@ import io.github.lijiahua1024.dsnative.data.ChatStore
 import io.github.lijiahua1024.dsnative.data.SettingsStore
 import io.github.lijiahua1024.dsnative.theme.DsTheme
 import io.github.lijiahua1024.dsnative.theme.Strings
+import io.github.lijiahua1024.dsnative.theme.softShadow
 import io.github.lijiahua1024.dsnative.ui.session.DsToast
 import kotlinx.coroutines.launch
 
@@ -124,7 +127,13 @@ fun ApiKeyScreen(settings: SettingsStore) {
 }
 
 @Composable
-fun AndroidSettings(settings: SettingsStore, chatStore: ChatStore, onBack: () -> Unit) {
+fun AndroidSettings(
+    settings: SettingsStore,
+    chatStore: ChatStore,
+    transitionProgress: Float = 1f,
+    onRootBackProgress: (Float) -> Unit = {},
+    onBack: () -> Unit,
+) {
     val c = DsTheme.colors
     val themePref by settings.themePreference.collectAsState()
     val localePref by settings.localePreference.collectAsState()
@@ -134,25 +143,38 @@ fun AndroidSettings(settings: SettingsStore, chatStore: ChatStore, onBack: () ->
     var confirmLogout by remember { mutableStateOf(false) }
     val ctx = LocalContext.current
 
-    // ref back(): 弹窗自行处理；root → onBack；export → data；其余 → root。
-    // PredictiveBackHandler：手势进度驱动页面右移预览，取消则复位。
-    var backProgress by remember { mutableStateOf(0f) }
+    // 2-phase settings motion per androidSettingsMotion.ts: handoff=0.35, 40dp slide + opacity.
+    val handoff = 0.35f
+    val fadeOutEase = remember { androidx.compose.animation.core.CubicBezierEasing(0.4f, 0f, 1f, 1f) }
+    val fadeInEase = remember { androidx.compose.animation.core.CubicBezierEasing(0.022f, 0.021f, 0.186f, 1f) }
+    val slideInEase = remember { androidx.compose.animation.core.CubicBezierEasing(0.04f, 0.085f, 0.19f, 1f) }
+    val rootBgAlpha = fadeOutEase.transform((transitionProgress / handoff).coerceIn(0f, 1f))
+    val rootContentFrac = ((transitionProgress - handoff) / (1f - handoff)).coerceIn(0f, 1f)
+    val rootContentAlpha = fadeInEase.transform(rootContentFrac)
+    val rootContentShiftDp = 40f * (1f - slideInEase.transform(rootContentFrac))
+
+    var subBackProgress by remember { mutableStateOf(0f) }
     androidx.activity.compose.PredictiveBackHandler(enabled = true) { flow ->
         try {
-            flow.collect { backProgress = it.progress }
+            flow.collect { ev ->
+                if (popup == null && page == "root") onRootBackProgress(ev.progress)
+                else subBackProgress = ev.progress
+            }
         } catch (e: kotlinx.coroutines.CancellationException) {
-            backProgress = 0f; throw e
+            onRootBackProgress(0f)
+            subBackProgress = 0f
+            throw e
         }
-        backProgress = 0f
-        // ref AndroidSettings.back(): open popup consumes the back first
+        onRootBackProgress(0f)
+        subBackProgress = 0f
         if (popup != null) popup = null
         else if (page == "root") onBack() else page = if (page == "export") "data" else "root"
     }
 
-    val bg = if (c.dark) Color(0xFF161616) else Color(0xFFF8F8F8)
-    val card = if (c.dark) Color(0xFF242424) else Color(0xFFFFFFFF)
-    val muted = if (c.dark) Color(0xFFA1A1A4) else Color(0xFF8C9097)
-    val btnBg = if (c.dark) Color(0xFF303030) else Color(0xFFEBEBEB)
+    val bg = if (c.dark) Color(0xFF1E1E1E) else Color(0xFFF8F8F8)
+    val card = if (c.dark) Color(0xFF292929) else Color(0xFFFFFFFF)
+    val muted = if (c.dark) Color(0xFF8E9094) else Color(0xFF8C9097)
+    val btnBg = if (c.dark) Color(0xFF3C3C3D) else Color(0xFFEDEDED)
 
     val titles = mapOf(
         "root" to Strings.get("settings"),
@@ -164,31 +186,52 @@ fun AndroidSettings(settings: SettingsStore, chatStore: ChatStore, onBack: () ->
         "export" to Strings.get("exportAllLabel"),
     )
 
-    // 状态栏 inset 由 DrawerFrame layer 提供（ref 的页面 frame 从状态栏下方开始）
-    Column(Modifier.fillMaxSize().background(bg)
-        .graphicsLayer { translationX = backProgress * size.width * 0.35f }) {
-        // ref .header: h44, centered 16/24 w500 title; back = 32dp circle at left 14
-        Box(Modifier.fillMaxWidth().height(44.dp)) {
-            Box(Modifier.align(Alignment.CenterStart).padding(start = 14.dp)
-                .size(32.dp).clip(RoundedCornerShape(50)).background(btnBg)
-                .clickable { if (page == "root") onBack() else page = "root" },
-                contentAlignment = Alignment.Center) {
-                Icon(painterResource(R.drawable.ic_chevron_right), Strings.get("back"),
-                    tint = c.labelPrimary, modifier = Modifier.size(18.dp).rotate(180f))
-            }
-            Text(titles[page] ?: "", fontSize = 16.sp, lineHeight = 24.sp,
-                fontWeight = FontWeight.Medium, color = c.labelPrimary,
-                modifier = Modifier.align(Alignment.Center))
+    val subAnim = remember { androidx.compose.animation.core.Animatable(1f) }
+    var prevPage by remember { mutableStateOf<String?>(null) }
+    var curPage by remember { mutableStateOf("root") }
+    LaunchedEffect(page) {
+        if (page != curPage) {
+            prevPage = curPage
+            curPage = page
+            subAnim.snapTo(0f)
+            subAnim.animateTo(1f, androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.LinearEasing))
+            prevPage = null
         }
-        // ref .page-enter 235ms cubic-bezier(0.2,0.72,0.25,1): translateX 100% -> 0
-        val pageAnim = remember { androidx.compose.animation.core.Animatable(1f) }
-        val pageEase = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.72f, 0.25f, 1f)
-        LaunchedEffect(page) {
-            pageAnim.snapTo(0f)
-            pageAnim.animateTo(1f, androidx.compose.animation.core.tween(235, easing = pageEase))
+    }
+    val effectiveSubT = (subAnim.value * (1f - subBackProgress)).coerceIn(0f, 1f)
+    val subContentFrac = ((effectiveSubT - handoff) / (1f - handoff)).coerceIn(0f, 1f)
+    val subAlpha = if (page == "root" && prevPage == null) 1f else fadeInEase.transform(subContentFrac)
+    val subShiftDp = if (page == "root" && prevPage == null) 0f else 40f * (1f - slideInEase.transform(subContentFrac))
+
+    Box(Modifier.fillMaxSize().background(bg.copy(alpha = rootBgAlpha))) {
+    Column(Modifier.fillMaxSize().statusBarsPadding()
+        .graphicsLayer {
+            alpha = rootContentAlpha
+            translationX = rootContentShiftDp.dp.toPx()
+        }) {
+        Box(Modifier.fillMaxWidth().height(44.dp)) {
+            Box(Modifier.align(Alignment.CenterStart).padding(start = 6.dp).size(48.dp)
+                .clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null,
+                ) { if (page == "root") onBack() else page = if (page == "export") "data" else "root" },
+                contentAlignment = Alignment.Center) {
+                Box(Modifier.size(32.dp).clip(RoundedCornerShape(50)).background(btnBg),
+                    contentAlignment = Alignment.Center) {
+                    Icon(painterResource(R.drawable.ic_chevron_right), Strings.get("back"),
+                        tint = c.labelPrimary, modifier = Modifier.size(18.dp).rotate(180f))
+                }
+            }
+            Text(titles[page] ?: "", fontSize = 17.sp, lineHeight = 24.sp,
+                fontWeight = FontWeight.SemiBold, color = c.labelPrimary,
+                modifier = Modifier.align(Alignment.Center)
+                    .graphicsLayer { alpha = subAlpha })
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
-            .graphicsLayer { translationX = (1f - pageAnim.value) * size.width }
+            .graphicsLayer {
+                alpha = subAlpha
+                translationX = subShiftDp.dp.toPx()
+            }
             .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 36.dp)) {
             when (page) {
                 "root" -> SettingsRootPage(c, card, muted,
@@ -208,14 +251,13 @@ fun AndroidSettings(settings: SettingsStore, chatStore: ChatStore, onBack: () ->
         }
         if (page == "font") FontPanel(c, card, muted, settings)
     }
+    }
 
     when (popup) {
         "locale" -> ChoicePopup(c, card, muted, Strings.get("settingsLocalePreference"),
-            icon = { Icon(painterResource(R.drawable.ic_globe_lang), null,
-                tint = c.labelPrimary, modifier = Modifier.size(20.dp)) },
             options = listOf(
                 "system" to Strings.get("settingsThemeSystem"),
-                "zh-CN" to "中文（简体中文）",
+                "zh-CN" to "中文 (简体中文)",
                 "en-US" to "English"),
             selected = when (localePref) {
                 io.github.lijiahua1024.dsnative.data.LocalePreference.ZH_CN -> "zh-CN"
@@ -229,8 +271,6 @@ fun AndroidSettings(settings: SettingsStore, chatStore: ChatStore, onBack: () ->
                 popup = null },
             onDismiss = { popup = null })
         "theme" -> ChoicePopup(c, card, muted, Strings.get("settingsAppearance"),
-            icon = { Icon(painterResource(R.drawable.ic_light), null,
-                tint = c.labelPrimary, modifier = Modifier.size(20.dp)) },
             options = listOf(
                 "system" to Strings.get("settingsThemeSystem"),
                 "light" to Strings.get("settingsThemeLight"),
@@ -288,23 +328,23 @@ private fun SettingsRootPage(
             { Icon(painterResource(R.drawable.ic_globe_lang), null, tint = c.labelPrimary, modifier = Modifier.size(18.dp)) },
             value = localeLabel(localePref)) { onPopup("locale") }
         SettingsRow(c, muted, Strings.get("settingsAppearance"),
-            { Icon(painterResource(R.drawable.ic_light), null, tint = c.labelPrimary, modifier = Modifier.size(18.dp)) },
+            { Icon(painterResource(if (c.dark) R.drawable.ic_moon else R.drawable.ic_light), null, tint = c.labelPrimary, modifier = Modifier.size(20.dp)) },
             value = themeLabel(themePref)) { onPopup("theme") }
         SettingsRow(c, muted, Strings.get("settingsFontPage"),
             { Text("ᴀA", fontSize = 17.sp, fontWeight = FontWeight.Medium, color = c.labelPrimary) }) { onPage("font") }
         SettingsRow(c, muted, Strings.get("settingsPersonalizationPage"),
-            { Icon(painterResource(R.drawable.ic_settings), null, tint = c.labelPrimary, modifier = Modifier.size(18.dp)) }) { onPage("personalization") }
+            { Icon(painterResource(R.drawable.ic_wand), null, tint = c.labelPrimary, modifier = Modifier.size(20.dp)) }) { onPage("personalization") }
     }
     SettingsGroup(Strings.get("settingsGroupVoice"), card, muted) {
         SettingsRow(c, muted, Strings.get("settingsTtsVoice"),
-            { Icon(painterResource(R.drawable.ic_sound), null, tint = c.labelPrimary, modifier = Modifier.size(18.dp)) },
+            { Icon(painterResource(R.drawable.ic_sound), null, tint = c.labelPrimary, modifier = Modifier.size(20.dp)) },
             arrow = false) { onPopup("voice") }
     }
     SettingsGroup(Strings.get("settingsGroupAbout"), card, muted) {
         SettingsRow(c, muted, Strings.get("settingsVersion"),
             { InfoGlyph("i", c.labelPrimary) }, value = BuildConfig.VERSION_NAME, arrow = false) { }
         SettingsRow(c, muted, Strings.get("settingsAgreementsPage"),
-            { Icon(painterResource(R.drawable.ic_link), null, tint = c.labelPrimary, modifier = Modifier.size(18.dp)) }) { onPage("agreements") }
+            { Icon(painterResource(R.drawable.ic_doc_edit), null, tint = c.labelPrimary, modifier = Modifier.size(20.dp)) }) { onPage("agreements") }
     }
     SettingsGroup(null, card, muted, topGap = 7.8.dp) {
         SettingsRow(c, muted, Strings.get("settingsHelp"), { InfoGlyph("?", c.labelPrimary) }) { onHelp() }
@@ -329,33 +369,33 @@ private fun ProfileGlyph(tint: Color) {
 
 @Composable
 private fun InfoGlyph(glyph: String, tint: Color) {
-    Box(Modifier.size(12.dp).clip(RoundedCornerShape(50))
+    Box(Modifier.size(17.dp).clip(RoundedCornerShape(50))
         .background(Color.Transparent)
         .androidBorder(1.5.dp, tint), contentAlignment = Alignment.Center) {
-        Text(glyph, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = tint, lineHeight = 12.sp)
+        Text(glyph, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = tint, lineHeight = 12.sp)
     }
 }
 
 private fun Modifier.androidBorder(w: androidx.compose.ui.unit.Dp, color: Color) =
     this.then(Modifier.border(w, color, RoundedCornerShape(50)))
 
-// ref .group h2: muted 13/18 w400, margin 0 16px 8px; groups gap 28.2px, spaced 36px
+// ref .group h2: muted 14/18 w400, margin 0 16px 8px; groups gap 28.2px
 @Composable
 private fun SettingsGroup(label: String?, card: Color, muted: Color, topGap: androidx.compose.ui.unit.Dp = 0.dp,
     content: @Composable ColumnScope.() -> Unit) {
     Column(Modifier.padding(top = topGap)) {
         if (label != null) {
-            Box(Modifier.height(18.dp).padding(start = 16.dp, end = 16.dp),
+            Box(Modifier.height(22.dp).padding(start = 16.dp, end = 16.dp),
                 contentAlignment = Alignment.CenterStart) {
-                Text(label, fontSize = 13.sp, color = muted,
+                Text(label, fontSize = 14.sp, color = muted,
                     style = androidx.compose.ui.text.TextStyle(
                         platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)))
             }
             Spacer(Modifier.height(8.dp))
         }
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(card)) { content() }
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(card)) { content() }
     }
-    Spacer(Modifier.height(28.2.dp))
+    Spacer(Modifier.height(28.dp))
 }
 
 // ref .row: minH48, padding 0 15px 0 16px, gap 12, font 16; icon box 22 (svg 18)
@@ -523,8 +563,8 @@ private fun PersonalizationPage(c: io.github.lijiahua1024.dsnative.theme.DsColor
             RefSwitch(foldThinking) { settings.setFoldThinking(it) }
         }
     }
-    Text(Strings.get("settingsAutoFoldCaption"), fontSize = 13.sp, lineHeight = 21.sp, color = muted,
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 27.dp))
+    Text(Strings.get("settingsAutoFoldCaption"), fontSize = 15.sp, lineHeight = 23.sp, color = muted,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 27.dp))
 }
 
 @Composable
@@ -558,12 +598,12 @@ private fun ExportPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: 
 private fun FontPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Color, muted: Color, settings: SettingsStore) {
     val fs = 16.sp
     // ref .preview: right bubble + two paragraphs, lineHeight 1.6, scaled by slider value
-    Column(Modifier.padding(top = 34.dp, start = 8.dp, end = 8.dp)) {
+    Column(Modifier.padding(top = 28.dp, start = 8.dp, end = 8.dp)) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
             Text(Strings.get("fontPreview"), fontSize = fs, color = c.labelPrimary,
-                modifier = Modifier.clip(RoundedCornerShape(22.dp))
+                modifier = Modifier.clip(RoundedCornerShape(20.dp))
                     .background(c.buttonGhostActiveFill)
-                    .padding(horizontal = 16.dp, vertical = 10.dp))
+                    .padding(horizontal = 20.dp, vertical = 12.dp))
         }
         Text(Strings.get("fontDesc1"), fontSize = fs, lineHeight = fs * 1.6f, color = c.labelPrimary,
             modifier = Modifier.padding(top = 27.7.dp))
@@ -588,37 +628,51 @@ private fun FontPanel(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: C
             Text(Strings.get("settingsFollowSystem"), fontSize = 16.sp, color = c.labelPrimary, modifier = Modifier.weight(1f))
             RefSwitch(fontSize == null) { settings.setFontSize(if (it) null else 2) }
         }
-        Row(Modifier.fillMaxWidth().padding(top = 13.dp),
+        Row(Modifier.fillMaxWidth().padding(top = 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Bottom) {
             Text("A", fontSize = 13.sp, color = c.labelPrimary, lineHeight = 19.sp)
             Text(Strings.get("fontStandard"), fontSize = 12.sp, color = c.labelPrimary, lineHeight = 19.sp)
-            Text("A", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = c.labelPrimary, lineHeight = 19.sp)
+            Text("A", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = c.labelPrimary, lineHeight = 20.sp)
         }
-        // ref range input: thin track, left light gray / right dark, round gray thumb
-        androidx.compose.foundation.Canvas(
-            Modifier.fillMaxWidth().padding(top = 5.dp).height(17.dp)
+        val thumbR = 13.dp
+        val trackCol = if (c.dark) Color(0xFF4A4A4D) else Color(0xFFD4D6DC)
+        val tickCol = if (c.dark) Color(0xFF6B6B70) else Color(0xFFB5B8C0)
+        Box(
+            Modifier.fillMaxWidth().padding(top = 8.dp).height(34.dp)
                 .pointerInput(Unit) {
                     detectTapGestures { p ->
-                        settings.setFontSize((p.x / size.width * 6f + 0.5f).toInt().coerceIn(0, 6))
+                        val pad = 13.dp.toPx()
+                        val usable = (size.width - 2 * pad).coerceAtLeast(1f)
+                        settings.setFontSize(((p.x - pad) / usable * 6f + 0.5f).toInt().coerceIn(0, 6))
                     }
                 }
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures { ch, _ ->
-                        settings.setFontSize((ch.position.x / size.width * 6f + 0.5f).toInt().coerceIn(0, 6))
+                        val pad = 13.dp.toPx()
+                        val usable = (size.width - 2 * pad).coerceAtLeast(1f)
+                        settings.setFontSize(((ch.position.x - pad) / usable * 6f + 0.5f).toInt().coerceIn(0, 6))
                     }
-                }) {
-            val th = 8.dp.toPx(); val cy = size.height / 2; val tr = th / 2
-            val tx = (size.width * (sliderValue / 6f)).coerceIn(5.5.dp.toPx(), size.width - 5.5.dp.toPx())
-            drawRoundRect(Color(0xFF3B3B3B), topLeft = androidx.compose.ui.geometry.Offset(0f, cy - th / 2),
-                size = androidx.compose.ui.geometry.Size(size.width, th),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(tr))
-            drawRoundRect(Color(0xFFAAAAAA), topLeft = androidx.compose.ui.geometry.Offset(0f, cy - th / 2),
-                size = androidx.compose.ui.geometry.Size(tx, th),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(tr))
-            // WebKit <input type=range>: ~10.5dp #AAAAAA thumb, same gray as the filled track
-            drawCircle(Color(0xFFAAAAAA), radius = 5.5.dp.toPx(),
-                center = androidx.compose.ui.geometry.Offset(tx, cy))
+                },
+        ) {
+            androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                val r = thumbR.toPx()
+                val usable = (size.width - 2 * r).coerceAtLeast(1f)
+                val cy = size.height / 2f
+                drawLine(trackCol, androidx.compose.ui.geometry.Offset(r, cy),
+                    androidx.compose.ui.geometry.Offset(size.width - r, cy), strokeWidth = 1.6.dp.toPx())
+                for (i in 0..6) {
+                    val x = r + usable * (i / 6f)
+                    drawLine(tickCol, androidx.compose.ui.geometry.Offset(x, cy - 5.dp.toPx()),
+                        androidx.compose.ui.geometry.Offset(x, cy + 5.dp.toPx()), strokeWidth = 1.4.dp.toPx())
+                }
+                val tx = r + usable * (sliderValue / 6f)
+                // Soft shadow ring + crisp white circular thumb
+                drawCircle(Color.Black.copy(alpha = 0.14f), radius = r + 1.5.dp.toPx(),
+                    center = androidx.compose.ui.geometry.Offset(tx, cy + 1.5.dp.toPx()))
+                drawCircle(Color.White, radius = r,
+                    center = androidx.compose.ui.geometry.Offset(tx, cy))
+            }
         }
     }
 }
@@ -637,10 +691,10 @@ private fun RefSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
 }
 
 private fun localeLabel(l: io.github.lijiahua1024.dsnative.data.LocalePreference) = when (l) {
-    io.github.lijiahua1024.dsnative.data.LocalePreference.ZH_CN -> "中文（简体中文）"
+    io.github.lijiahua1024.dsnative.data.LocalePreference.ZH_CN -> "中文 (简体中文)"
     io.github.lijiahua1024.dsnative.data.LocalePreference.EN_US -> "English"
     io.github.lijiahua1024.dsnative.data.LocalePreference.SYSTEM ->
-        if (java.util.Locale.getDefault().language == "zh") "中文（简体中文）" else "English"
+        if (java.util.Locale.getDefault().language == "zh") "中文 (简体中文)" else "English"
 }
 private fun themeLabel(t: io.github.lijiahua1024.dsnative.data.ThemePreference) = when (t) {
     io.github.lijiahua1024.dsnative.data.ThemePreference.LIGHT -> Strings.get("settingsThemeLight")
@@ -662,49 +716,54 @@ private fun ChoicePopup(
     onDismiss: () -> Unit,
 ) {
     var next by remember { mutableStateOf(selected) }
-    // ref .overlay-enter 170ms ease-out: dim fades in
     val ov = remember { androidx.compose.animation.core.Animatable(0f) }
-    LaunchedEffect(Unit) { ov.animateTo(1f, androidx.compose.animation.core.tween(170)) }
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f * ov.value))
+    LaunchedEffect(Unit) { ov.animateTo(1f, androidx.compose.animation.core.tween(180)) }
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.60f * ov.value))
+        .statusBarsPadding()
         .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
             indication = null) { onDismiss() },
         contentAlignment = Alignment.Center) {
-        Column(Modifier.padding(horizontal = 28.dp).widthIn(max = 290.dp).fillMaxWidth()
-            .heightIn(max = 560.dp).clip(RoundedCornerShape(20.dp)).background(card)
+        Column(Modifier.padding(horizontal = 32.dp).widthIn(max = 294.dp).fillMaxWidth()
+            .heightIn(max = 560.dp)
+            .graphicsLayer {
+                val s = 0.94f + 0.06f * ov.value
+                scaleX = s; scaleY = s; alpha = ov.value
+            }
+            .clip(RoundedCornerShape(24.dp)).background(card)
             .clickable(enabled = false) {}) {
-            Column(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 22.dp, bottom = 15.dp),
+            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally) {
-                if (icon != null) { icon(); Spacer(Modifier.height(8.dp)) }
-                Text(title, fontSize = 16.sp, color = c.labelPrimary)
+                if (icon != null) { icon(); Spacer(Modifier.height(6.dp)) }
+                Text(title, fontSize = 18.sp, fontWeight = FontWeight.Medium, color = c.labelPrimary)
             }
             Column(Modifier.fillMaxWidth()
                 .drawBehind {
-                    val w = 1.dp.toPx()
-                    drawLine(c.borderL2, androidx.compose.ui.geometry.Offset(0f, 0f),
+                    val w = 0.7.dp.toPx()
+                    drawLine(c.borderL1, androidx.compose.ui.geometry.Offset(0f, 0f),
                         androidx.compose.ui.geometry.Offset(size.width, 0f), w)
-                    drawLine(c.borderL2, androidx.compose.ui.geometry.Offset(0f, size.height),
+                    drawLine(c.borderL1, androidx.compose.ui.geometry.Offset(0f, size.height),
                         androidx.compose.ui.geometry.Offset(size.width, size.height), w)
                 }) {
                 options.forEach { (id, label) ->
                     val checked = next == id
-                    Row(Modifier.fillMaxWidth().height(54.dp)
-                        .clickable { next = id }.padding(horizontal = 18.dp),
+                    Row(Modifier.fillMaxWidth().height(60.dp)
+                        .clickable { next = id }.padding(horizontal = 22.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(17.dp)) {
+                        horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                         Box(Modifier.size(20.dp).clip(RoundedCornerShape(50))
-                            .border(2.dp, if (checked) c.labelPrimary else Color(0xFF6D7684),
+                            .border(2.dp, if (checked) c.labelPrimary else Color(0xFF49505C),
                                 RoundedCornerShape(50)),
                             contentAlignment = Alignment.Center) {
-                            if (checked) Box(Modifier.size(11.dp).clip(RoundedCornerShape(50))
+                            if (checked) Box(Modifier.size(10.dp).clip(RoundedCornerShape(50))
                                 .background(c.labelPrimary))
                         }
-                        Text(label, fontSize = 15.sp, color = c.labelPrimary)
+                        Text(label, fontSize = 16.sp, color = c.labelPrimary)
                     }
                 }
             }
-            Box(Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
+            Box(Modifier.fillMaxWidth().height(54.dp)
                 .clickable { onConfirm(next) }, contentAlignment = Alignment.Center) {
-                Text(Strings.get("confirm"), fontSize = 16.sp, color = c.brandText)
+                Text(Strings.get("confirm"), fontSize = 16.sp, fontWeight = FontWeight.Medium, color = c.brandText)
             }
         }
     }
@@ -729,33 +788,55 @@ private fun VoiceSheet(
     // ref .overlay-enter 170ms + .sheet-enter 220ms cubic-bezier(0.2,0.72,0.25,1)
     val ov = remember { androidx.compose.animation.core.Animatable(0f) }
     val sheet = remember { androidx.compose.animation.core.Animatable(0f) }
+    var dragY by remember { mutableFloatStateOf(0f) }
     val sheetEase = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.72f, 0.25f, 1f)
+    val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) {
         ov.animateTo(1f, androidx.compose.animation.core.tween(170))
     }
     LaunchedEffect(Unit) {
         sheet.animateTo(1f, androidx.compose.animation.core.tween(220, easing = sheetEase))
     }
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f * ov.value))
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.28f * ov.value))
         .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
             indication = null) { onDismiss() },
         contentAlignment = Alignment.BottomCenter) {
-        Column(Modifier.fillMaxWidth().fillMaxHeight(0.7f)
-            .graphicsLayer { translationY = (1f - sheet.value) * size.height }
-            .clip(RoundedCornerShape(topStart = 21.dp, topEnd = 21.dp)).background(card)
+        Column(Modifier.fillMaxWidth().fillMaxHeight(0.814f)
+            .graphicsLayer { translationY = (1f - sheet.value) * size.height + dragY }
+            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)).background(card)
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onVerticalDrag = { _, d -> dragY = (dragY + d).coerceAtLeast(0f) },
+                    onDragEnd = {
+                        if (dragY > 110.dp.toPx()) {
+                            onDismiss()
+                        } else {
+                            val start = dragY
+                            scope.launch {
+                                val a = androidx.compose.animation.core.Animatable(start)
+                                a.animateTo(0f, androidx.compose.animation.core.tween(180)) {
+                                    dragY = value
+                                }
+                            }
+                        }
+                    },
+                    onDragCancel = { dragY = 0f },
+                )
+            }
             .clickable(enabled = false) {}) {
             Box(Modifier.fillMaxWidth().height(56.dp), contentAlignment = Alignment.Center) {
-                Text(Strings.get("settingsTtsVoice"), fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium, color = c.labelPrimary)
-                Box(Modifier.align(Alignment.CenterEnd).padding(end = 13.dp)
+                Text(Strings.get("settingsTtsVoice"), fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold, color = c.labelPrimary)
+                Box(Modifier.align(Alignment.CenterEnd).padding(end = 12.dp)
                     .size(32.dp).clip(RoundedCornerShape(50))
-                    .background(if (c.dark) Color(0xFF303030) else Color(0xFFEBEBEB))
+                    .background(if (c.dark) Color(0xFF3C3C3D) else Color(0xFFEDEDED))
                     .clickable { onDismiss() }, contentAlignment = Alignment.Center) {
                     Icon(painterResource(R.drawable.ic_close), Strings.get("close"),
                         tint = c.labelPrimary, modifier = Modifier.size(16.dp))
                 }
             }
             Column(Modifier.weight(1f).fillMaxWidth()
+                .excludeFromDrawerGesture()
                 .pointerInput(Unit) {
                     var dx = 0f
                     detectHorizontalDragGestures(
@@ -769,9 +850,10 @@ private fun VoiceSheet(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center) {
                 VoiceArt(tone)
-                Spacer(Modifier.height(8.dp))
-                Text(now.second.first, fontSize = 16.sp, color = c.labelPrimary)
-                Text(now.second.second, fontSize = 13.sp, color = muted)
+                Spacer(Modifier.height(16.dp))
+                Text(now.second.first, fontSize = 17.sp, fontWeight = FontWeight.Medium, color = c.labelPrimary)
+                Spacer(Modifier.height(4.dp))
+                Text(now.second.second, fontSize = 14.sp, color = muted)
                 Row(Modifier.padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     tones.forEach { (id, _) ->
                         Box(Modifier.size(22.dp).padding(7.dp).clip(RoundedCornerShape(50))
