@@ -20,7 +20,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.Dispatchers
@@ -406,11 +405,11 @@ fun SiteLogo(
 ) {
     val c = DsTheme.colors
     val iconUrl = url?.trim()?.takeIf { it.isNotEmpty() }
-    val loaded by produceState<ImageBitmap?>(
-        initialValue = iconUrl?.let { SiteIconCache.cached(it) },
-        key1 = iconUrl,
-    ) {
-        value = if (iconUrl != null) SiteIconCache.load(iconUrl) else null
+    var loaded by remember(iconUrl) { mutableStateOf(iconUrl?.let { SiteIconCache.cached(it) }) }
+    LaunchedEffect(iconUrl) {
+        if (iconUrl != null && loaded == null) {
+            loaded = SiteIconCache.load(iconUrl)
+        }
     }
     Box(
         modifier
