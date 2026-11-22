@@ -66,7 +66,11 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     val activeId by chatStore.activeId.collectAsState()
     val streaming by chatStore.streaming.collectAsState()
     val drafts by chatStore.drafts.collectAsState()
-    var text by remember(activeId) { mutableStateOf(drafts[activeId ?: ""] ?: "") }
+    val storeDraft = drafts[activeId] ?: ""
+    var text by remember(activeId) { mutableStateOf(storeDraft) }
+    LaunchedEffect(activeId, storeDraft) {
+        if (text != storeDraft) text = storeDraft
+    }
     var focused by remember { mutableStateOf(false) }
     var focusAt by remember { mutableStateOf(0L) }
     val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
