@@ -366,10 +366,10 @@ fun DrawerFrame(
                 mainContent { settleTo(1f) }
                 io.github.lijiahua1024.dsnative.ui.session.DsToastHost()
                 if (progress > 0f) {
-                    // ref: .main::after — bg-base tint at 0.7*progress (washes toward bg, not black)
+                    // ref: .main::after — washes toward bg (light) or elevated #1D1D1D card (dark)
                     Box(Modifier.fillMaxSize()
                         .graphicsLayer { alpha = 0.7f * progress }
-                        .background(DsTheme.colors.bgBase)
+                        .background(if (dark) Color(0xFF1D1D1D) else DsTheme.colors.bgBase)
                         .semantics { contentDescription = Strings.get("collapseSiderbarButton") }
                         .pointerInput(Unit) {
                             detectTapGestures { settleTo(0f) }

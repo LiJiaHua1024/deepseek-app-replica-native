@@ -395,9 +395,14 @@ private fun AttachmentAction(modifier: Modifier, icon: Int, label: String, onCli
     // ref AndroidAttachments .action:active -> color-mix(currentColor 10%)
     val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val pressed by src.collectIsPressedAsState()
+    val tileBg = if (c.dark) {
+        if (pressed) Color(0xFF4A4A4C) else Color(0xFF3C3C3D)
+    } else {
+        c.labelPrimary.copy(alpha = DsTheme.pressAlpha(pressed, 0.10f, 0.05f))
+    }
     Column(
         modifier.height(84.dp).clip(RoundedCornerShape(18.dp))
-            .background(c.labelPrimary.copy(alpha = DsTheme.pressAlpha(pressed, 0.10f, 0.05f)))
+            .background(tileBg)
             .clickable(src, null, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,

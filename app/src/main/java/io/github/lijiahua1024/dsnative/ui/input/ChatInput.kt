@@ -177,7 +177,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
         previousKeyboardOpen = keyboardOpen
     }
     val cardShape = RoundedCornerShape(24.dp)
-    val cardBorder = if (c.dark) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.055f)
+    val cardBorder = if (c.dark) Color(0xFF333333) else Color.Black.copy(alpha = 0.055f)
     Column(
         Modifier.fillMaxWidth()
             .then(if (keyboardOpen) Modifier.imePadding() else Modifier)

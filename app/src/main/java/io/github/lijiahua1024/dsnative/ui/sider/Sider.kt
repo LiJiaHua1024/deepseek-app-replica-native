@@ -95,7 +95,7 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
             // .search: h48 r24 bg-skeleton, padding 0 14, gap 8, search icon 16 tertiary
             Box(
                 Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(24.dp))
-                    .background(c.bgSkeleton)
+                    .background(if (c.dark) Color(0xFF292929) else c.bgSkeleton)
             ) {
                 androidx.compose.foundation.text.BasicTextField(
                     value = query, onValueChange = { query = it },
@@ -418,7 +418,7 @@ private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean,
         Text(s.title.ifEmpty { Strings.get("untitledChat") }, fontSize = 16.sp,
             color = when {
                 pressPhase != SessionPressPhase.Rest -> Color(0xFF3269EF)
-                active && !selectionMode -> c.brandPrimaryInvert
+                active && !selectionMode -> c.brandText
                 else -> c.labelPrimary
             },
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
