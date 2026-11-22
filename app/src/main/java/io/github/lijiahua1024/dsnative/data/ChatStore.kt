@@ -1328,7 +1328,4 @@ class ChatStore(
         }
         return imported
     }
-
-    fun exportAll(context: Context) {}
-    fun importHistory(context: Context) { _importingHistory.value = false }
 }

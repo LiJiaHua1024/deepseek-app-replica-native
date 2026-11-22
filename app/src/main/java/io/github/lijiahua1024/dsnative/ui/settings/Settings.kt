@@ -47,6 +47,16 @@ import io.github.lijiahua1024.dsnative.theme.softShadow
 import io.github.lijiahua1024.dsnative.ui.session.DsToast
 import kotlinx.coroutines.launch
 
+private fun verifyErrorMessage(e: Exception): String = when (e) {
+    is io.github.lijiahua1024.dsnative.api.ApiError -> when {
+        e.kind == io.github.lijiahua1024.dsnative.api.ApiErrorKind.NETWORK ->
+            Strings.get("commonNetworkErrorToast")
+        e.status == 401 -> Strings.get("apiKeyInvalid")
+        else -> Strings.get("apiKeyVerificationFailed", "message" to (e.message ?: ""))
+    }
+    else -> Strings.get("apiKeyInvalid")
+}
+
 @Composable
 fun ApiKeyScreen(settings: SettingsStore) {
     val c = DsTheme.colors
@@ -107,7 +117,7 @@ fun ApiKeyScreen(settings: SettingsStore) {
                         verifyApiKey(key.trim())
                         if (!settings.setApiKey(key.trim())) error = Strings.get("apiKeyStorageFailed")
                     } catch (e: Exception) {
-                        error = Strings.get("apiKeyInvalid")
+                        error = verifyErrorMessage(e)
                     }
                     verifying = false
                 }
@@ -290,14 +300,19 @@ fun AndroidSettings(
                 popup = null },
             onDismiss = { popup = null })
         "voice" -> VoiceSheet(c, card, muted, current = ttsVoice,
+            apiKey = settings.apiKey.collectAsState().value,
             onConfirm = {
+                io.github.lijiahua1024.dsnative.data.ReadAloud.stop()
                 if (it != ttsVoice) {
                     DsToast.show(Strings.get("ttsVoiceSwitched", "voice" to Strings.get(
                         if (it == "stella") "settingsTtsVoiceStella" else "settingsTtsVoiceTide")))
                 }
                 settings.setTtsVoice(it); popup = null
             },
-            onDismiss = { popup = null })
+            onDismiss = {
+                io.github.lijiahua1024.dsnative.data.ReadAloud.stop()
+                popup = null
+            })
     }
 
     if (confirmLogout) {
@@ -351,7 +366,9 @@ private fun SettingsRootPage(
     }
     SettingsGroup(Strings.get("settingsGroupAbout"), card, muted) {
         SettingsRow(c, muted, Strings.get("settingsVersion"),
-            { InfoGlyph("i", c.labelPrimary) }, value = BuildConfig.VERSION_NAME, arrow = false) { }
+            { InfoGlyph("i", c.labelPrimary) }, value = BuildConfig.VERSION_NAME, arrow = false) {
+            DsToast.show(Strings.get("updateCurrent"))
+        }
         SettingsRow(c, muted, Strings.get("settingsAgreementsPage"),
             { Icon(painterResource(R.drawable.ic_doc_edit), null, tint = c.labelPrimary, modifier = Modifier.size(20.dp)) }) { onPage("agreements") }
     }
@@ -417,6 +434,7 @@ private fun SettingsRow(
     value: String? = null,
     danger: Boolean = false,
     arrow: Boolean = true,
+    enabled: Boolean = true,
     onClick: () -> Unit = {},
 ) {
     // ref button.row:active/a.row:active -> background: var(--settings-button)
@@ -424,8 +442,9 @@ private fun SettingsRow(
     val pressed by src.collectIsPressedAsState()
     val pressBg = if (c.dark) Color(0xFF303030) else Color(0xFFEBEBEB)
     Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
-        .background(if (pressed) DsTheme.pressTint(pressed, pressBg) else Color.Transparent)
-        .clickable(src, null, onClick = onClick)
+        .alpha(if (enabled) 1f else 0.5f)
+        .background(if (pressed && enabled) DsTheme.pressTint(pressed, pressBg) else Color.Transparent)
+        .clickable(src, null, enabled = enabled, onClick = onClick)
         .padding(start = 16.dp, end = 12.dp),
         verticalAlignment = Alignment.CenterVertically) {
         if (icon != null) {
@@ -446,6 +465,9 @@ private fun SettingsRow(
 @Composable
 private fun AccountPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Color, muted: Color, settings: SettingsStore) {
     var editing by remember { mutableStateOf(false) }
+    var verifying by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
     val ctx = LocalContext.current
     val open = { url: String ->
         ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
@@ -453,27 +475,60 @@ private fun AccountPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card:
     // ref account page: 账户 group -> masked-key row + 开放平台 + 开放平台帮助 links
     SettingsGroup(Strings.get("settingsGroupAccount"), card, muted) {
         SettingsRow(c, muted, Strings.get("apiKeyLabel"), { ProfileGlyph(c.labelPrimary) },
-            value = "••••••••") { editing = true }
+            value = "••••••••") { editing = !editing; error = null }
         if (editing) {
             // ref .credentials: inline password field + confirm under the key row
             var value by remember { mutableStateOf("") }
-            Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
-                .padding(start = 16.dp, end = 15.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                androidx.compose.foundation.text.BasicTextField(
-                    value = value, onValueChange = { value = it }, singleLine = true,
-                    textStyle = androidx.compose.ui.text.TextStyle(fontSize = 16.sp, color = c.labelPrimary),
-                    modifier = Modifier.weight(1f),
-                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                    decorationBox = { inner ->
-                        if (value.isEmpty()) Text(Strings.get("apiKeyPlaceholder"), fontSize = 16.sp, color = muted)
-                        inner()
-                    })
-                Text(Strings.get("confirm"), fontSize = 16.sp, color = c.brandPrimary,
-                    modifier = Modifier.clickable(enabled = value.isNotBlank()) {
-                        settings.setApiKey(value.trim()); editing = false
-                    })
+            Column(Modifier.fillMaxWidth()) {
+                Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp)
+                    .padding(start = 16.dp, end = 15.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    androidx.compose.foundation.text.BasicTextField(
+                        value = value,
+                        onValueChange = { value = it; error = null },
+                        singleLine = true,
+                        enabled = !verifying,
+                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 16.sp, color = c.labelPrimary),
+                        cursorBrush = androidx.compose.ui.graphics.SolidColor(c.brandPrimary),
+                        modifier = Modifier.weight(1f),
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        decorationBox = { inner ->
+                            if (value.isEmpty()) Text(Strings.get("apiKeyPlaceholder"), fontSize = 16.sp, color = muted)
+                            inner()
+                        })
+                    Text(
+                        if (verifying) Strings.get("apiKeyVerifying") else Strings.get("confirm"),
+                        fontSize = 16.sp,
+                        color = if (value.isNotBlank() && !verifying) c.brandPrimary else muted,
+                        modifier = Modifier.clickable(enabled = value.isNotBlank() && !verifying) {
+                            val trimmed = value.trim()
+                            verifying = true
+                            error = null
+                            scope.launch {
+                                try {
+                                    verifyApiKey(trimmed)
+                                    if (settings.setApiKey(trimmed)) {
+                                        editing = false
+                                        DsToast.show(Strings.get("apiKeyUpdated"))
+                                    } else {
+                                        error = Strings.get("apiKeyStorageFailed")
+                                    }
+                                } catch (e: Exception) {
+                                    error = verifyErrorMessage(e)
+                                }
+                                verifying = false
+                            }
+                        })
+                }
+                error?.let { msg ->
+                    Text(
+                        msg,
+                        fontSize = 13.sp,
+                        color = c.stateErrorPrimary,
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp),
+                    )
+                }
             }
         }
         SettingsRow(c, muted, Strings.get("openPlatform")) { open("https://platform.deepseek.com/api_keys") }
@@ -486,11 +541,22 @@ private fun DataPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Co
     var confirmDeleteAll by remember { mutableStateOf(false) }
     var confirmImport by remember { mutableStateOf(false) }
     var importResult by remember { mutableStateOf<Int?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     val ctx = LocalContext.current
     val privacyUrl = "https://cdn.deepseek.com/policies/zh-CN/deepseek-open-platform-privacy-policy.html"
     val importLauncher = rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
-    ) { uri -> importResult = uri?.let { chatStore.importArchive(ctx, it) } }
+    ) { uri ->
+        if (uri == null || busy) return@rememberLauncherForActivityResult
+        scope.launch {
+            busy = true
+            importResult = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                chatStore.importArchive(ctx, uri)
+            }
+            busy = false
+        }
+    }
     // ref .caption above the groups: muted 13/21, underlined privacy-policy link
     androidx.compose.material3.Text(
         androidx.compose.ui.text.buildAnnotatedString {
@@ -500,22 +566,25 @@ private fun DataPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Co
             addStyle(androidx.compose.ui.text.SpanStyle(
                 textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline),
                 linkStart, length)
-            append(if (java.util.Locale.getDefault().language == "zh") "。" else ".")
+            append(if (Strings.isZh()) "。" else ".")
         },
         fontSize = 13.sp, lineHeight = 21.sp, color = muted,
         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 29.3.dp)
             .clickable { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(privacyUrl))) })
     // caption text metrics land the first card ~7px higher than the reference; extra ~2.3dp compensates
     SettingsGroup(null, card, muted) {
-        SettingsRow(c, muted, Strings.get("exportAllLabel")) { onPage("export") }
+        SettingsRow(c, muted, Strings.get("exportAllLabel"), enabled = !busy) { onPage("export") }
     }
     SettingsGroup(null, card, muted) {
-        SettingsRow(c, muted, Strings.get("settingsDeleteAll"), danger = true, arrow = false) { confirmDeleteAll = true }
+        SettingsRow(c, muted, Strings.get("settingsDeleteAll"), danger = true, arrow = false, enabled = !busy) { confirmDeleteAll = true }
     }
     SettingsGroup(null, card, muted) {
-        SettingsRow(c, muted, Strings.get("historyImport"), arrow = false) { confirmImport = true }
+        SettingsRow(c, muted, Strings.get("historyImport"), arrow = false, enabled = !busy) { confirmImport = true }
     }
-    importResult?.let { count ->
+    if (busy) {
+        Text(Strings.get("exportBusy"), fontSize = 13.sp, lineHeight = 21.sp,
+            color = muted, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 27.dp))
+    } else importResult?.let { count ->
         Text(if (count >= 0) Strings.get("historyImported", "count" to count) else Strings.get("historyImportFailed"),
             fontSize = 13.sp, lineHeight = 21.sp,
             color = muted, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 27.dp))
@@ -582,26 +651,74 @@ private fun PersonalizationPage(c: io.github.lijiahua1024.dsnative.theme.DsColor
 @Composable
 private fun ExportPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Color, muted: Color, chatStore: ChatStore) {
     val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
     val sessions by chatStore.sessions.collectAsState()
     var archive by remember { mutableStateOf<String?>(null) }
+    var exportFile by remember { mutableStateOf<java.io.File?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    DisposableEffect(Unit) {
+        onDispose { exportFile?.delete() }
+    }
     val saveLauncher = rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/zip"),
-    ) { uri -> if (uri != null) chatStore.exportArchive(ctx, uri) }
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            busy = true
+            val cached = exportFile
+            val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                if (cached != null && cached.exists()) {
+                    try {
+                        ctx.contentResolver.openOutputStream(uri)?.use { out ->
+                            cached.inputStream().use { it.copyTo(out) }
+                        } != null
+                    } catch (_: Exception) {
+                        false
+                    }
+                } else {
+                    chatStore.exportArchive(ctx, uri)
+                }
+            }
+            if (!ok) DsToast.show(Strings.get("exportFailed"))
+            busy = false
+        }
+    }
     // ref: 导出 row first; 保存到设备 group appears once an archive exists; caption below
     SettingsGroup(null, card, muted) {
         SettingsRow(c, muted,
             if (archive == null) Strings.get("exportLabel") else Strings.get("exportAgain"),
-            arrow = false) {
-            val f = java.io.File(ctx.cacheDir, "deepseek-chats-${System.currentTimeMillis()}.zip")
-            if (chatStore.exportArchive(ctx, android.net.Uri.fromFile(f))) archive = f.name
+            arrow = false, enabled = !busy) {
+            scope.launch {
+                busy = true
+                val f = java.io.File(ctx.cacheDir, "deepseek-chats-${System.currentTimeMillis()}.zip")
+                val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    chatStore.exportArchive(ctx, android.net.Uri.fromFile(f))
+                }
+                if (ok) {
+                    exportFile?.takeIf { it != f }?.delete()
+                    exportFile = f
+                    archive = f.name
+                } else {
+                    f.delete()
+                    DsToast.show(Strings.get("exportFailed"))
+                }
+                busy = false
+            }
         }
     }
     if (archive != null) {
         SettingsGroup(null, card, muted) {
-            SettingsRow(c, muted, Strings.get("exportSaveDevice"), arrow = false) { saveLauncher.launch(archive!!) }
+            SettingsRow(c, muted, Strings.get("exportSaveDevice"), arrow = false, enabled = !busy) {
+                saveLauncher.launch(archive!!)
+            }
         }
     }
-    Text(archive ?: Strings.get(if (sessions.isEmpty()) "androidNoChats" else "historyExportDescription"),
+    Text(
+        when {
+            busy -> Strings.get("exportBusy")
+            archive != null -> archive!!
+            else -> Strings.get(if (sessions.isEmpty()) "androidNoChats" else "historyExportDescription")
+        },
         fontSize = 13.sp, lineHeight = 21.sp, color = muted,
         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 27.dp))
 }
@@ -724,7 +841,7 @@ private fun localeLabel(l: io.github.lijiahua1024.dsnative.data.LocalePreference
     io.github.lijiahua1024.dsnative.data.LocalePreference.ZH_CN -> "中文 (简体中文)"
     io.github.lijiahua1024.dsnative.data.LocalePreference.EN_US -> "English"
     io.github.lijiahua1024.dsnative.data.LocalePreference.SYSTEM ->
-        if (java.util.Locale.getDefault().language == "zh") "中文 (简体中文)" else "English"
+        if (Strings.isZh()) "中文 (简体中文)" else "English"
 }
 private fun themeLabel(t: io.github.lijiahua1024.dsnative.data.ThemePreference) = when (t) {
     io.github.lijiahua1024.dsnative.data.ThemePreference.LIGHT -> Strings.get("settingsThemeLight")
@@ -807,6 +924,7 @@ private fun VoiceSheet(
     c: io.github.lijiahua1024.dsnative.theme.DsColors,
     card: Color, muted: Color,
     current: String,
+    apiKey: String?,
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -821,6 +939,21 @@ private fun VoiceSheet(
     var dragY by remember { mutableFloatStateOf(0f) }
     val sheetEase = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.72f, 0.25f, 1f)
     val scope = rememberCoroutineScope()
+    DisposableEffect(Unit) {
+        onDispose { io.github.lijiahua1024.dsnative.data.ReadAloud.stop() }
+    }
+    fun previewTone(targetTone: String) {
+        if (!apiKey.isNullOrBlank()) {
+            io.github.lijiahua1024.dsnative.data.ReadAloud.toggle(
+                scope = scope,
+                messageId = "voice-preview-$targetTone-${System.currentTimeMillis()}",
+                text = Strings.get("ttsPreviewSample"),
+                apiKey = apiKey,
+                voice = targetTone,
+                onError = { key -> DsToast.show(Strings.get(key)) },
+            )
+        }
+    }
     LaunchedEffect(Unit) {
         ov.animateTo(1f, androidx.compose.animation.core.tween(170))
     }
@@ -873,8 +1006,13 @@ private fun VoiceSheet(
                         onDragStart = { dx = 0f },
                         onHorizontalDrag = { _, d -> dx += d },
                         onDragEnd = {
-                            if (kotlin.math.abs(dx) > 32 * density)
-                                tone = if (dx > 0) "stella" else "tide"
+                            if (kotlin.math.abs(dx) > 32 * density) {
+                                val next = if (dx > 0) "stella" else "tide"
+                                if (next != tone) {
+                                    tone = next
+                                    previewTone(next)
+                                }
+                            }
                         })
                 },
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -888,13 +1026,18 @@ private fun VoiceSheet(
                     tones.forEach { (id, _) ->
                         Box(Modifier.size(22.dp).padding(7.dp).clip(RoundedCornerShape(50))
                             .background(if (tone == id) c.brandText else Color(0xFFCCCCCC))
-                            .clickable { tone = id })
+                            .clickable {
+                                tone = id
+                                previewTone(id)
+                            })
                     }
                 }
             }
             Text(Strings.get("confirm"), fontSize = 16.sp, color = Color.White,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, bottom = 16.dp)
+                modifier = Modifier.fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(start = 24.dp, end = 24.dp, bottom = 16.dp)
                     .height(48.dp).clip(RoundedCornerShape(28.dp)).background(c.brandText)
                     .clickable { onConfirm(tone) }
                     .wrapContentHeight(Alignment.CenterVertically))

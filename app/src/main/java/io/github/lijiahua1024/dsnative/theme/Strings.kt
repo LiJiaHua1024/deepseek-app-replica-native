@@ -13,7 +13,7 @@ object Strings {
         set(v) { _locale.value = v }
     private val _locale = androidx.compose.runtime.mutableStateOf(LocalePreference.SYSTEM)
 
-    private fun isZh(): Boolean = when (locale) {
+    fun isZh(): Boolean = when (locale) {
         LocalePreference.ZH_CN -> true
         LocalePreference.EN_US -> false
         LocalePreference.SYSTEM ->
@@ -141,6 +141,7 @@ object Strings {
             "confirm" -> pick("确认", "Confirm")
             "jumpToBottom" -> pick("回到底部", "Jump to bottom")
             "apiKeyInvalid" -> pick("API Key 无效，请检查后重试", "Invalid API Key")
+            "apiKeyUpdated" -> pick("API Key 已更新", "API Key updated")
             "apiKeyStorageFailed" -> pick("无法在此设备上保存 API Key", "Cannot save API Key")
             "apiKeyVerificationFailed" -> pick("校验失败：{message}", "Verification failed: {message}")
             "historyImport" -> pick("导入历史对话", "Import chat history")
@@ -213,6 +214,7 @@ object Strings {
             "exportAgain" -> pick("重新导出", "Export again")
             "exportSaveDevice" -> pick("保存到设备", "Save to device")
             "exportBusy" -> pick("正在处理归档…", "Working on the archive…")
+            "exportFailed" -> pick("导出失败，请稍后重试", "Export failed. Please try again.")
             "dataCaptionA" -> pick("历史对话保存在此设备。API 数据处理适用 ", "Chat history is stored on this device. API usage is subject to the ")
             "dataCaptionLink" -> pick("DeepSeek 开放平台隐私政策", "DeepSeek Open Platform Privacy Policy")
             "welcomeMessageChat250808" -> pick("今天有什么可以帮到你？", "How can I help you?")
@@ -366,6 +368,8 @@ object Strings {
             "readAloudInterrupted" -> pick("语音朗读中断", "Read aloud was interrupted")
             "readingAloud" -> pick("正在朗读", "Reading aloud")
             "ttsVoiceSwitched" -> pick("朗读音色已切换为 {voice}", "Read-aloud voice switched to {voice}")
+            "ttsPreviewSample" -> pick("你好，很高兴认识你", "Hello, nice to meet you")
+            "updateCurrent" -> pick("当前已是最新版本", "You’re on the latest version")
             "latestReminderLanguage" -> pick("中文", "English")
             else -> key
         }
