@@ -77,6 +77,9 @@ fun SessionView(
     // 会把强制对比度的黑色导航栏区域刷白，必须用窗口内 overlay
     var bubbleMenu by remember { mutableStateOf<Triple<Message.User, androidx.compose.ui.geometry.Rect, () -> Unit>?>(null) }
     val rootCtx = LocalContext.current
+    val autoRead by settings.autoRead.collectAsState()
+    val foldThinking by settings.foldThinking.collectAsState()
+    val autoReadScope = rememberCoroutineScope()
 
     // 状态栏深灰带由 DrawerFrame 在 layer 之上统一绘制（ref 的状态栏是窗口级底色）
     Column(Modifier.fillMaxSize().background(c.bgBase).statusBarsPadding()) {
@@ -105,7 +108,8 @@ fun SessionView(
                 fontWeight = FontWeight.Medium, color = c.labelPrimary,
                 maxLines = 1, modifier = Modifier.weight(1f).padding(start = 10.dp, end = 8.dp),
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-            val autoRead by settings.autoRead.collectAsState()
+            val readStatus by io.github.lijiahua1024.dsnative.data.ReadAloud.status.collectAsState()
+            val reading = readStatus != io.github.lijiahua1024.dsnative.data.ReadAloud.Status.IDLE
             Box(
                 Modifier.size(48.dp).toggleable(
                     value = autoRead,
@@ -113,13 +117,15 @@ fun SessionView(
                     indication = null,
                     role = androidx.compose.ui.semantics.Role.Checkbox,
                 ) {
-                    settings.setAutoRead(!autoRead)
-                    DsToast.show(Strings.get(if (autoRead) "androidAutoReadDisabled" else "androidAutoReadEnabled"))
+                    val next = !autoRead
+                    settings.setAutoRead(next)
+                    if (!next) io.github.lijiahua1024.dsnative.data.ReadAloud.stop()
+                    DsToast.show(Strings.get(if (next) "androidAutoReadEnabled" else "androidAutoReadDisabled"))
                 },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    painterResource(if (autoRead) R.drawable.ic_sound else R.drawable.ic_sound_muted),
+                    painterResource(if (autoRead || reading) R.drawable.ic_sound else R.drawable.ic_sound_muted),
                     Strings.get("autoRead"), tint = c.labelPrimary, modifier = Modifier.size(24.dp))
             }
             Spacer(Modifier.width(4.dp))
@@ -136,6 +142,34 @@ fun SessionView(
         }
 
         val visible = session?.let { visibleMessages(it) } ?: emptyList()
+        val lastAssistant = visible.lastOrNull() as? Message.Assistant
+        var streamingMsgId by remember(activeId) { mutableStateOf<String?>(null) }
+        LaunchedEffect(activeId, lastAssistant?.id, lastAssistant?.status, lastAssistant?.stopReason) {
+            val msg = lastAssistant
+            if (shouldAutoReadOnDone(streamingMsgId == msg?.id, true, msg, autoRead)) {
+                val safeMsg = msg!!
+                val audioManager = rootCtx.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+                io.github.lijiahua1024.dsnative.data.ReadAloud.toggle(
+                    autoReadScope,
+                    safeMsg.id,
+                    replyText(safeMsg),
+                    settings.apiKey.value ?: "",
+                    settings.ttsVoice.value,
+                    { key -> DsToast.show(Strings.get(key)) },
+                    {
+                        if (audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) == 0) {
+                            DsToast.show(Strings.get("readAloudLowVolume"))
+                        }
+                    },
+                )
+            }
+            streamingMsgId = if (
+                msg != null &&
+                (msg.status == ReplyStatus.STREAMING || msg.status == ReplyStatus.PENDING)
+            ) {
+                msg.id
+            } else null
+        }
         if (visible.isEmpty()) {
             Welcome(
                 Modifier.weight(1f),
@@ -163,7 +197,7 @@ fun SessionView(
                     when (val msg = visible[index]) {
                         is Message.User -> session?.let { UserBubble(msg, it, chatStore) { m, r, e -> bubbleMenu = Triple(m, r, e) } }
                         is Message.Assistant -> session?.let {
-                            AssistantView(msg, it, chatStore, index == visible.size - 1, onOpenSettings)
+                            AssistantView(msg, it, chatStore, index == visible.size - 1, onOpenSettings, foldThinking)
                         }
                     }
                 }
@@ -669,7 +703,14 @@ fun WaitingDots() {
 }
 
 @Composable
-fun AssistantView(msg: Message.Assistant, session: Session, chatStore: ChatStore, isLast: Boolean = false, onOpenSettings: () -> Unit = {}) {
+fun AssistantView(
+    msg: Message.Assistant,
+    session: Session,
+    chatStore: ChatStore,
+    isLast: Boolean = false,
+    onOpenSettings: () -> Unit = {},
+    foldThinking: Boolean = true,
+) {
     val c = DsTheme.colors
     val ctx = LocalContext.current
     val sessionId = session.id
@@ -680,7 +721,7 @@ fun AssistantView(msg: Message.Assistant, session: Session, chatStore: ChatStore
         var prevWasStep = false
         for (block in withCitationMarkers(msg.blocks, sources)) {
             when (block) {
-                is ReplyBlock.Thinking -> ThinkingBlock(block, msg).also { prevWasStep = true }
+                is ReplyBlock.Thinking -> ThinkingBlock(block, msg, foldThinking).also { prevWasStep = true }
                 is ReplyBlock.Text -> MarkdownBody(block.text,
                     Modifier.padding(top = if (prevWasStep) 5.dp else 0.dp),
                     streaming = msg.status == ReplyStatus.STREAMING)
@@ -842,14 +883,27 @@ internal fun thinkingDurationSeconds(
     return maxOf(1L, kotlin.math.round((end - start) / 1000.0).toLong())
 }
 
+internal fun shouldAutoReadOnDone(
+    wasStreaming: Boolean,
+    isLast: Boolean,
+    msg: Message.Assistant?,
+    autoRead: Boolean,
+): Boolean {
+    if (!wasStreaming || !isLast || !autoRead || msg == null) return false
+    if (msg.status != ReplyStatus.DONE || msg.stopReason != "end_turn") return false
+    return replyText(msg).isNotBlank()
+}
+
+internal fun defaultThinkingExpanded(foldThinking: Boolean, hasResponse: Boolean): Boolean =
+    !foldThinking || !hasResponse
+
 @Composable
-fun ThinkingBlock(block: ReplyBlock.Thinking, msg: Message.Assistant) {
+fun ThinkingBlock(block: ReplyBlock.Thinking, msg: Message.Assistant, foldThinking: Boolean = true) {
     val c = DsTheme.colors
     val hasResponse =
         msg.blocks.any { it is ReplyBlock.Text && it.text.isNotEmpty() }
-    var expanded by remember(msg.status, hasResponse) {
-      mutableStateOf(msg.status == ReplyStatus.STREAMING && !hasResponse)
-    }
+    var override by remember(msg.id) { mutableStateOf<Boolean?>(null) }
+    val expanded = override ?: defaultThinkingExpanded(foldThinking, hasResponse)
     val title = when {
         msg.status == ReplyStatus.STREAMING && !hasResponse -> Strings.get("messageThinking")
         msg.status == ReplyStatus.STOPPED && !hasResponse -> Strings.get("messageThinkStopped")
@@ -892,7 +946,7 @@ fun ThinkingBlock(block: ReplyBlock.Thinking, msg: Message.Assistant) {
         TextStyle(color = titleColor, fontSize = 14.sp)
     }
     Column {
-        Row(Modifier.fillMaxWidth().height(32.dp).clickable { expanded = !expanded },
+        Row(Modifier.fillMaxWidth().height(32.dp).clickable { override = !expanded },
             verticalAlignment = Alignment.CenterVertically) {
             Text(title, style = titleStyle)
             Spacer(Modifier.width(4.dp))

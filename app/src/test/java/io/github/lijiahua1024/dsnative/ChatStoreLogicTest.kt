@@ -12,7 +12,9 @@ import io.github.lijiahua1024.dsnative.data.orphanAttachmentPaths
 import io.github.lijiahua1024.dsnative.data.replyText
 import io.github.lijiahua1024.dsnative.data.toAssistantMessageParam
 import io.github.lijiahua1024.dsnative.data.visibleMessages
+import io.github.lijiahua1024.dsnative.ui.session.defaultThinkingExpanded
 import io.github.lijiahua1024.dsnative.ui.session.replyGrowthKey
+import io.github.lijiahua1024.dsnative.ui.session.shouldAutoReadOnDone
 import io.github.lijiahua1024.dsnative.ui.session.thinkingDurationSeconds
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
@@ -238,5 +240,30 @@ class OrphanAttachmentPathsTest {
             remainingDrafts = emptyList(),
         )
         assertEquals(setOf("/app/files/attaches/a.png", "/app/files/attaches/d.png"), orphans)
+    }
+}
+
+class AutoReadAndFoldThinkingTest {
+
+    @Test
+    fun triggersAutoReadOnlyOnEndTurnDoneWithTextAfterStreaming() {
+        val doneMsg = Message.Assistant(
+            id = "a1", createdAt = 0, status = ReplyStatus.DONE, stopReason = "end_turn",
+            blocks = listOf(ReplyBlock.Text("hello")),
+        )
+        assertTrue(shouldAutoReadOnDone(wasStreaming = true, isLast = true, msg = doneMsg, autoRead = true))
+        assertTrue(!shouldAutoReadOnDone(wasStreaming = false, isLast = true, msg = doneMsg, autoRead = true))
+        assertTrue(!shouldAutoReadOnDone(wasStreaming = true, isLast = true, msg = doneMsg, autoRead = false))
+        assertTrue(!shouldAutoReadOnDone(wasStreaming = true, isLast = false, msg = doneMsg, autoRead = true))
+        assertTrue(!shouldAutoReadOnDone(wasStreaming = true, isLast = true, msg = doneMsg.copy(stopReason = "refusal"), autoRead = true))
+        assertTrue(!shouldAutoReadOnDone(wasStreaming = true, isLast = true, msg = doneMsg.copy(blocks = emptyList()), autoRead = true))
+    }
+
+    @Test
+    fun thinkingRespectsFoldSettingAfterResponseArrives() {
+        assertTrue(defaultThinkingExpanded(foldThinking = true, hasResponse = false))
+        assertTrue(!defaultThinkingExpanded(foldThinking = true, hasResponse = true))
+        assertTrue(defaultThinkingExpanded(foldThinking = false, hasResponse = false))
+        assertTrue(defaultThinkingExpanded(foldThinking = false, hasResponse = true))
     }
 }
