@@ -194,9 +194,9 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
             .alpha(if (voiceStatus != VoiceInput.Status.IDLE) 0f else 1f)
             .softShadow(
                 cornerRadius = 24.dp,
-                blurRadius = 16.dp,
-                offsetY = 2.dp,
-                color = if (c.dark) Color.Transparent else Color.Black.copy(alpha = 0.085f),
+                blurRadius = 14.dp,
+                offsetY = 5.dp,
+                color = if (c.dark) Color.Transparent else Color.Black.copy(alpha = 0.08f),
             )
             .clip(cardShape)
             .background(c.inputMajor)
@@ -249,8 +249,8 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
         } else {
         Box(
             Modifier.fillMaxWidth()
-                .defaultMinSize(minHeight = 62.dp)
-                .padding(start = 17.dp, end = 17.dp, top = 16.dp, bottom = 12.dp)
+                .defaultMinSize(minHeight = 58.dp)
+                .padding(start = 17.dp, end = 17.dp, top = 14.dp, bottom = 10.dp)
         ) {
             BasicTextField(
                 value = text,

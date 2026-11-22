@@ -328,12 +328,12 @@ fun SessionView(
 fun Welcome(modifier: Modifier = Modifier, coldStart: Boolean = false, identity: Any? = null) {
     val c = DsTheme.colors
     val greeting = remember(coldStart, identity) { Strings.welcomeGreeting(coldStart) }
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.Center,
+    Column(modifier = modifier.fillMaxWidth().offset(y = (-6).dp), verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(painterResource(R.drawable.whale), null, tint = c.brandPrimary,
             modifier = Modifier.size(42.dp))
         Spacer(Modifier.height(14.dp))
-        Text(greeting, fontSize = 22.sp, lineHeight = 29.sp, fontWeight = FontWeight.SemiBold,
+        Text(greeting, fontSize = 21.sp, lineHeight = 28.sp, fontWeight = FontWeight.Medium,
             color = c.labelPrimary)
     }
 }
