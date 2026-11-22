@@ -312,6 +312,8 @@ object Strings {
             "mermaidLoading" -> pick("图表生成中...", "Rendering diagram...")
             "mermaidRenderFail" -> pick("渲染失败", "Mermaid rendering failed.")
             "mermaidSwitchLabel" -> pick("Mermaid 图表与代码切换", "Toggle between Mermaid diagram and code")
+            "mermaidSave" -> pick("保存", "Save")
+            "mermaidFullscreen" -> pick("全屏", "Full screen")
             "toolSearchIntro" -> pick("搜索", "Searching for")
             "imageSearching" -> pick("图像搜索中...", "Searching by image...")
             "searchStopped" -> pick("搜索已停止", "Search stopped")

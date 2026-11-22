@@ -145,18 +145,24 @@ private fun layoutAstNode(
     color: Color,
     measurer: TextMeasurer,
     density: Density,
+    displayMode: Boolean = false,
 ): MathBox {
     val pxPerSp = with(density) { 1.sp.toPx() }
     val ruleStroke = max(1f, 0.065f * fontSizeSp * pxPerSp)
 
     return when (node) {
-        is LatexNode.Text -> measureTextBox(node.text, node.style, fontSizeSp, color, measurer)
+        is LatexNode.Text -> {
+            val isBigOp = displayMode && node.style == MathTextStyle.OPERATOR &&
+                node.text in setOf("∑", "∏", "∐", "∫", "∬", "∭", "∮", "⋃", "⋂")
+            val sz = if (isBigOp) fontSizeSp * 1.32f else fontSizeSp
+            measureTextBox(node.text, node.style, sz, color, measurer)
+        }
         is LatexNode.Space -> {
             val w = max(0f, node.em * fontSizeSp * pxPerSp)
             MathBox(w, fontSizeSp * 0.4f * pxPerSp, fontSizeSp * 0.2f * pxPerSp) { _, _, _ -> }
         }
         is LatexNode.Seq -> {
-            val boxes = node.children.map { layoutAstNode(it, fontSizeSp, color, measurer, density) }
+            val boxes = node.children.map { layoutAstNode(it, fontSizeSp, color, measurer, density, displayMode) }
             if (boxes.isEmpty()) {
                 MathBox(0f, 0.4f * fontSizeSp * pxPerSp, 0.2f * fontSizeSp * pxPerSp) { _, _, _ -> }
             } else {
@@ -173,11 +179,12 @@ private fun layoutAstNode(
             }
         }
         is LatexNode.Frac -> {
-            val subSize = max(10f, fontSizeSp * 0.74f)
-            val num = layoutAstNode(node.num, subSize, color, measurer, density)
-            val den = layoutAstNode(node.den, subSize, color, measurer, density)
-            val padX = 2.2f * density.density
-            val gap = 1.6f * density.density
+            val subScale = if (displayMode) 0.84f else 0.74f
+            val subSize = max(10f, fontSizeSp * subScale)
+            val num = layoutAstNode(node.num, subSize, color, measurer, density, displayMode)
+            val den = layoutAstNode(node.den, subSize, color, measurer, density, displayMode)
+            val padX = (if (displayMode) 3.0f else 2.2f) * density.density
+            val gap = (if (displayMode) 2.5f else 1.6f) * density.density
             val contentW = max(num.width, den.width) + padX * 2f
             val asc = num.height + gap + ruleStroke * 0.5f
             val desc = den.height + gap + ruleStroke * 0.5f
@@ -194,7 +201,7 @@ private fun layoutAstNode(
             }
         }
         is LatexNode.Root -> {
-            val body = layoutAstNode(node.body, fontSizeSp, color, measurer, density)
+            val body = layoutAstNode(node.body, fontSizeSp, color, measurer, density, displayMode)
             val idxSize = max(8.5f, fontSizeSp * 0.58f)
             val idxBox = node.index?.let { layoutAstNode(it, idxSize, color, measurer, density) }
             val topPad = 2.6f * density.density
@@ -227,7 +234,7 @@ private fun layoutAstNode(
             }
         }
         is LatexNode.Script -> {
-            val base = layoutAstNode(node.base, fontSizeSp, color, measurer, density)
+            val base = layoutAstNode(node.base, fontSizeSp, color, measurer, density, displayMode)
             val scriptSize = max(9.5f, fontSizeSp * 0.68f)
             val subBox = node.sub?.let { layoutAstNode(it, scriptSize, color, measurer, density) }
             val supBox = node.sup?.let { layoutAstNode(it, scriptSize, color, measurer, density) }
@@ -262,7 +269,7 @@ private fun layoutAstNode(
             }
         }
         is LatexNode.Accent -> {
-            val body = layoutAstNode(node.body, fontSizeSp, color, measurer, density)
+            val body = layoutAstNode(node.body, fontSizeSp, color, measurer, density, displayMode)
             val gap = 1.6f * density.density
             val accentH = when (node.kind) {
                 MathAccentKind.BAR, MathAccentKind.OVERLINE, MathAccentKind.UNDERLINE -> 2.0f * density.density
@@ -326,8 +333,8 @@ private fun layoutAstNode(
             }
         }
         is LatexNode.Delimited -> {
-            val body = layoutAstNode(node.body, fontSizeSp, color, measurer, density)
-            val delimW = if (node.left.isEmpty() && node.right.isEmpty()) 0f else 5.5f * density.density
+            val body = layoutAstNode(node.body, fontSizeSp, color, measurer, density, displayMode)
+            val delimW = if (node.left.isEmpty() && node.right.isEmpty()) 0f else (if (displayMode) 6.5f else 5.5f) * density.density
             val lw = if (node.left.isEmpty()) 0f else delimW
             val rw = if (node.right.isEmpty()) 0f else delimW
             val pad = 1.5f * density.density
@@ -354,8 +361,8 @@ private fun layoutAstNode(
             val rowDescents = FloatArray(measuredRows.size) { r ->
                 measuredRows[r].maxOfOrNull { it.descent } ?: (cellSize * 0.2f * pxPerSp)
             }
-            val colGap = 6.5f * density.density
-            val rowGap = 3.5f * density.density
+            val colGap = (if (displayMode) 9f else 6.5f) * density.density
+            val rowGap = (if (displayMode) 6f else 3.5f) * density.density
             val bodyW = colWidths.sum() + max(0, cols - 1) * colGap
             val bodyH = (rowAscents.indices.sumOf { (rowAscents[it] + rowDescents[it]).toDouble() }.toFloat()) +
                 max(0, measuredRows.size - 1) * rowGap
@@ -394,7 +401,7 @@ private fun layoutAstNode(
         is LatexNode.Colored -> {
             val fg = parseColorOrNull(node.color) ?: color
             val bg = parseColorOrNull(node.bgColor)
-            val body = layoutAstNode(node.body, fontSizeSp, fg, measurer, density)
+            val body = layoutAstNode(node.body, fontSizeSp, fg, measurer, density, displayMode)
             if (bg == null) body else {
                 val pad = 2f * density.density
                 MathBox(body.width + pad * 2, body.ascent + pad, body.descent + pad) { x, axisY, out ->
@@ -404,7 +411,7 @@ private fun layoutAstNode(
             }
         }
         is LatexNode.StackRel -> {
-            val base = layoutAstNode(node.base, fontSizeSp, color, measurer, density)
+            val base = layoutAstNode(node.base, fontSizeSp, color, measurer, density, displayMode)
             val subSize = max(9f, fontSizeSp * 0.65f)
             val topBox = node.top?.let { layoutAstNode(it, subSize, color, measurer, density) }
             val botBox = node.bottom?.let { layoutAstNode(it, subSize, color, measurer, density) }
@@ -427,15 +434,25 @@ internal fun measureInlineLatexFormula(
     color: Color,
     measurer: TextMeasurer,
     density: Density,
+    displayMode: Boolean = false,
 ): MeasuredLatexFormula {
     val ast = parseLatexInlineAst(tex)
-    val box = layoutAstNode(ast, fontSizeSp, color, measurer, density)
-    val padX = 2f * density.density
-    val halfSpan = max(box.ascent, box.descent) + density.density
+    val box = layoutAstNode(ast, fontSizeSp, color, measurer, density, displayMode)
+    val padX = (if (displayMode) 4f else 2f) * density.density
+    val padY = (if (displayMode) 3f else 1f) * density.density
     val wPx = max(1f, box.width + padX * 2f)
-    val hPx = max(1f, halfSpan * 2f)
+    val hPx: Float
+    val axisY: Float
+    if (displayMode) {
+        hPx = max(1f, box.height + padY * 2f)
+        axisY = padY + box.ascent
+    } else {
+        val halfSpan = max(box.ascent, box.descent) + padY
+        hPx = max(1f, halfSpan * 2f)
+        axisY = halfSpan
+    }
     val cmds = mutableListOf<DrawCmd>()
-    box.draw(padX, halfSpan, cmds)
+    box.draw(padX, axisY, cmds)
     return with(density) {
         MeasuredLatexFormula(
             widthPx = wPx,
