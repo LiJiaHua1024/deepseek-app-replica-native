@@ -78,7 +78,7 @@ fun SessionView(
     val rootCtx = LocalContext.current
 
     // 状态栏深灰带由 DrawerFrame 在 layer 之上统一绘制（ref 的状态栏是窗口级底色）
-    Column(Modifier.fillMaxSize().background(c.bgBase)) {
+    Column(Modifier.fillMaxSize().background(c.bgBase).statusBarsPadding()) {
     // ref anchors the disclaimer to the bottom overlapping the composer's
     // bottom margin zone; the composer card bottom sits --android-composer-bottom
     // (27css px) above the screen bottom, so the disclaimer must overlay rather
@@ -86,52 +86,51 @@ fun SessionView(
     Box(Modifier.weight(1f).fillMaxWidth()) {
     CompositionLocalProvider(LocalOpenSources provides { sourcesPanel = it }) {
     Column(Modifier.fillMaxSize()) {
-        // header: h52, padding 0 2 0 4
-        Row(Modifier.fillMaxWidth().height(52.dp).padding(start = 2.1.dp),
+        // Official top bar: 52dp below status bar, 48dp buttons with 24dp icons.
+        Row(Modifier.fillMaxWidth().height(52.dp).padding(start = 2.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(44.8.dp).clickable(
+                Modifier.size(48.dp).clickable(
                     interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                     indication = null,
                     onClick = onOpenDrawer,
                 ),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(painterResource(R.drawable.ic_menu), Strings.get("expandSiderbarButton"), tint = c.labelPrimary, modifier = Modifier.size(22.4.dp))
+                Icon(painterResource(R.drawable.ic_menu), Strings.get("expandSiderbarButton"), tint = c.labelPrimary, modifier = Modifier.size(24.dp))
             }
             val headerTitle = session?.title?.ifEmpty { Strings.get("untitledChat") } ?: ""
-            Text(headerTitle, fontSize = 14.sp, lineHeight = 22.sp,
+            Text(headerTitle, fontSize = 17.sp, lineHeight = 22.sp,
                 fontWeight = FontWeight.Medium, color = c.labelPrimary,
-                maxLines = 1, modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+                maxLines = 1, modifier = Modifier.weight(1f).padding(start = 10.dp, end = 8.dp),
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             val autoRead by settings.autoRead.collectAsState()
-            val ctx = LocalContext.current
-            IconButton(onClick = {
-                settings.setAutoRead(!autoRead)
-                DsToast.show(Strings.get(if (autoRead) "androidAutoReadDisabled" else "androidAutoReadEnabled"))
-            }, modifier = Modifier.size(48.dp).offset(x = 2.1.dp).toggleable(
-                value = autoRead,
-                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                indication = null,
-                role = androidx.compose.ui.semantics.Role.Checkbox,
+            Box(
+                Modifier.size(48.dp).toggleable(
+                    value = autoRead,
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null,
+                    role = androidx.compose.ui.semantics.Role.Checkbox,
+                ) {
+                    settings.setAutoRead(!autoRead)
+                    DsToast.show(Strings.get(if (autoRead) "androidAutoReadDisabled" else "androidAutoReadEnabled"))
+                },
+                contentAlignment = Alignment.Center,
             ) {
-                settings.setAutoRead(!autoRead)
-                DsToast.show(Strings.get(if (autoRead) "androidAutoReadDisabled" else "androidAutoReadEnabled"))
-            }) {
                 Icon(
                     painterResource(if (autoRead) R.drawable.ic_sound else R.drawable.ic_sound_muted),
-                    null, tint = c.labelPrimary, modifier = Modifier.size(22.4.dp))
+                    Strings.get("autoRead"), tint = c.labelPrimary, modifier = Modifier.size(24.dp))
             }
-            Spacer(Modifier.width(5.6.dp))
+            Spacer(Modifier.width(4.dp))
             Box(
-                Modifier.size(44.8.dp).clickable(
+                Modifier.size(48.dp).clickable(
                     interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                     indication = null,
                     onClick = { chatStore.newChat() },
                 ),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(painterResource(R.drawable.ic_new_chat), Strings.get("newChat"), tint = c.labelPrimary, modifier = Modifier.size(22.4.dp))
+                Icon(painterResource(R.drawable.ic_new_chat), Strings.get("newChat"), tint = c.labelPrimary, modifier = Modifier.size(24.dp))
             }
         }
 
@@ -216,6 +215,9 @@ fun SessionView(
     sourcesPanel?.let { SearchSourcesPanel(it, numbered = true) { sourcesPanel = null } }
     val voiceStatus by VoiceInput.status.collectAsState()
     val voiceCanceling by VoiceInput.canceling.collectAsState()
+    io.github.lijiahua1024.dsnative.ui.DrawerGestureBlocker(
+        sourcesPanel != null || bubbleMenu != null || voiceStatus != VoiceInput.Status.IDLE
+    )
     if (voiceStatus != VoiceInput.Status.IDLE) {
         VoiceOverlay(canceling = voiceCanceling) { VoiceInput.level() }
     }
@@ -229,16 +231,14 @@ fun SessionView(
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 31.dp),
+                    .padding(bottom = 10.dp),
             )
         }
     }
     bubbleMenu?.let { (bmsg, rect, onEdit) ->
         val density = androidx.compose.ui.platform.LocalDensity.current
         var overlayPos by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
-        val winW = with(density) {
-            androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp.toPx()
-        }
+        val winW = androidx.compose.ui.platform.LocalView.current.width.toFloat()
         val endPad = with(density) { (winW - rect.right - 22f).coerceAtLeast(0f).toDp() }
         val topPad = with(density) { (rect.top - overlayPos.y + 97f).coerceAtLeast(0f).toDp() }
         Box(Modifier.fillMaxSize()
@@ -276,13 +276,12 @@ fun SessionView(
 fun Welcome(modifier: Modifier = Modifier, coldStart: Boolean = false, identity: Any? = null) {
     val c = DsTheme.colors
     val greeting = remember(coldStart, identity) { Strings.welcomeGreeting(coldStart) }
-    // ref .greeting: margin auto 0 + translateY(-2.7px)
-    Column(modifier.fillMaxSize().offset(y = (-2.7).dp), verticalArrangement = Arrangement.Center,
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(painterResource(R.drawable.whale), null, tint = c.brandPrimary,
             modifier = Modifier.size(42.dp))
-        Spacer(Modifier.height(15.dp))
-        Text(greeting, fontSize = 20.sp, lineHeight = 28.sp, fontWeight = FontWeight.Medium,
+        Spacer(Modifier.height(14.dp))
+        Text(greeting, fontSize = 22.sp, lineHeight = 29.sp, fontWeight = FontWeight.SemiBold,
             color = c.labelPrimary)
     }
 }

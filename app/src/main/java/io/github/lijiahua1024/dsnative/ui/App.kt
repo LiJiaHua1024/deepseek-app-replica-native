@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -43,6 +44,9 @@ import io.github.lijiahua1024.dsnative.data.ChatStore
 import io.github.lijiahua1024.dsnative.data.SettingsStore
 import io.github.lijiahua1024.dsnative.theme.DsTheme
 import io.github.lijiahua1024.dsnative.theme.Strings
+import io.github.lijiahua1024.dsnative.theme.softShadow
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import kotlinx.coroutines.launch
 import io.github.lijiahua1024.dsnative.ui.sider.Sider
 import io.github.lijiahua1024.dsnative.ui.session.SessionView
@@ -83,18 +87,19 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
     }
 
     DsTheme(colors) {
-        val density = LocalDensity.current
-        val contentFontScale = fontSizeSetting?.let { 1f + (it - 2) * 0.1f }
-        val contentDensity = if (contentFontScale == null) density else Density(
-            density.density,
-            fontScale = contentFontScale,
-        )
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+        val baseDensity = LocalDensity.current
+        val designDensity = if (constraints.maxWidth > 0 && constraints.maxHeight > 0) {
+            min(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat()) / 360f
+        } else baseDensity.density
+        val contentFontScale = fontSizeSetting?.let { 1f + (it - 2) * 0.1f } ?: baseDensity.fontScale
+        val contentDensity = Density(designDensity, fontScale = contentFontScale)
         androidx.compose.runtime.CompositionLocalProvider(LocalDensity provides contentDensity) {
         // ref base/Modal .overlay has backdrop-filter: blur(2px), but
         // RenderEffect is a no-op on this emulator's GPU path, so the
         // backdrop relies on the dim overlay only (see decisions.md).
         if (apiKey == null) {
-            Box(Modifier.fillMaxSize().background(DsTheme.colors.bgBase)) {
+            Box(Modifier.fillMaxSize().background(DsTheme.colors.bgBase).statusBarsPadding()) {
                 ApiKeyScreen(settings)
             }
             return@CompositionLocalProvider
@@ -106,31 +111,64 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
         LaunchedEffect(newChatRequests) { coldStartWelcome = newChatRequests == 0 }
         val freePan = nav == NavState.Chat &&
             (sessionCache[activeId]?.let { io.github.lijiahua1024.dsnative.data.visibleMessages(it).isNotEmpty() } != true)
-        DrawerFrame(
-            nav = nav,
-            dark = dark,
-            freePan = freePan,
-            closeImmediately = true,
-            onNavigate = { nav = it },
-            siderContent = { close ->
-                Sider(settings, chatStore,
-                    onNavigateSettings = { nav = NavState.Settings; close() },
-                    onClose = close)
-            },
-        ) { open ->
-            when (nav) {
-                is NavState.Settings -> Box(Modifier.fillMaxSize().background(DsTheme.colors.bgBase)) {
-                    AndroidSettings(settings, chatStore) { nav = NavState.Chat }
+        Box(Modifier.fillMaxSize()) {
+            var showSettings by remember { mutableStateOf(false) }
+            val settingsProg = remember { androidx.compose.animation.core.Animatable(0f) }
+            var settingsDragBack by remember { mutableStateOf(0f) }
+            val settingsMounted = nav == NavState.Settings || settingsProg.value > 0.001f || showSettings
+            val settingsScope = rememberCoroutineScope()
+            LaunchedEffect(nav) {
+                if (nav == NavState.Settings) {
+                    showSettings = true
+                    settingsDragBack = 0f
+                    settingsProg.animateTo(1f, androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.LinearEasing))
+                } else if (showSettings) {
+                    settingsProg.animateTo(0f, androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.LinearEasing))
+                    showSettings = false
+                    settingsDragBack = 0f
                 }
-                else -> SessionView(
-                    settings,
-                    chatStore,
-                    onOpenDrawer = open,
-                    onOpenSettings = { nav = NavState.Settings },
-                    coldStartWelcome = coldStartWelcome,
-                    greetingIdentity = newChatRequests,
+            }
+            val effectiveSettingsT = (settingsProg.value * (1f - settingsDragBack)).coerceIn(0f, 1f)
+            val parentShiftDp = run {
+                val outEase = androidx.compose.animation.core.CubicBezierEasing(0.415f, 0f, 0.63f, 0.225f)
+                val p = (effectiveSettingsT / 0.35f).coerceIn(0f, 1f)
+                -40f * outEase.transform(p)
+            }
+            Box(Modifier.fillMaxSize().graphicsLayer {
+                if (settingsMounted) translationX = with(contentDensity) { parentShiftDp.dp.toPx() }
+            }) {
+                DrawerFrame(
+                    nav = nav,
+                    dark = dark,
+                    freePan = freePan,
+                    closeImmediately = false,
+                    onNavigate = { nav = it },
+                    siderContent = { close ->
+                        Sider(settings, chatStore,
+                            onNavigateSettings = { nav = NavState.Settings; close() },
+                            onClose = close)
+                    },
+                ) { open ->
+                    SessionView(
+                        settings,
+                        chatStore,
+                        onOpenDrawer = open,
+                        onOpenSettings = { nav = NavState.Settings },
+                        coldStartWelcome = coldStartWelcome,
+                        greetingIdentity = newChatRequests,
+                    )
+                }
+            }
+            if (settingsMounted) {
+                AndroidSettings(
+                    settings = settings,
+                    chatStore = chatStore,
+                    transitionProgress = effectiveSettingsT,
+                    onRootBackProgress = { settingsDragBack = it },
+                    onBack = { nav = NavState.Chat },
                 )
             }
+        }
         }
         }
     }
@@ -149,11 +187,11 @@ fun DrawerFrame(
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val density = LocalDensity.current
         val widthPx = constraints.maxWidth.toFloat()
-        val edgePx = with(density) { min(widthPx - 68.4.dp.toPx(), 380.dp.toPx()) }
+        val drawerWidthPx = with(density) { min(widthPx * 0.80f, 360.dp.toPx()) }
+        val edgePx = with(density) { min(drawerWidthPx + 9.dp.toPx(), widthPx - 63.dp.toPx()) }
         var progress by remember { mutableStateOf(0f) }
         var settling by remember { mutableStateOf(false) }
-        // ref --drawer-transition: 150ms cubic-bezier(0.18,0.23,0.32,1) on
-        // transform+opacity — release/settle animates, drag tracks directly.
+        // Official drawer settle timing ~160ms ease-out.
         val settleScope = rememberCoroutineScope()
         val settleEasing = androidx.compose.animation.core.CubicBezierEasing(0.18f, 0.23f, 0.32f, 1f)
         var settleJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
@@ -166,14 +204,13 @@ fun DrawerFrame(
             settleJob = settleScope.launch {
                 androidx.compose.animation.core.animate(
                     initialValue = start, targetValue = t,
-                    animationSpec = androidx.compose.animation.core.tween(150, easing = settleEasing),
+                    animationSpec = androidx.compose.animation.core.tween(160, easing = settleEasing),
                 ) { v, _ -> progress = v }
             }
         }
 
-        // 返回手势关闭打开的抽屉（ref: sider open -> closeMobileSider）。
-        // PredictiveBackHandler：手势进度直接驱动抽屉位移，取消则弹回。
-        androidx.activity.compose.PredictiveBackHandler(enabled = progress >= 0.999f) { flow ->
+        // Back gesture closes an open drawer only while on Chat nav.
+        androidx.activity.compose.PredictiveBackHandler(enabled = nav == NavState.Chat && progress >= 0.999f) { flow ->
             try {
                 flow.collect { ev -> progress = (1f - ev.progress).coerceIn(0f, 1f) }
                 settleTo(0f)
@@ -185,12 +222,6 @@ fun DrawerFrame(
 
         LaunchedEffect(progress) { /* progress is the single source of truth */ }
 
-        // Literal port of useAndroidDrawerGesture.ts at window level, on raw
-        // MotionEvents delivered through Activity.dispatchTouchEvent — the same
-        // stream Chromium turns into pointer events. Compose's coalesced
-        // historical[].uptimeMillis collapses to batch eventTime, but
-        // MotionEvent.getHistoricalEventTime keeps the true injection times
-        // that decide the 60ms velocity window and 56ms fling-pause check.
         class Gesture {
             var downX = 0f; var downY = 0f
             var startedOpen = false
@@ -203,7 +234,7 @@ fun DrawerFrame(
             DrawerGestureBus.progressProbe = { progress }
             onDispose { DrawerGestureBus.progressProbe = null }
         }
-        DisposableEffect(edgePx, freePan) {
+        DisposableEffect(edgePx, freePan, nav) {
             val slopPx = 8f * density.density
             var g: Gesture? = null
             fun record(g: Gesture, x: Float, t: Long) {
@@ -217,33 +248,35 @@ fun DrawerFrame(
                 val horizontal = abs(dx)
                 if (g.start < 0f) {
                     val dy = abs(y - g.downY)
-                    // ref canScrollVertically is per-target: free-pan only on
-                    // the welcome container. A gesture that starts with the
-                    // drawer already open always lands on the mask or the
-                    // sider — never on a free-pan target.
                     val canScrollVertically = !freePan || g.startedOpen
                     if (canScrollVertically && dy >= slopPx && dy > horizontal) {
-                        // ref: gesture.current = null — up does nothing.
                         g.cancelled = true
                         return
                     }
                     if (horizontal <= slopPx || (canScrollVertically && horizontal < dy)) return
                     settleJob?.cancel()
-                    g.start = progress // take over live position
+                    g.start = progress
                     if ((g.start <= 0.001f && dx < 0) || (g.start >= 0.999f && dx > 0)) {
                         g.start = -1f
                         return
                     }
                 }
                 val distance = kotlin.math.sign(dx) * max(0f, horizontal - slopPx)
-                g.current = (g.start + (1.031f * distance) / edgePx).coerceIn(0f, 1f)
+                g.current = (g.start + (1.075f * distance) / edgePx).coerceIn(0f, 1f)
                 progress = g.current
                 DrawerGestureBus.trace.add(Triple(t, x, g.current))
             }
             DrawerGestureBus.handler = handler@{ ev ->
+                if (nav != NavState.Chat || DrawerGestureBus.isBlocked()) {
+                    val active = g
+                    if (active != null && active.start >= 0f) settleTo(if (active.startedOpen) 1f else 0f)
+                    g = null
+                    return@handler
+                }
                 var cur = g
                 if (cur == null) {
                     if (ev.actionMasked == android.view.MotionEvent.ACTION_DOWN) {
+                        if (DrawerGestureBus.inExcludedZone(ev.x, ev.y)) return@handler
                         cur = Gesture()
                         g = cur
                         DrawerGestureBus.trace.clear()
@@ -252,7 +285,6 @@ fun DrawerFrame(
                         cur.samples.add(ev.x to ev.eventTime)
                     } else return@handler
                 }
-                if (cur == null) return@handler
                 when (ev.actionMasked) {
                     android.view.MotionEvent.ACTION_MOVE,
                     android.view.MotionEvent.ACTION_UP -> {
@@ -263,14 +295,12 @@ fun DrawerFrame(
                         if (!cur.cancelled) evalMove(cur, ev.x, ev.y, ev.eventTime)
                         if (ev.actionMasked == android.view.MotionEvent.ACTION_UP) {
                             if (cur.start >= 0f) {
-                                // ref: releaseVelocity uses the UP event's own timeStamp
                                 val now = ev.eventTime
                                 val first = cur.samples.first()
                                 val last = cur.samples.last()
                                 val velocity = if (first != last && now - last.second < 56)
                                     (last.first - first.first) / (last.second - first.second) else 0f
-                                // ref 0.33 css px/ms → device px = 0.33 * density
-                                val flick = abs(velocity) >= 0.33f * density.density
+                                val flick = abs(velocity) >= 0.28f * density.density
                                 val open = if (cur.cancelled) cur.startedOpen else if (flick) velocity > 0 else cur.current >= 0.5f
                                 settleTo(if (open) 1f else 0f)
                             }
@@ -278,7 +308,6 @@ fun DrawerFrame(
                         }
                     }
                     android.view.MotionEvent.ACTION_CANCEL -> {
-                        // ref pointercancel/lostpointercapture → settle(cancelled)
                         if (cur.start >= 0f) settleTo(if (cur.startedOpen) 1f else 0f)
                         g = null
                     }
@@ -288,15 +317,15 @@ fun DrawerFrame(
         }
 
         Box(Modifier.fillMaxSize()) {
-            // ref .frame: bg-base paints the FULL frame — the strip exposed above
-            // the shifted main layer (and around its rounded corner) must stay bgBase,
-            // not the dark window decor behind the composition.
             Box(
                 Modifier
                     .fillMaxSize()
                     .background(DsTheme.colors.bgBase)
             ) {
-                Box(Modifier.width(with(density) { edgePx.toDp() }).fillMaxSize()) {
+                Box(
+                    Modifier.width(with(density) { drawerWidthPx.toDp() }).fillMaxSize()
+                        .graphicsLayer { translationX = -drawerWidthPx * (1f - progress) }
+                ) {
                     siderContent {
                         if (closeImmediately) {
                             settleJob?.cancel()
@@ -305,49 +334,33 @@ fun DrawerFrame(
                             settleTo(0f)
                         }
                     }
-                    // ref .frame::after — 缩放后的 main 层把 box-shadow(-7px 3px 33px
-                    // rgb(0 0 0/.12)) 投到抽屉右缘，抽屉上呈现约 90px 的内侧渐变。
-                    if (progress > 0f) {
-                        Box(
-                            Modifier.align(Alignment.CenterEnd)
-                                .width(30.dp).fillMaxSize()
-                                .graphicsLayer { alpha = progress }
-                                .background(
-                                    androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.09f))))
-                        )
-                    }
                 }
             }
-            // ref .drawerMask exists only while the drawer is open/moving; at
-            // progress=0 a 0.207 black veil here would darken the visible
-            // status band (93 vs ref 117) and every scene's top area.
-            val statusTopPx = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
             if (progress > 0f && progress < 1f) {
-                Box(Modifier.fillMaxSize().padding(top = statusTopPx)
-                    .graphicsLayer { alpha = 0.207f * (1f - progress) }.background(Color.Black))
+                Box(Modifier.fillMaxSize()
+                    .graphicsLayer { alpha = 0.21f * (1f - progress) }.background(Color.Black))
             }
-            // Main content layer
-            // ref radius is 36px pre-scale; clip applies post-scale → use 34dp (~93.5px ≈ 36*0.9496*2.75)
-            val radiusDp = (min(1f, progress * 6f) * 34f)
-            // ref frame 从状态栏下方开始：layer 自身就是 128..2340 的盒子，
-            // scale 绕 left-center 收缩后顶边落在 ~184px，与 ref 一致
-            Box(Modifier.fillMaxSize().padding(top = statusTopPx)) {
+            // Main content layer (full-height card; inner screens apply statusBarsPadding() so scaled top reaches ~55px under status bar).
+            val radiusDp = (min(1f, progress * 6f) * 32f)
+            Box(Modifier.fillMaxSize()) {
             Box(
                 Modifier
                     .fillMaxSize()
                     .offset { IntOffset((edgePx * progress).roundToInt(), 0) }
                     .graphicsLayer {
-                        val s = 1f - 0.0504f * progress
+                        val s = 1f - 0.051f * progress
                         scaleX = s; scaleY = s
                         transformOrigin = TransformOrigin(0f, 0.5f)
-                        shadowElevation = if (progress > 0f) with(density) { 8.dp.toPx() } else 0f
-                        clip = progress > 0f
-                        shape = if (progress > 0f)
-                            androidx.compose.foundation.shape.RoundedCornerShape(radiusDp.dp)
-                        else RectangleShape
                     }
-                    .clipToBounds()
+                    .then(
+                        if (progress > 0f && !dark) Modifier.softShadow(
+                            cornerRadius = radiusDp.dp,
+                            blurRadius = 20.dp,
+                            offsetX = (-5).dp,
+                            color = Color.Black.copy(alpha = 0.11f * progress),
+                        ) else Modifier
+                    )
+                    .clip(if (progress > 0f) androidx.compose.foundation.shape.RoundedCornerShape(radiusDp.dp) else RectangleShape)
                     .background(DsTheme.colors.bgBase)
             ) {
                 mainContent { settleTo(1f) }
@@ -397,10 +410,42 @@ object DrawerGestureBus {
     @Volatile var lastDownX = -1f
     @Volatile var progressProbe: (() -> Float)? = null
     val trace = java.util.concurrent.CopyOnWriteArrayList<Triple<Long, Float, Float>>()
+    private val blockers = java.util.Collections.synchronizedSet(mutableSetOf<Any>())
+    private val excludeZones = java.util.concurrent.ConcurrentHashMap<Any, androidx.compose.ui.geometry.Rect>()
+
+    fun addBlocker(key: Any) { blockers.add(key) }
+    fun removeBlocker(key: Any) { blockers.remove(key) }
+    fun isBlocked(): Boolean = blockers.isNotEmpty()
+    fun setExcludeZone(key: Any, rect: androidx.compose.ui.geometry.Rect) { excludeZones[key] = rect }
+    fun removeExcludeZone(key: Any) { excludeZones.remove(key) }
+    fun inExcludedZone(x: Float, y: Float): Boolean =
+        excludeZones.values.any { x in it.left..it.right && y in it.top..it.bottom }
+
     fun dispatch(ev: android.view.MotionEvent) {
         if (ev.actionMasked == android.view.MotionEvent.ACTION_DOWN) {
             lastDownAt = ev.eventTime; lastDownX = ev.x
         }
         handler?.invoke(ev)
+    }
+}
+
+@Composable
+fun DrawerGestureBlocker(active: Boolean) {
+    val key = remember { Any() }
+    DisposableEffect(active) {
+        if (active) DrawerGestureBus.addBlocker(key) else DrawerGestureBus.removeBlocker(key)
+        onDispose { DrawerGestureBus.removeBlocker(key) }
+    }
+}
+
+@Composable
+fun Modifier.excludeFromDrawerGesture(): Modifier {
+    val key = remember { Any() }
+    DisposableEffect(Unit) {
+        onDispose { DrawerGestureBus.removeExcludeZone(key) }
+    }
+    return this.onGloballyPositioned { coords ->
+        if (coords.isAttached) DrawerGestureBus.setExcludeZone(key, coords.boundsInWindow())
+        else DrawerGestureBus.removeExcludeZone(key)
     }
 }

@@ -33,6 +33,7 @@ import io.github.lijiahua1024.dsnative.data.SettingsStore
 import io.github.lijiahua1024.dsnative.data.groupSessions
 import io.github.lijiahua1024.dsnative.theme.DsTheme
 import io.github.lijiahua1024.dsnative.theme.Strings
+import io.github.lijiahua1024.dsnative.ui.DrawerGestureBlocker
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -74,9 +75,8 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
         }
     }
 
-    // ref [data-android] .mobile: padding 12px 24px 16px 16px (CSS px == dp here)
-    // top pad: ref 12css+row 高相抵后 native 行整体低 ~4-5px → 10.3dp
-    Column(Modifier.fillMaxSize().statusBarsPadding().imePadding().padding(start = 16.dp, end = 24.dp, top = 10.3.dp, bottom = 16.dp)) {
+    DrawerGestureBlocker(menuFor != null || renameFor != null || deleteFor != null || pinning != null || deletingSel != null)
+    Column(Modifier.fillMaxSize().statusBarsPadding().imePadding().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 0.dp)) {
         if (selectionMode) {
             // .selectionHeader h48: label left + close IconButton right
             Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -126,11 +126,9 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
             }.filter { it.second.isNotEmpty() }
             filtered.forEachIndexed { gi, (label, list) ->
                 item(key = "g-$label") {
-                    // .section margin-top 7 (first 0) + padding-top 4;
-                    // .sectionHeader padding 2px 10px, 12/18 w400 → box 22dp h
-                    Box(Modifier.padding(top = (4 + if (gi == 0) 0 else 7).dp, start = 7.dp, end = 7.dp).height(31.dp),
+                    Box(Modifier.padding(top = (if (gi == 0) 2 else 12).dp, start = 6.dp, end = 6.dp).height(26.dp),
                         contentAlignment = Alignment.CenterStart) {
-                        Text(label, fontSize = 12.sp, color = c.labelTertiary, fontWeight = FontWeight.Normal,
+                        Text(label, fontSize = 14.sp, color = c.labelTertiary, fontWeight = FontWeight.Normal,
                             style = androidx.compose.ui.text.TextStyle(
                                 platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)))
                     }
@@ -199,25 +197,19 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
                 }
             }
         } else {
-            // .bottom = height 64 + padding-top 8 (content-box) = 72dp; .settings padding 4px 0
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp).height(64.dp).clip(RoundedCornerShape(12.dp))
-                    .clickable(onClick = onNavigateSettings).padding(vertical = 4.dp),
+            Row(Modifier.fillMaxWidth().padding(top = 6.dp).navigationBarsPadding().height(56.dp).clip(RoundedCornerShape(12.dp))
+                    .clickable(onClick = onNavigateSettings).padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically) {
-                // .settingsIcon: 32 circle bg-skeleton, profile glyph #a2a5a8
-                Box(Modifier.size(32.dp).clip(androidx.compose.foundation.shape.CircleShape).background(c.bgSkeleton),
+                Box(Modifier.size(44.dp).clip(androidx.compose.foundation.shape.CircleShape).background(c.bgSkeleton),
                     contentAlignment = Alignment.Center) {
                     Icon(painterResource(R.drawable.ic_profile), null, tint = androidx.compose.ui.graphics.Color(0xFFA2A5A8),
-                        modifier = Modifier.size(24.dp))
+                        modifier = Modifier.size(32.dp))
                 }
-                Spacer(Modifier.width(10.dp))
-                // androidDrawer label is 'API Key' + trailing ellipsis icon
+                Spacer(Modifier.width(12.dp))
                 Text("API Key", fontSize = 16.sp, color = c.labelPrimary, modifier = Modifier.weight(1f))
-                Icon(painterResource(R.drawable.ic_ellipsis), null, tint = c.labelPrimary, modifier = Modifier.size(16.dp))
+                Icon(painterResource(R.drawable.ic_ellipsis), null, tint = c.labelTertiary, modifier = Modifier.size(16.dp))
             }
         }
-        // ref --android-button-nav-inset resolves to 0 on this device (gesture nav):
-        // drawer runs to screen bottom; ~11dp matches ref's measured settings-row position
-        Spacer(Modifier.height(11.dp))
     }
 
     // long-press dropdown menu
@@ -392,7 +384,7 @@ private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean,
     val pressSrc = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val pressed by pressSrc.collectIsPressedAsState()
     Row(
-        Modifier.fillMaxWidth().height(48.dp)
+        Modifier.fillMaxWidth().padding(bottom = 2.dp).height(50.dp)
             .clip(RoundedCornerShape(12.dp))
             // selection rows render as plain .select buttons — no active accent;
             // ref .item:active -> bg-skeleton
@@ -406,7 +398,7 @@ private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean,
                 }
             )
             .combinedClickable(pressSrc, null, onClick = onClick, onLongClick = onLongClick)
-            .padding(start = 7.dp, end = 4.dp),
+            .padding(start = 6.dp, end = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (selectionMode) {
@@ -465,9 +457,11 @@ private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean,
         // ref base/Menu: anchored at the item's (invisible) ellipsis — align start
         // -5px, offset +4 below; menu clamps to viewport with 8px padding, so its
         // right edge lands at vw-8 and it can overflow the drawer into the scrim.
-        val vw = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.toFloat()
-        val edge = kotlin.math.min(vw - 68.4f, 380f)
         val density = androidx.compose.ui.platform.LocalDensity.current
+        val vw = androidx.compose.ui.platform.LocalView.current.width.let {
+            if (it > 0) it / density.density else 360f
+        }
+        val edge = kotlin.math.min(vw - 68.4f, 380f)
         val offX = with(density) { (vw - 8f - (edge - 24f)).dp.roundToPx() }
         val offY = with(density) { 44.dp.roundToPx() } // item h48, icon btn bottom ≈ +40, +4 gap
         androidx.compose.ui.window.Popup(

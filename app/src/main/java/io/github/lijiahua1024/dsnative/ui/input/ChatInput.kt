@@ -36,6 +36,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -50,6 +51,7 @@ import io.github.lijiahua1024.dsnative.data.DraftAttachment
 import io.github.lijiahua1024.dsnative.data.SettingsStore
 import io.github.lijiahua1024.dsnative.theme.DsTheme
 import io.github.lijiahua1024.dsnative.theme.Strings
+import io.github.lijiahua1024.dsnative.theme.softShadow
 import kotlinx.coroutines.launch
 
 // Android composer per ChatInput.module.css [data-android] .wrapper: radius
@@ -167,31 +169,39 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
         }
     }
 
-    // ref --android-composer-bottom: 27px gesture nav, 11px with keyboard
-    val keyboardOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+    val density = LocalDensity.current
+    val keyboardOpen = WindowInsets.ime.getBottom(density) > 0
     var previousKeyboardOpen by remember { mutableStateOf(false) }
     LaunchedEffect(keyboardOpen) {
         if (previousKeyboardOpen && !keyboardOpen && focused) focusManager.clearFocus()
         previousKeyboardOpen = keyboardOpen
     }
-    Column(Modifier.fillMaxWidth().imePadding()
-        .padding(bottom = if (keyboardOpen) 27.7.dp else 50.1.dp)) {
+    val cardShape = RoundedCornerShape(24.dp)
+    val cardBorder = if (c.dark) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.055f)
     Column(
         Modifier.fillMaxWidth()
-            .padding(start = 12.dp, end = 12.dp)
-            // ref .recordingCard：录音中整个输入卡片隐藏（layout 保留）——alpha 必须在
-            // shadow/border 之前，否则卡片外框仍被绘制
-            .alpha(if (voiceStatus != VoiceInput.Status.IDLE) 0f else 1f)
-            // ref [data-android] .wrapper box-shadow: 0 10px 22px rgb(0 0 0/7%),
-            // 0 1px 4px rgb(0 0 0/4%); border color-mix(currentColor 7%)
-            .shadow(10.dp, RoundedCornerShape(30.dp), clip = false,
-                ambientColor = Color.Black.copy(alpha = 0.07f),
-                spotColor = Color.Black.copy(alpha = 0.04f))
-            .clip(RoundedCornerShape(30.dp))
-            .background(c.inputMajor)
-            .border(1.dp, c.labelPrimary.copy(alpha = 0.07f), RoundedCornerShape(30.dp))
+            .then(if (keyboardOpen) Modifier.imePadding() else Modifier)
+            .padding(bottom = when {
+                keyboardOpen -> 11.dp
+                showAttachments -> 10.dp
+                else -> 27.dp
+            })
     ) {
-        // ref AndroidDraftAttachments：卡片内 textarea 上方的草稿附件与快捷建议
+    Column(
+        Modifier.fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            // During active voice recording, hide the composer card cleanly while keeping layout bounds.
+            .alpha(if (voiceStatus != VoiceInput.Status.IDLE) 0f else 1f)
+            .softShadow(
+                cornerRadius = 24.dp,
+                blurRadius = 16.dp,
+                offsetY = 2.dp,
+                color = if (c.dark) Color.Transparent else Color.Black.copy(alpha = 0.085f),
+            )
+            .clip(cardShape)
+            .background(c.inputMajor)
+            .border(0.6.dp, cardBorder, cardShape)
+    ) {
         DraftAttachmentsRow(
             items = atts,
             showSuggestions = text.isBlank() && atts.any { it.isImage },
@@ -205,14 +215,12 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
             },
         )
         if (voiceMode) {
-            // ref .holdButton：w100% h56px, font 16px, border-bottom color-mix(currentColor 6%);
-            // pointerdown 立即录音，上滑 >=72px 进入取消态，松手 finish/cancel
             Box(
-                Modifier.fillMaxWidth().height(56.dp)
+                Modifier.fillMaxWidth().height(48.dp)
                     .drawWithContent {
                         drawContent()
                         drawLine(c.labelPrimary.copy(alpha = 0.06f),
-                            Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
+                            Offset(0f, size.height), Offset(size.width, size.height), 0.7.dp.toPx())
                     }
                     .pointerInput(Unit) {
                         awaitEachGesture {
@@ -235,31 +243,34 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                 Text(
                     Strings.get(if (voiceStatus == VoiceInput.Status.TRANSCRIBING)
                         "voiceInputCancel" else "androidHoldToTalk"),
-                    fontSize = 16.sp, color = c.labelPrimary,
+                    fontSize = 16.sp, fontWeight = FontWeight.Medium, color = c.labelPrimary,
                 )
             }
         } else {
-        // ref textarea: min-height 56px, padding-top 14.75px, padding-inline 17px
-        Box(Modifier.fillMaxWidth().height(24.dp).padding(start = 17.dp, end = 17.dp)) {
+        Box(
+            Modifier.fillMaxWidth()
+                .defaultMinSize(minHeight = 62.dp)
+                .padding(start = 17.dp, end = 17.dp, top = 16.dp, bottom = 12.dp)
+        ) {
             BasicTextField(
                 value = text,
                 onValueChange = { text = it; chatStore.setDraft(activeId, it) },
-                textStyle = TextStyle(fontSize = 16.75.sp, color = c.labelPrimary,
+                textStyle = TextStyle(fontSize = 16.5.sp, color = c.labelPrimary,
                     lineHeight = 24.sp, fontFamily = DsTheme.fontFamily),
                 cursorBrush = SolidColor(c.brandText),
                 singleLine = false,
-                keyboardOptions = KeyboardOptions(autoCorrect = true, capitalization = KeyboardCapitalization.Sentences),
+                maxLines = 6,
+                keyboardOptions = KeyboardOptions(autoCorrectEnabled = true, capitalization = KeyboardCapitalization.Sentences),
                 keyboardActions = KeyboardActions(onSend = {
                     if (canSend) { chatStore.setDraft(activeId, text); chatStore.sendMessage(activeId); text = "" }
                 }),
                 decorationBox = { inner ->
-                    Box {
+                    Box(Modifier.fillMaxWidth()) {
                         if (text.isEmpty()) {
                             Text(
                                 Strings.get(if (focused) "androidMessageHint" else "androidHoldHint"),
-                                fontSize = 16.75.sp, color = c.labelCaption,
-                                modifier = Modifier.fillMaxWidth()
-                                    .offset(x = (-1.8).dp, y = 26.7.dp),
+                                fontSize = 16.5.sp, lineHeight = 24.sp, color = c.labelCaption,
+                                modifier = Modifier.fillMaxWidth(),
                             )
                         }
                         inner()
@@ -271,21 +282,15 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                         focused = it.isFocused
                         if (it.isFocused) focusAt = android.os.SystemClock.uptimeMillis()
                     }
-                    // ref hold.delayed: pointerdown on empty unfocused field arms a
-                    // 380ms timer; holding past it starts voice, |dy|>12 cancels,
-                    // drag up >=72px while recording enters cancel state,
-                    // release finishes (transcribe+send)
+                    // hold.delayed: pointerdown on empty unfocused field arms 380ms hold-to-talk timer.
                     .pointerInput(Unit) {
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false)
-                            // armed when the field was unfocused before this press (focus
-                            // landing <300ms ago was caused by this very down)
                             val arm = text.isEmpty() &&
                                 (!focused || android.os.SystemClock.uptimeMillis() - focusAt < 300)
                             if (!arm) return@awaitEachGesture
                             val startY = down.position.y
                             var started = false
-                            // ref setTimeout(start, 380)：子协程计时，松开/位移>12 时取消
                             val timer = holdScope.launch {
                                 kotlinx.coroutines.delay(380)
                                     tryStartVoice(); started = true
@@ -317,37 +322,35 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
             }
         }
         }
-        // Official Android function row: 56dp touch wrappers with 28dp icons.
         Row(
-            Modifier.fillMaxWidth().height(56.dp).offset(y = 24.5.dp),
+            Modifier.fillMaxWidth()
+                .padding(start = 15.dp, end = 11.dp, top = if (voiceMode) 10.dp else 0.dp, bottom = 11.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TogglePill(Strings.get("thinkingSwitch"), thinking, { settings.setThinking(!thinking) }, R.drawable.ic_think, 12.8.dp)
-            Spacer(Modifier.width(8.5.dp))
+            TogglePill(Strings.get("thinkingSwitch"), thinking, { settings.setThinking(!thinking) }, R.drawable.ic_think)
+            Spacer(Modifier.width(8.dp))
             TogglePill(Strings.get("search"), search, { settings.setSearch(!search) }, R.drawable.ic_globe)
             Spacer(Modifier.weight(1f))
-            // ref IconButton/VoiceButton :active -> interactive-bg-hover
             val attSrc = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
             val attPressed by attSrc.collectIsPressedAsState()
             Box(
-                Modifier.align(Alignment.CenterVertically).size(41.244.dp, 56.2.dp)
+                Modifier.align(Alignment.CenterVertically).size(36.dp)
                     .clickable(attSrc, null) { showAttachments = !showAttachments },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(painterResource(if (showAttachments) R.drawable.ic_close_circle else R.drawable.ic_add_circle),
                     Strings.get(if (showAttachments) "close" else "uploadFile"),
                     tint = c.labelPrimary,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(24.dp)
                         .clip(CircleShape)
                         .background(DsTheme.pressTint(attPressed, c.interactiveBgHover)))
             }
+            Spacer(Modifier.width(5.dp))
             val voiceSrc = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
             val voicePressed by voiceSrc.collectIsPressedAsState()
+            val voiceIcon = if (voiceMode) R.drawable.ic_keyboard_circle else R.drawable.ic_voice_circle
+            val voiceDesc = Strings.get(if (voiceMode) "androidSwitchToText" else "voiceInput")
             if (voiceStatus == VoiceInput.Status.RECORDING) {
-                // ref VoiceButton .recording: 26px 双层圆 —— halo(brand 20%，
-                // 150ms 0.6→1 展开后 1.8s ease-in-out 呼吸 1↔1.1) +
-                // core(brand 75%，200ms 延迟 140ms 展开) + 白色 mic glyph
-                // (100ms 延迟 260ms 淡入)；原 outline glyph 120ms 淡出
                 val haloEnter = remember { androidx.compose.animation.core.Animatable(0f) }
                 val coreEnter = remember { androidx.compose.animation.core.Animatable(0f) }
                 val glyphIn = remember { androidx.compose.animation.core.Animatable(0f) }
@@ -371,46 +374,46 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                         androidx.compose.animation.core.tween(100, delayMillis = 260, easing = easeOut))
                 }
                 Box(
-                    Modifier.align(Alignment.CenterVertically).size(57.955.dp, 56.2.dp)
+                    Modifier.align(Alignment.CenterVertically).size(40.dp, 36.dp)
                         .clickable(voiceSrc, null) {
                             VoiceInput.cancel()
                             VoiceInput.enabled.value = !VoiceInput.enabled.value
                         },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Box(Modifier.fillMaxSize()
+                    Box(Modifier.size(36.dp)
                         .graphicsLayer {
                             val s = (0.6f + 0.4f * haloEnter.value) * haloS.value
                             scaleX = s; scaleY = s; alpha = 0.2f * haloEnter.value
                         }
                         .clip(CircleShape).background(c.brandPrimary))
-                    Box(Modifier.fillMaxSize().padding(2.dp)
+                    Box(Modifier.size(32.dp)
                         .graphicsLayer {
                             val s = 0.6f + 0.4f * coreEnter.value
                             scaleX = s; scaleY = s; alpha = 0.75f * coreEnter.value
                         }
                         .clip(CircleShape).background(c.brandPrimary))
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(painterResource(R.drawable.ic_voice_circle), null,
+                        Icon(painterResource(voiceIcon), null,
                             tint = Color.White,
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(25.dp)
                                 .graphicsLayer { alpha = glyphIn.value })
                     }
-                    Box(Modifier.size(28.dp).align(Alignment.Center)
-                        .semantics { contentDescription = Strings.get("voiceInput") }) {}
+                    Box(Modifier.size(25.dp).align(Alignment.Center)
+                        .semantics { contentDescription = voiceDesc }) {}
                 }
             } else {
                 Box(
-                    Modifier.align(Alignment.CenterVertically).size(57.955.dp, 56.2.dp)
+                    Modifier.align(Alignment.CenterVertically).size(40.dp, 36.dp)
                         .clickable(voiceSrc, null) {
                             VoiceInput.cancel()
                             VoiceInput.enabled.value = !VoiceInput.enabled.value
                         },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(painterResource(R.drawable.ic_voice_circle), Strings.get("voiceInput"),
+                    Icon(painterResource(voiceIcon), voiceDesc,
                         tint = c.labelPrimary,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(25.dp)
                             .clip(CircleShape)
                             .background(DsTheme.pressTint(voicePressed, c.interactiveBgHover)))
                 }
@@ -418,7 +421,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
             if (focused && text.isNotEmpty() && !canSend && !isStreaming) {
                 Box(
                     Modifier.align(Alignment.CenterVertically)
-                        .padding(start = 6.dp, end = 7.dp)
+                        .padding(start = 4.dp, end = 4.dp)
                         .size(30.dp).clip(CircleShape)
                         .clickable(enabled = false) {}
                         .semantics { contentDescription = Strings.get("send") },
@@ -434,7 +437,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
             } else if (canSend || isStreaming) {
                 Box(
                     Modifier.align(Alignment.CenterVertically)
-                        .padding(start = 6.dp, end = 7.dp)
+                        .padding(start = 4.dp, end = 4.dp)
                         .size(30.dp).clip(CircleShape)
                         .background(c.buttonPrimaryFill)
                         .clickable {
@@ -446,14 +449,12 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                     Icon(
                         painterResource(if (isStreaming) R.drawable.ic_stop else R.drawable.ic_send),
                         Strings.get(if (isStreaming) "stopGenerating" else "send"),
-                        tint = androidx.compose.ui.graphics.Color.White,
+                        tint = Color.White,
                         modifier = Modifier.size(16.dp),
                     )
                 }
             }
         }
-        // ref composer 底部留白：卡片内衬在 chips 行下方
-        Spacer(Modifier.height(5.dp))
     }
     // ref AndroidAttachments：卡片外、composer 列内展开的面板
     AttachmentsPanel(
@@ -498,7 +499,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
 }
 
 @Composable
-private fun TogglePill(label: String, on: Boolean, onClick: () -> Unit, icon: Int, hitStart: androidx.compose.ui.unit.Dp = 0.dp) {
+private fun TogglePill(label: String, on: Boolean, onClick: () -> Unit, icon: Int) {
     val c = DsTheme.colors
     // ref [data-android] .toggle:active -> transform: scale(.96), 100ms
     val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -506,31 +507,29 @@ private fun TogglePill(label: String, on: Boolean, onClick: () -> Unit, icon: In
     val scale by androidx.compose.animation.core.animateFloatAsState(
         if (pressed) 0.96f else 1f,
         androidx.compose.animation.core.tween(100), label = "togglePress")
-    Box(
-        Modifier
-            .size(if (hitStart > 0.dp) 111.2.dp else 97.4.dp, 46.5.dp)
+    val pillShape = RoundedCornerShape(16.dp)
+    val bg = if (on) c.buttonGhostActiveFill else if (c.dark) c.inputMajor else Color.Transparent
+    Row(
+        Modifier.height(32.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clip(pillShape)
+            .background(bg)
+            .border(1.dp, if (on) c.buttonGhostActiveBorder else c.borderL2, pillShape)
             .toggleable(
                 value = on,
                 interactionSource = src,
                 indication = null,
                 role = androidx.compose.ui.semantics.Role.Checkbox,
-            ) { onClick() },
-        contentAlignment = Alignment.Center,
+            ) { onClick() }
+            .padding(horizontal = 11.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            Modifier.offset(x = hitStart).height(32.dp).graphicsLayer { scaleX = scale; scaleY = scale }
-                .clip(RoundedCornerShape(18.dp))
-                .background(if (on) c.buttonGhostActiveFill else androidx.compose.ui.graphics.Color.Transparent)
-                .border(1.dp, if (on) c.buttonGhostActiveBorder else c.borderL2, RoundedCornerShape(18.dp))
-                .padding(horizontal = 11.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(painterResource(icon), null,
-                tint = if (on) c.brandText else c.labelPrimary,
-                modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(4.dp))
-            Text(label, fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Normal,
-                color = if (on) c.brandText else c.labelPrimary)
-        }
+        Icon(painterResource(icon), null,
+            tint = if (on) c.brandText else c.labelPrimary,
+            modifier = Modifier.size(15.dp))
+        Spacer(Modifier.width(4.dp))
+        Text(label, fontSize = 14.sp, lineHeight = 20.sp,
+            fontWeight = if (on) FontWeight.Medium else FontWeight.Normal,
+            color = if (on) c.brandText else c.labelPrimary)
     }
 }

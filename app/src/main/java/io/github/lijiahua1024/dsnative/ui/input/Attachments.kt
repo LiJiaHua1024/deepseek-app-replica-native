@@ -78,6 +78,8 @@ import io.github.lijiahua1024.dsnative.R
 import io.github.lijiahua1024.dsnative.data.DraftAttachment
 import io.github.lijiahua1024.dsnative.theme.DsTheme
 import io.github.lijiahua1024.dsnative.theme.Strings
+import io.github.lijiahua1024.dsnative.theme.softShadow
+import io.github.lijiahua1024.dsnative.ui.excludeFromDrawerGesture
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -246,6 +248,7 @@ fun AttachmentsPanel(
     // + opacity 160ms ease-out — expand/collapse the panel instead of instant mount
     val ease = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)
     var showFileSources by remember { mutableStateOf(false) }
+    io.github.lijiahua1024.dsnative.ui.DrawerGestureBlocker(open && showFileSources)
     val c = DsTheme.colors
     androidx.compose.animation.AnimatedVisibility(visible = open,
         enter = androidx.compose.animation.expandVertically(
@@ -261,7 +264,7 @@ fun AttachmentsPanel(
         if (photos.isNotEmpty()) {
             // .recent: gap 8, padding 24 20 0；80x80 r16 border-l2 skeleton
             LazyRow(
-                Modifier.fillMaxWidth().padding(top = 24.dp),
+                Modifier.fillMaxWidth().padding(top = 12.dp).excludeFromDrawerGesture(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 itemsIndexed(photos, key = { _, p -> p.id }) { i, photo ->
@@ -302,9 +305,9 @@ fun AttachmentsPanel(
                 }
             }
         }
-        // .actions: 3 列 grid，gap 8，padding 20 20 32.8；按钮 h84 r18 currentColor 5%
+        // .actions: 3 列 grid，gap 8，padding 20 20 33；按钮 h84 r18 currentColor 5%
         Row(
-            Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 32.8.dp),
+            Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 50.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             AttachmentAction(Modifier.weight(1f), R.drawable.ic_camera,
@@ -317,31 +320,52 @@ fun AttachmentsPanel(
     }
     }
     if (open && showFileSources) {
-        Box(
-            Modifier.fillMaxSize()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                ) { showFileSources = false }
+        val atWindowOrigin = remember {
+            object : androidx.compose.ui.window.PopupPositionProvider {
+                override fun calculatePosition(
+                    anchorBounds: androidx.compose.ui.unit.IntRect,
+                    windowSize: androidx.compose.ui.unit.IntSize,
+                    layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+                    popupContentSize: androidx.compose.ui.unit.IntSize,
+                ) = androidx.compose.ui.unit.IntOffset(-anchorBounds.left, -anchorBounds.top)
+            }
+        }
+        androidx.compose.ui.window.Popup(
+            popupPositionProvider = atWindowOrigin,
+            onDismissRequest = { showFileSources = false },
+            properties = androidx.compose.ui.window.PopupProperties(
+                focusable = true,
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true,
+            ),
         ) {
             Box(
-                Modifier.align(Alignment.BottomCenter)
-                    .padding(bottom = 134.dp)
-                    .width(217.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(c.inputMajor)
-                    .shadow(2.dp, RoundedCornerShape(6.dp), clip = false),
+                Modifier.fillMaxSize()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) { showFileSources = false }
             ) {
-                Column {
-                    FileSourceRow(
-                        icon = R.drawable.ic_files_clip,
-                        label = Strings.get("androidLocalFiles"),
-                    ) { showFileSources = false; onFiles() }
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(c.borderL2))
-                    FileSourceRow(
-                        icon = R.drawable.ic_files_clip,
-                        label = Strings.get("androidWeChatFiles"),
-                    ) { showFileSources = false; onFiles() }
+                Box(
+                    Modifier.align(Alignment.BottomEnd)
+                        .padding(end = 32.dp, bottom = 215.dp)
+                        .width(208.dp)
+                        .softShadow(16.dp, 14.dp, 4.dp, color = Color.Black.copy(alpha = 0.12f))
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(c.menu)
+                        .clickable(enabled = false) {},
+                ) {
+                    Column {
+                        FileSourceRow(
+                            icon = R.drawable.ic_folder,
+                            label = Strings.get("androidLocalFiles"),
+                        ) { showFileSources = false; onFiles() }
+                        Box(Modifier.fillMaxWidth().height(0.7.dp).background(c.borderL1))
+                        FileSourceRow(
+                            icon = R.drawable.ic_wechat,
+                            label = Strings.get("androidWeChatFiles"),
+                        ) { showFileSources = false; onFiles() }
+                    }
                 }
             }
         }
@@ -354,17 +378,14 @@ private fun FileSourceRow(icon: Int, label: String, onClick: () -> Unit) {
     val src = remember { MutableInteractionSource() }
     val pressed by src.collectIsPressedAsState()
     Row(
-        Modifier.fillMaxWidth().height(63.5.dp).clickable(src, null, onClick = onClick)
-            .background(DsTheme.pressTint(pressed, c.interactiveBgHover)),
+        Modifier.fillMaxWidth().height(52.dp).clickable(src, null, onClick = onClick)
+            .background(DsTheme.pressTint(pressed, c.interactiveBgHover))
+            .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(19.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Spacer(Modifier.width(32.dp))
-        Column {
-            Icon(painterResource(icon), null, tint = c.labelPrimary, modifier = Modifier.size(20.dp))
-            Text(label, fontSize = 16.sp, lineHeight = 21.sp, color = c.labelPrimary)
-        }
-        Spacer(Modifier.weight(1f))
+        Icon(painterResource(icon), null, tint = c.labelPrimary, modifier = Modifier.size(20.dp))
+        Text(label, fontSize = 16.sp, lineHeight = 22.sp, color = c.labelPrimary)
     }
 }
 
@@ -381,8 +402,8 @@ private fun AttachmentAction(modifier: Modifier, icon: Int, label: String, onCli
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Icon(painterResource(icon), null, tint = c.labelPrimary, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.height(4.dp))
+        Icon(painterResource(icon), null, tint = c.labelPrimary, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.height(6.dp))
         Text(label, fontSize = 15.sp, color = c.labelPrimary)
     }
 }
