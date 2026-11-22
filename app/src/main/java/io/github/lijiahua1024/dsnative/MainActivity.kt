@@ -20,7 +20,7 @@ import kotlinx.coroutines.SupervisorJob
 class MainActivity : ComponentActivity() {
     lateinit var settings: SettingsStore
     lateinit var chatStore: ChatStore
-    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val registeredReceivers = mutableListOf<BroadcastReceiver>()
 
     // Debug-only hook so UI tests can inject non-ASCII text, which `adb shell
     // input text` cannot deliver (it throws NPE for unmappable characters).
@@ -45,7 +45,7 @@ class MainActivity : ComponentActivity() {
             val mode = intent.getIntExtra("mode", 0)
             if (mode < 0) vi.cancel() else {
                 vi.debugOverlayMode = mode
-                vi.start(this@MainActivity)
+                vi.start(applicationContext)
             }
         }
     }
@@ -58,24 +58,30 @@ class MainActivity : ComponentActivity() {
             window.isNavigationBarContrastEnforced = false
             window.isStatusBarContrastEnforced = false
         }
-        settings = SettingsStore(applicationContext)
-        io.github.lijiahua1024.dsnative.api.ApiOrigin.init(applicationContext)
-        chatStore = ChatStore(applicationContext, settings, appScope)
+        val app = application as? DeepSeekApp
+        if (app != null) {
+            settings = app.settings
+            chatStore = app.chatStore
+        } else {
+            io.github.lijiahua1024.dsnative.api.ApiOrigin.init(applicationContext)
+            settings = SettingsStore(applicationContext)
+            chatStore = ChatStore(applicationContext, settings, CoroutineScope(SupervisorJob() + Dispatchers.Main))
+        }
         if (BuildConfig.DEBUG) {
-            val filter = IntentFilter("$packageName.DEBUG_INPUT")
-            val vfilter = IntentFilter("$packageName.DEBUG_VOICE")
             // 与 DEBUG_API_ORIGIN 清单 receiver 相同动作，运行时注册一份：
             // 本模拟器对 manifest receiver 的投递不稳定（pm clear 后常丢）。
-            val apiOriginReceiver = DebugApiOriginReceiver()
-            val ofilter = IntentFilter("$packageName.DEBUG_API_ORIGIN")
-            if (Build.VERSION.SDK_INT >= 33) {
-                registerReceiver(debugInput, filter, RECEIVER_EXPORTED)
-                registerReceiver(debugVoice, vfilter, RECEIVER_EXPORTED)
-                registerReceiver(apiOriginReceiver, ofilter, RECEIVER_EXPORTED)
-            } else {
-                registerReceiver(debugInput, filter)
-                registerReceiver(debugVoice, vfilter)
-                registerReceiver(apiOriginReceiver, ofilter)
+            val entries = listOf(
+                debugInput to IntentFilter("$packageName.DEBUG_INPUT"),
+                debugVoice to IntentFilter("$packageName.DEBUG_VOICE"),
+                DebugApiOriginReceiver() to IntentFilter("$packageName.DEBUG_API_ORIGIN"),
+            )
+            entries.forEach { (receiver, filter) ->
+                if (Build.VERSION.SDK_INT >= 33) {
+                    registerReceiver(receiver, filter, RECEIVER_EXPORTED)
+                } else {
+                    registerReceiver(receiver, filter)
+                }
+                registeredReceivers.add(receiver)
             }
         }
         setContent {
@@ -85,11 +91,23 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
-        if (io.github.lijiahua1024.dsnative.ui.input.VoiceInput.status.value ==
+        if (!isChangingConfigurations &&
+            io.github.lijiahua1024.dsnative.ui.input.VoiceInput.status.value ==
             io.github.lijiahua1024.dsnative.ui.input.VoiceInput.Status.RECORDING
         ) {
             io.github.lijiahua1024.dsnative.ui.input.VoiceInput.cancel()
         }
+    }
+
+    override fun onDestroy() {
+        registeredReceivers.forEach { receiver ->
+            try {
+                unregisterReceiver(receiver)
+            } catch (_: IllegalArgumentException) {
+            }
+        }
+        registeredReceivers.clear()
+        super.onDestroy()
     }
 
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
