@@ -650,6 +650,11 @@ private fun MessageFileView(
             DraftAttachment(file.id, file.name, file.mimeType, file.isImage,
                 file.localPath ?: ""),
             onClose = { preview = false },
+            onConfirmCrop = { cropped ->
+                chatStore.addDraftAttachments(session.id, listOf(cropped))
+                preview = false
+                chatStore.requestFocusComposer()
+            },
             onDownload = {})  // ref: canDownload solo nel viewer dei messaggi
     }
 }

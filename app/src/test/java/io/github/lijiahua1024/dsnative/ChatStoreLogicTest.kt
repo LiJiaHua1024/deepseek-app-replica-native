@@ -12,6 +12,7 @@ import io.github.lijiahua1024.dsnative.data.orphanAttachmentPaths
 import io.github.lijiahua1024.dsnative.data.replyText
 import io.github.lijiahua1024.dsnative.data.toAssistantMessageParam
 import io.github.lijiahua1024.dsnative.data.visibleMessages
+import io.github.lijiahua1024.dsnative.ui.input.NormalizedCrop
 import io.github.lijiahua1024.dsnative.ui.session.clampMenuTopPx
 import io.github.lijiahua1024.dsnative.ui.session.defaultThinkingExpanded
 import io.github.lijiahua1024.dsnative.ui.session.replyGrowthKey
@@ -293,5 +294,38 @@ class BubbleMenuClampingTest {
             marginPx = 16f,
         )
         assertEquals(500f, clamped, 0.01f)
+    }
+}
+
+class NormalizedCropTest {
+
+    @Test
+    fun rotate90FourTimesRestoresOriginalCropRect() {
+        val original = NormalizedCrop(turns = 0, left = 0.1f, top = 0.2f, right = 0.6f, bottom = 0.5f)
+        val r1 = original.rotated90Ccw()
+        assertEquals(1, r1.turns)
+        assertEquals(0.2f, r1.left, 0.001f)
+        assertEquals(0.4f, r1.top, 0.001f)
+        assertEquals(0.5f, r1.right, 0.001f)
+        assertEquals(0.9f, r1.bottom, 0.001f)
+        val r4 = r1.rotated90Ccw().rotated90Ccw().rotated90Ccw()
+        assertEquals(0, r4.turns)
+        assertEquals(original.left, r4.left, 0.001f)
+        assertEquals(original.top, r4.top, 0.001f)
+        assertEquals(original.right, r4.right, 0.001f)
+        assertEquals(original.bottom, r4.bottom, 0.001f)
+    }
+
+    @Test
+    fun resizeAndMoveClampWithinUnitBoundsAndMinSize() {
+        val moved = NormalizedCrop(0, 0.2f, 0.2f, 0.6f, 0.6f).resizeOrMove(0, 0, 0.8f, -0.5f)
+        assertEquals(0.6f, moved.left, 0.001f)
+        assertEquals(1.0f, moved.right, 0.001f)
+        assertEquals(0.0f, moved.top, 0.001f)
+        assertEquals(0.4f, moved.bottom, 0.001f)
+
+        val resized = NormalizedCrop(0, 0.2f, 0.2f, 0.8f, 0.8f).resizeOrMove(-1, -1, 0.9f, 0.9f, minSize = 0.1f)
+        assertEquals(0.7f, resized.left, 0.001f)
+        assertEquals(0.7f, resized.top, 0.001f)
     }
 }

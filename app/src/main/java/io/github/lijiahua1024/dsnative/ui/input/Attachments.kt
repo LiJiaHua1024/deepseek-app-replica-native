@@ -6,21 +6,26 @@ import android.content.ContentUris
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.util.Size
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -52,15 +57,20 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
@@ -72,6 +82,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import io.github.lijiahua1024.dsnative.R
@@ -84,7 +96,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileOutputStream
 import java.util.UUID
+import kotlin.math.hypot
 
 /** 一张照片（MediaStore 最近照片行） */
 data class RecentPhoto(val id: String, val uri: Uri, val name: String, val mimeType: String)
@@ -246,11 +260,15 @@ fun AttachmentsPanel(
     onCamera: () -> Unit,
     onGallery: () -> Unit,
     onFiles: () -> Unit,
+    onWeChatFiles: () -> Unit = onFiles,
 ) {
     // ref AndroidAttachments.module.css: grid-template-rows 260ms cubic-bezier(0.2,0.8,0.2,1)
     // + opacity 160ms ease-out — expand/collapse the panel instead of instant mount
     val ease = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)
     var showFileSources by remember { mutableStateOf(false) }
+    LaunchedEffect(open) {
+        if (!open) showFileSources = false
+    }
     io.github.lijiahua1024.dsnative.ui.DrawerGestureBlocker(open && showFileSources)
     val c = DsTheme.colors
     androidx.compose.animation.AnimatedVisibility(visible = open,
@@ -367,7 +385,7 @@ fun AttachmentsPanel(
                         FileSourceRow(
                             icon = R.drawable.ic_wechat,
                             label = Strings.get("androidWeChatFiles"),
-                        ) { showFileSources = false; onFiles() }
+                        ) { showFileSources = false; onWeChatFiles() }
                     }
                 }
             }
@@ -579,25 +597,174 @@ internal fun saveImageToGallery(context: Context, localPath: String?, name: Stri
     }
 }
 
+internal data class NormalizedCrop(
+    val turns: Int = 0,
+    val left: Float = 0f,
+    val top: Float = 0f,
+    val right: Float = 1f,
+    val bottom: Float = 1f,
+) {
+    fun isFull(): Boolean =
+        turns % 4 == 0 && left <= 0.001f && top <= 0.001f && right >= 0.999f && bottom >= 0.999f
+
+    fun rotated90Ccw(): NormalizedCrop = NormalizedCrop(
+        turns = (turns + 1) % 4,
+        left = top.coerceIn(0f, 1f),
+        top = (1f - right).coerceIn(0f, 1f),
+        right = bottom.coerceIn(0f, 1f),
+        bottom = (1f - left).coerceIn(0f, 1f),
+    )
+
+    fun resizeOrMove(
+        handleX: Int,
+        handleY: Int,
+        dxFrac: Float,
+        dyFrac: Float,
+        minSize: Float = 0.1f,
+    ): NormalizedCrop {
+        if (handleX == 0 && handleY == 0) {
+            val w = right - left
+            val h = bottom - top
+            val nl = (left + dxFrac).coerceIn(0f, (1f - w).coerceAtLeast(0f))
+            val nt = (top + dyFrac).coerceIn(0f, (1f - h).coerceAtLeast(0f))
+            return copy(left = nl, top = nt, right = nl + w, bottom = nt + h)
+        }
+        val minW = minOf(minSize, right - left)
+        val minH = minOf(minSize, bottom - top)
+        val nl = if (handleX < 0) (left + dxFrac).coerceIn(0f, right - minW) else left
+        val nr = if (handleX > 0) (right + dxFrac).coerceIn(left + minW, 1f) else right
+        val nt = if (handleY < 0) (top + dyFrac).coerceIn(0f, bottom - minH) else top
+        val nb = if (handleY > 0) (bottom + dyFrac).coerceIn(top + minH, 1f) else bottom
+        return copy(left = nl, top = nt, right = nr, bottom = nb)
+    }
+}
+
+private fun decodeOrientedBitmap(path: String, maxEdge: Int): Bitmap? {
+    val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(path, opts)
+    if (opts.outWidth <= 0 || opts.outHeight <= 0) return null
+    var sample = 1
+    while (opts.outWidth / sample > maxEdge * 2 || opts.outHeight / sample > maxEdge * 2) sample *= 2
+    val raw = BitmapFactory.decodeFile(
+        path,
+        BitmapFactory.Options().apply { inSampleSize = sample },
+    ) ?: return null
+    val matrix = Matrix()
+    try {
+        when (ExifInterface(path).getAttributeInt(
+            ExifInterface.TAG_ORIENTATION,
+            ExifInterface.ORIENTATION_NORMAL,
+        )) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
+            ExifInterface.ORIENTATION_TRANSPOSE -> { matrix.postRotate(90f); matrix.postScale(-1f, 1f) }
+            ExifInterface.ORIENTATION_TRANSVERSE -> { matrix.postRotate(270f); matrix.postScale(-1f, 1f) }
+        }
+    } catch (_: Exception) {
+    }
+    val oriented = if (!matrix.isIdentity) {
+        val r = Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height, matrix, true)
+        if (r != raw) raw.recycle()
+        r
+    } else raw
+    val maxDim = maxOf(oriented.width, oriented.height)
+    if (maxDim > maxEdge) {
+        val scale = maxEdge.toFloat() / maxDim
+        val scaled = Bitmap.createScaledBitmap(
+            oriented,
+            maxOf(1, (oriented.width * scale).toInt()),
+            maxOf(1, (oriented.height * scale).toInt()),
+            true,
+        )
+        if (scaled != oriented) oriented.recycle()
+        return scaled
+    }
+    return oriented
+}
+
+private fun rotateBitmapCcw(src: Bitmap, turns: Int): Bitmap {
+    val normTurns = ((turns % 4) + 4) % 4
+    if (normTurns == 0) return src
+    val matrix = Matrix().apply { postRotate(-normTurns * 90f) }
+    return Bitmap.createBitmap(src, 0, 0, src.width, src.height, matrix, true)
+}
+
+private suspend fun exportCroppedAttachment(
+    context: Context,
+    item: DraftAttachment,
+    crop: NormalizedCrop,
+): DraftAttachment? = withContext(Dispatchers.IO) {
+    var base: Bitmap? = null
+    var rotated: Bitmap? = null
+    var cropped: Bitmap? = null
+    try {
+        base = decodeOrientedBitmap(item.localPath, 4096) ?: return@withContext null
+        rotated = rotateBitmapCcw(base, crop.turns)
+        val cx = (crop.left * rotated.width).toInt().coerceIn(0, rotated.width - 1)
+        val cy = (crop.top * rotated.height).toInt().coerceIn(0, rotated.height - 1)
+        val cw = ((crop.right - crop.left) * rotated.width).toInt().coerceIn(1, rotated.width - cx)
+        val ch = ((crop.bottom - crop.top) * rotated.height).toInt().coerceIn(1, rotated.height - cy)
+        cropped = Bitmap.createBitmap(rotated, cx, cy, cw, ch)
+        val dir = attachDir(context)
+        val stem = item.name.substringBeforeLast('.').ifEmpty { "image" }
+        val outFile = File(dir, "${UUID.randomUUID()}-$stem.webp")
+        val format = if (Build.VERSION.SDK_INT >= 30) {
+            Bitmap.CompressFormat.WEBP_LOSSY
+        } else {
+            @Suppress("DEPRECATION")
+            Bitmap.CompressFormat.WEBP
+        }
+        FileOutputStream(outFile).use { out ->
+            if (!cropped.compress(format, 85, out)) return@withContext null
+        }
+        DraftAttachment(
+            id = UUID.randomUUID().toString(),
+            name = "$stem.webp",
+            mimeType = "image/webp",
+            isImage = true,
+            localPath = outFile.absolutePath,
+        )
+    } catch (_: Exception) {
+        null
+    } finally {
+        if (cropped != null && cropped !== rotated && cropped !== base) cropped.recycle()
+        if (rotated != null && rotated !== base) rotated.recycle()
+        base?.recycle()
+    }
+}
+
 @Composable
 fun ImagePreviewDialog(
     item: DraftAttachment,
     onClose: () -> Unit,
     onCrop: () -> Unit = {},
+    onConfirmCrop: ((DraftAttachment) -> Unit)? = null,
     onDownload: (() -> Unit)? = null,
 ) {
     val dlgCtx = LocalContext.current
     val dlgScope = rememberCoroutineScope()
     var downloadStatus by remember { mutableStateOf<String?>(null) }
     var downloading by remember { mutableStateOf(false) }
+    var cropState by remember(item.id, item.localPath) { mutableStateOf<NormalizedCrop?>(null) }
+    var cropError by remember { mutableStateOf<String?>(null) }
+    var cropSaving by remember { mutableStateOf(false) }
     LaunchedEffect(downloadStatus) {
         if (downloadStatus != null) {
             kotlinx.coroutines.delay(2500)
             downloadStatus = null
         }
     }
+    LaunchedEffect(cropError) {
+        if (cropError != null) {
+            kotlinx.coroutines.delay(2500)
+            cropError = null
+        }
+    }
     Dialog(
-        onDismissRequest = onClose,
+        onDismissRequest = { if (cropState != null) cropState = null else onClose() },
         properties = DialogProperties(usePlatformDefaultWidth = false,
             decorFitsSystemWindows = false),
     ) {
@@ -649,6 +816,33 @@ fun ImagePreviewDialog(
                 val s = 0.96f + 0.04f * viewerEnter.value
                 scaleX = s; scaleY = s
             }) {
+            val activeCrop = cropState
+            if (activeCrop != null) {
+                CropEditorOverlay(
+                    item = item,
+                    crop = activeCrop,
+                    saving = cropSaving,
+                    errorKey = cropError,
+                    onCropChange = { cropState = it; cropError = null },
+                    onCancel = { cropState = null; cropError = null },
+                    onConfirm = {
+                        if (cropSaving) return@CropEditorOverlay
+                        cropSaving = true
+                        cropError = null
+                        dlgScope.launch {
+                            val result = exportCroppedAttachment(dlgCtx, item, activeCrop)
+                            cropSaving = false
+                            if (result != null) {
+                                onConfirmCrop?.invoke(result)
+                                cropState = null
+                                onClose()
+                            } else {
+                                cropError = "androidCropFailed"
+                            }
+                        }
+                    },
+                )
+            } else {
             val bmp = thumbFor(item.localPath, 2048)
             if (bmp != null) {
                 // the content rect extends under the nav bar, so the centered
@@ -693,18 +887,26 @@ fun ImagePreviewDialog(
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Row(
-                    Modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF20242B))
-                        .clickable(onClick = onCrop)
-                        .padding(start = 12.dp, end = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(painterResource(R.drawable.ic_crop), null,
-                        tint = Color(0xFFF7F9FC), modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(Strings.get("androidCropImage"),
-                        color = Color(0xFFF7F9FC), fontSize = 15.sp)
+                if (bmp != null) {
+                    Row(
+                        Modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFF20242B))
+                            .clickable {
+                                if (onConfirmCrop != null) {
+                                    cropState = NormalizedCrop()
+                                } else {
+                                    onCrop()
+                                }
+                            }
+                            .padding(start = 12.dp, end = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(painterResource(R.drawable.ic_crop), null,
+                            tint = Color(0xFFF7F9FC), modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(Strings.get("androidCropImage"),
+                            color = Color(0xFFF7F9FC), fontSize = 15.sp)
+                    }
                 }
                 if (onDownload != null) {
                     Row(
@@ -735,6 +937,226 @@ fun ImagePreviewDialog(
                     }
                 }
             }
+            }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CropEditorOverlay(
+    item: DraftAttachment,
+    crop: NormalizedCrop,
+    saving: Boolean,
+    errorKey: String?,
+    onCropChange: (NormalizedCrop) -> Unit,
+    onCancel: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    val c = DsTheme.colors
+    var previewBmp by remember(item.localPath, crop.turns) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(item.localPath, crop.turns) {
+        previewBmp = withContext(Dispatchers.IO) {
+            val base = decodeOrientedBitmap(item.localPath, 1600) ?: return@withContext null
+            val rotated = rotateBitmapCcw(base, crop.turns)
+            if (rotated !== base) base.recycle()
+            rotated.asImageBitmap()
+        }
+    }
+    Column(
+        Modifier.fillMaxSize()
+            .navigationBarsPadding()
+            .padding(top = 36.dp, bottom = 16.dp),
+    ) {
+        // 顶部操作栏：还原 + 旋转
+        Row(
+            Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.End,
+        ) {
+            if (!crop.isFull()) {
+                Row(
+                    Modifier.height(36.dp).clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFF20242B))
+                        .clickable(enabled = !saving) { onCropChange(NormalizedCrop()) }
+                        .padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(Strings.get("androidCropReset"), color = Color(0xFFF7F9FC), fontSize = 14.sp)
+                }
+                Spacer(Modifier.width(10.dp))
+            }
+            Row(
+                Modifier.height(36.dp).clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFF20242B))
+                    .clickable(enabled = !saving) { onCropChange(crop.rotated90Ccw()) }
+                    .padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(painterResource(R.drawable.ic_refresh), null,
+                    tint = Color(0xFFF7F9FC), modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(Strings.get("androidCropRotate"), color = Color(0xFFF7F9FC), fontSize = 14.sp)
+            }
+        }
+        // 中央裁剪画布
+        BoxWithConstraints(
+            Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            val bmp = previewBmp
+            if (bmp != null) {
+                val density = LocalDensity.current
+                val boxW = with(density) { maxWidth.toPx() }
+                val boxH = with(density) { maxHeight.toPx() }
+                val scale = minOf(boxW / bmp.width.toFloat(), boxH / bmp.height.toFloat())
+                val imgW = bmp.width * scale
+                val imgH = bmp.height * scale
+                val imgLeft = (boxW - imgW) / 2f
+                val imgTop = (boxH - imgH) / 2f
+                val latestCrop by rememberUpdatedState(crop)
+                var dragTarget by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+
+                Box(Modifier.fillMaxSize()) {
+                    Image(
+                        bmp, item.name,
+                        Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit,
+                    )
+                    Canvas(
+                        Modifier.fillMaxSize()
+                            .pointerInput(imgW, imgH, crop.turns) {
+                                detectDragGestures(
+                                    onDragStart = { offset ->
+                                        val r = latestCrop
+                                        val cl = imgLeft + r.left * imgW
+                                        val ct = imgTop + r.top * imgH
+                                        val cr = imgLeft + r.right * imgW
+                                        val cb = imgTop + r.bottom * imgH
+                                        val cx = (cl + cr) / 2f
+                                        val cy = (ct + cb) / 2f
+                                        val hitR = 28.dp.toPx()
+                                        val handles = listOf(
+                                            Triple(-1, -1, Offset(cl, ct)),
+                                            Triple(0, -1, Offset(cx, ct)),
+                                            Triple(1, -1, Offset(cr, ct)),
+                                            Triple(-1, 0, Offset(cl, cy)),
+                                            Triple(1, 0, Offset(cr, cy)),
+                                            Triple(-1, 1, Offset(cl, cb)),
+                                            Triple(0, 1, Offset(cx, cb)),
+                                            Triple(1, 1, Offset(cr, cb)),
+                                        )
+                                        var best: Pair<Int, Int>? = null
+                                        var bestDist = hitR
+                                        for ((hx, hy, pt) in handles) {
+                                            val d = hypot(offset.x - pt.x, offset.y - pt.y)
+                                            if (d <= bestDist) {
+                                                bestDist = d
+                                                best = hx to hy
+                                            }
+                                        }
+                                        if (best == null && offset.x in cl..cr && offset.y in ct..cb) {
+                                            best = 0 to 0
+                                        }
+                                        dragTarget = best
+                                    },
+                                    onDragEnd = { dragTarget = null },
+                                    onDragCancel = { dragTarget = null },
+                                    onDrag = { change, dragAmount ->
+                                        val target = dragTarget ?: return@detectDragGestures
+                                        change.consume()
+                                        if (imgW > 1f && imgH > 1f) {
+                                            onCropChange(
+                                                latestCrop.resizeOrMove(
+                                                    target.first, target.second,
+                                                    dragAmount.x / imgW, dragAmount.y / imgH,
+                                                ),
+                                            )
+                                        }
+                                    },
+                                )
+                            },
+                    ) {
+                        val cl = imgLeft + crop.left * imgW
+                        val ct = imgTop + crop.top * imgH
+                        val cr = imgLeft + crop.right * imgW
+                        val cb = imgTop + crop.bottom * imgH
+                        val cw = (cr - cl).coerceAtLeast(1f)
+                        val ch = (cb - ct).coerceAtLeast(1f)
+                        val scrim = Color(0x99000000)
+                        // 上、下、左、右半透明遮罩
+                        if (ct > imgTop) drawRect(scrim, Offset(imgLeft, imgTop), androidx.compose.ui.geometry.Size(imgW, ct - imgTop))
+                        if (cb < imgTop + imgH) drawRect(scrim, Offset(imgLeft, cb), androidx.compose.ui.geometry.Size(imgW, imgTop + imgH - cb))
+                        if (cl > imgLeft) drawRect(scrim, Offset(imgLeft, ct), androidx.compose.ui.geometry.Size(cl - imgLeft, ch))
+                        if (cr < imgLeft + imgW) drawRect(scrim, Offset(cr, ct), androidx.compose.ui.geometry.Size(imgLeft + imgW - cr, ch))
+                        // 三分线与外框
+                        val thirdW = cw / 3f
+                        val thirdH = ch / 3f
+                        val gridColor = Color.White.copy(alpha = 0.42f)
+                        val gridStroke = 0.75.dp.toPx()
+                        drawLine(gridColor, Offset(cl + thirdW, ct), Offset(cl + thirdW, cb), gridStroke)
+                        drawLine(gridColor, Offset(cl + 2 * thirdW, ct), Offset(cl + 2 * thirdW, cb), gridStroke)
+                        drawLine(gridColor, Offset(cl, ct + thirdH), Offset(cr, ct + thirdH), gridStroke)
+                        drawLine(gridColor, Offset(cl, ct + 2 * thirdH), Offset(cr, ct + 2 * thirdH), gridStroke)
+                        drawRect(Color.White, Offset(cl, ct), androidx.compose.ui.geometry.Size(cw, ch), style = Stroke(1.5.dp.toPx()))
+                        // 四角白色加粗柄
+                        val arm = minOf(18.dp.toPx(), cw / 3f, ch / 3f)
+                        val handleW = 3.dp.toPx()
+                        drawLine(Color.White, Offset(cl, ct), Offset(cl + arm, ct), handleW)
+                        drawLine(Color.White, Offset(cl, ct), Offset(cl, ct + arm), handleW)
+                        drawLine(Color.White, Offset(cr, ct), Offset(cr - arm, ct), handleW)
+                        drawLine(Color.White, Offset(cr, ct), Offset(cr, ct + arm), handleW)
+                        drawLine(Color.White, Offset(cl, cb), Offset(cl + arm, cb), handleW)
+                        drawLine(Color.White, Offset(cl, cb), Offset(cl, cb - arm), handleW)
+                        drawLine(Color.White, Offset(cr, cb), Offset(cr - arm, cb), handleW)
+                        drawLine(Color.White, Offset(cr, cb), Offset(cr, cb - arm), handleW)
+                    }
+                }
+            } else {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(28.dp))
+            }
+        }
+        // 底部错误提示 + 取消 / 去提问按钮
+        if (errorKey != null) {
+            Box(
+                Modifier.align(Alignment.CenterHorizontally)
+                    .padding(bottom = 10.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFF20242B))
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            ) {
+                Text(Strings.get(errorKey), color = Color(0xFFFF7A7A), fontSize = 13.sp)
+            }
+        }
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier.size(44.dp).clip(CircleShape)
+                    .background(Color(0xFF20242B))
+                    .clickable(enabled = !saving, onClick = onCancel),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(painterResource(R.drawable.ic_close), Strings.get("cancel"),
+                    tint = Color(0xFFF7F9FC), modifier = Modifier.size(18.dp))
+            }
+            Button(
+                onClick = onConfirm,
+                enabled = !saving && previewBmp != null,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = c.brandPrimary,
+                    contentColor = Color.White,
+                ),
+                shape = RoundedCornerShape(100.dp),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
+            ) {
+                if (saving) {
+                    CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
+                } else {
+                    Text(Strings.get("androidCropAsk"), fontSize = 15.sp)
+                }
             }
         }
     }

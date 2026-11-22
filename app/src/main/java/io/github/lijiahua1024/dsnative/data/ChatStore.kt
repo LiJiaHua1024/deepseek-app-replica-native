@@ -300,6 +300,9 @@ class ChatStore(
     private val _newChatRequests = MutableStateFlow(0)
     val newChatRequests: StateFlow<Int> = _newChatRequests
 
+    private val _focusComposerRequests = MutableStateFlow(0)
+    val focusComposerRequests: StateFlow<Int> = _focusComposerRequests
+
     /** 正在生成的会话 id 集合 */
     private val _streaming = MutableStateFlow<Set<String>>(emptySet())
     val streaming: StateFlow<Set<String>> = _streaming
@@ -381,6 +384,10 @@ class ChatStore(
         _newChatRequests.value += 1
     }
 
+    fun requestFocusComposer() {
+        _focusComposerRequests.value += 1
+    }
+
     fun selectSession(id: String) {
         ReadAloud.stop()
         _activeId.value = id
@@ -422,6 +429,22 @@ class ChatStore(
         if (removed.isEmpty()) return
         val remainingList = current.filterNot { it.id == attachmentId }
         val nextDrafts = _draftAttachments.value + (sessionId to remainingList)
+        _draftAttachments.value = nextDrafts
+        val orphans = orphanAttachmentPaths(null, removed, _sessionCache.value.values, nextDrafts.values)
+        if (orphans.isNotEmpty()) {
+            scope.launch(Dispatchers.IO) { deleteOrphanAttachFiles(orphans) }
+        }
+    }
+
+    fun replaceDraftAttachment(sessionId: String?, attachmentId: String, replacement: DraftAttachment) {
+        val current = draftAttachments(sessionId)
+        val removed = current.filter { it.id == attachmentId }
+        if (removed.isEmpty()) {
+            addDraftAttachments(sessionId, listOf(replacement))
+            return
+        }
+        val nextList = current.map { if (it.id == attachmentId) replacement else it }
+        val nextDrafts = _draftAttachments.value + (sessionId to nextList)
         _draftAttachments.value = nextDrafts
         val orphans = orphanAttachmentPaths(null, removed, _sessionCache.value.values, nextDrafts.values)
         if (orphans.isNotEmpty()) {

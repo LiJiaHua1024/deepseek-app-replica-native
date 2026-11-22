@@ -138,6 +138,29 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     val openDocs = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.OpenMultipleDocuments()
     ) { uris -> if (uris.isNotEmpty()) addFiles(uris) }
+    val openWeChatDocs = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val data = result.data
+            val uris = buildList {
+                data?.clipData?.let { clip ->
+                    for (i in 0 until clip.itemCount) clip.getItemAt(i)?.uri?.let(::add)
+                }
+                if (isEmpty()) data?.data?.let(::add)
+            }
+            if (uris.isNotEmpty()) addFiles(uris)
+        }
+    }
+    val focusRequests by chatStore.focusComposerRequests.collectAsState()
+    LaunchedEffect(focusRequests) {
+        if (focusRequests > 0) {
+            if (VoiceInput.enabled.value) VoiceInput.enabled.value = false
+            showAttachments = false
+            try { focusRequester.requestFocus() } catch (_: IllegalStateException) {}
+            keyboardController?.show()
+        }
+    }
     var cameraFile by remember { mutableStateOf<java.io.File?>(null) }
     val takePicture = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.TakePicture()
@@ -305,7 +328,10 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
                     .focusRequester(focusRequester)
                     .onFocusChanged {
                         focused = it.isFocused
-                        if (it.isFocused) focusAt = android.os.SystemClock.uptimeMillis()
+                        if (it.isFocused) {
+                            focusAt = android.os.SystemClock.uptimeMillis()
+                            showAttachments = false
+                        }
                     }
                     // hold.delayed: pointerdown on empty unfocused field arms 380ms hold-to-talk timer.
                     .pointerInput(Unit) {
@@ -360,7 +386,13 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
             val attPressed by attSrc.collectIsPressedAsState()
             Box(
                 Modifier.align(Alignment.CenterVertically).size(36.dp)
-                    .clickable(attSrc, null) { showAttachments = !showAttachments },
+                    .clickable(attSrc, null) {
+                        if (!showAttachments) {
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                        }
+                        showAttachments = !showAttachments
+                    },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(painterResource(if (showAttachments) R.drawable.ic_close_circle else R.drawable.ic_add_circle),
@@ -499,27 +531,74 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
             }
         },
         onCamera = {
+            showAttachments = false
             val dir = attachDir(context)
             val f = java.io.File(dir, "camera-${System.currentTimeMillis()}.jpg")
             val u = androidx.core.content.FileProvider.getUriForFile(
                 context, "${context.packageName}.fileprovider", f)
             cameraFile = f
-            takePicture.launch(u)
+            try {
+                takePicture.launch(u)
+            } catch (_: android.content.ActivityNotFoundException) {
+                cameraFile = null
+                f.delete()
+                io.github.lijiahua1024.dsnative.ui.session.DsToast.show(Strings.get("androidCameraUnavailable"))
+            }
         },
         onGallery = {
             showAttachments = false
-            pickImages.launch(
-                androidx.activity.result.PickVisualMediaRequest(
-                    androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly))
+            try {
+                pickImages.launch(
+                    androidx.activity.result.PickVisualMediaRequest(
+                        androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly))
+            } catch (_: android.content.ActivityNotFoundException) {
+                io.github.lijiahua1024.dsnative.ui.session.DsToast.show(Strings.get("uploadFileStatusFailed"))
+            }
         },
         onFiles = {
             showAttachments = false
-            openDocs.launch(arrayOf("*/*"))
+            try {
+                openDocs.launch(arrayOf("*/*"))
+            } catch (_: android.content.ActivityNotFoundException) {
+                io.github.lijiahua1024.dsnative.ui.session.DsToast.show(Strings.get("uploadFileStatusFailed"))
+            }
+        },
+        onWeChatFiles = {
+            showAttachments = false
+            val installed = context.packageManager.getLaunchIntentForPackage("com.tencent.mm") != null
+            if (!installed) {
+                io.github.lijiahua1024.dsnative.ui.session.DsToast.show(Strings.get("androidWeChatNotInstalled"))
+            } else {
+                val intent = android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(android.content.Intent.CATEGORY_OPENABLE)
+                    putExtra(android.content.Intent.EXTRA_ALLOW_MULTIPLE, true)
+                    type = "*/*"
+                    if (android.os.Build.VERSION.SDK_INT >= 26) {
+                        putExtra(
+                            android.provider.DocumentsContract.EXTRA_INITIAL_URI,
+                            android.net.Uri.parse("content://com.android.externalstorage.documents/document/primary%3ADownload%2FWeiXin"),
+                        )
+                    }
+                }
+                try {
+                    openWeChatDocs.launch(intent)
+                } catch (_: android.content.ActivityNotFoundException) {
+                    io.github.lijiahua1024.dsnative.ui.session.DsToast.show(Strings.get("androidWeChatOpenFailed"))
+                }
+            }
         },
     )
     }
     previewAtt?.let { att ->
-        ImagePreviewDialog(att, onClose = { previewAtt = null })
+        ImagePreviewDialog(
+            att,
+            onClose = { previewAtt = null },
+            onConfirmCrop = { cropped ->
+                chatStore.replaceDraftAttachment(activeId, att.id, cropped)
+                previewAtt = null
+                chatStore.requestFocusComposer()
+            },
+        )
     }
 }
 
