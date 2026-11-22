@@ -22,8 +22,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.draw.rotate
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.ui.platform.LocalContext
@@ -331,7 +334,13 @@ private fun SettingsRootPage(
             { Icon(painterResource(if (c.dark) R.drawable.ic_moon else R.drawable.ic_light), null, tint = c.labelPrimary, modifier = Modifier.size(20.dp)) },
             value = themeLabel(themePref)) { onPopup("theme") }
         SettingsRow(c, muted, Strings.get("settingsFontPage"),
-            { Text("ᴀA", fontSize = 17.sp, fontWeight = FontWeight.Medium, color = c.labelPrimary) }) { onPage("font") }
+            {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text("A", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = c.labelPrimary,
+                        modifier = Modifier.padding(bottom = 0.5.dp))
+                    Text("A", fontSize = 16.5.sp, fontWeight = FontWeight.Medium, color = c.labelPrimary)
+                }
+            }) { onPage("font") }
         SettingsRow(c, muted, Strings.get("settingsPersonalizationPage"),
             { Icon(painterResource(R.drawable.ic_wand), null, tint = c.labelPrimary, modifier = Modifier.size(20.dp)) }) { onPage("personalization") }
     }
@@ -598,12 +607,12 @@ private fun ExportPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: 
 private fun FontPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Color, muted: Color, settings: SettingsStore) {
     val fs = 16.sp
     // ref .preview: right bubble + two paragraphs, lineHeight 1.6, scaled by slider value
-    Column(Modifier.padding(top = 28.dp, start = 8.dp, end = 8.dp)) {
+    Column(Modifier.padding(top = 28.dp, start = 8.dp, end = 0.dp)) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
             Text(Strings.get("fontPreview"), fontSize = fs, color = c.labelPrimary,
-                modifier = Modifier.clip(RoundedCornerShape(20.dp))
+                modifier = Modifier.clip(RoundedCornerShape(22.dp))
                     .background(c.buttonGhostActiveFill)
-                    .padding(horizontal = 20.dp, vertical = 12.dp))
+                    .padding(horizontal = 18.dp, vertical = 12.dp))
         }
         Text(Strings.get("fontDesc1"), fontSize = fs, lineHeight = fs * 1.6f, color = c.labelPrimary,
             modifier = Modifier.padding(top = 27.7.dp))
@@ -618,28 +627,40 @@ private fun FontPanel(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: C
     val systemFontScale = LocalDensity.current.fontScale
     val sliderValue = fontSize
         ?: Math.round((systemFontScale - 1f) / 0.1f + 2f).coerceIn(0, 6)
-    // ref .fontPanel: bottom sheet card, r18 top, padding 12 24 36; follow-system switch + labels + slider
+    // Match official FontPanel metrics: 16dp side margin (1080-48=1032 right edge),
+    // elevated top-rounded card, "标准" positioned over notch 2 (1/3 along track).
     Column(Modifier.fillMaxWidth().navigationBarsPadding()
+        .softShadow(cornerRadius = 18.dp, blurRadius = 12.dp, offsetY = (-2).dp,
+            color = Color.Black.copy(alpha = if (c.dark) 0.25f else 0.03f))
         .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)).background(card)
-        .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 36.dp)) {
+        .padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 52.dp)) {
         Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 44.dp)
-            .padding(start = 3.dp, end = 3.dp),
+            .padding(start = 12.dp, end = 0.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Text(Strings.get("settingsFollowSystem"), fontSize = 16.sp, color = c.labelPrimary, modifier = Modifier.weight(1f))
             RefSwitch(fontSize == null) { settings.setFontSize(if (it) null else 2) }
         }
-        Row(Modifier.fillMaxWidth().padding(top = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom) {
-            Text("A", fontSize = 13.sp, color = c.labelPrimary, lineHeight = 19.sp)
-            Text(Strings.get("fontStandard"), fontSize = 12.sp, color = c.labelPrimary, lineHeight = 19.sp)
-            Text("A", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = c.labelPrimary, lineHeight = 20.sp)
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 18.dp, start = 13.dp, end = 13.dp).height(24.dp)) {
+            val stdOffset = (maxWidth * (1f / 3f))
+            Text("A", fontSize = 13.sp, color = c.labelPrimary, lineHeight = 19.sp,
+                modifier = Modifier.align(Alignment.BottomStart))
+            val density = LocalDensity.current
+            var stdWidthPx by remember { mutableStateOf(0) }
+            Text(Strings.get("fontStandard"), fontSize = 12.sp, color = c.labelPrimary, lineHeight = 19.sp,
+                modifier = Modifier.align(Alignment.BottomStart)
+                    .onGloballyPositioned { stdWidthPx = it.size.width }
+                    .offset {
+                        val cx = with(density) { stdOffset.roundToPx() }
+                        androidx.compose.ui.unit.IntOffset(cx - stdWidthPx / 2, 0)
+                    })
+            Text("A", fontSize = 19.sp, fontWeight = FontWeight.Medium, color = c.labelPrimary, lineHeight = 20.sp,
+                modifier = Modifier.align(Alignment.BottomEnd))
         }
         val thumbR = 13.dp
         val trackCol = if (c.dark) Color(0xFF4A4A4D) else Color(0xFFD4D6DC)
         val tickCol = if (c.dark) Color(0xFF6B6B70) else Color(0xFFB5B8C0)
         Box(
-            Modifier.fillMaxWidth().padding(top = 8.dp).height(34.dp)
+            Modifier.fillMaxWidth().padding(top = 10.dp).height(34.dp)
                 .pointerInput(Unit) {
                     detectTapGestures { p ->
                         val pad = 13.dp.toPx()
@@ -667,9 +688,15 @@ private fun FontPanel(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: C
                         androidx.compose.ui.geometry.Offset(x, cy + 5.dp.toPx()), strokeWidth = 1.4.dp.toPx())
                 }
                 val tx = r + usable * (sliderValue / 6f)
-                // Soft shadow ring + crisp white circular thumb
-                drawCircle(Color.Black.copy(alpha = 0.14f), radius = r + 1.5.dp.toPx(),
-                    center = androidx.compose.ui.geometry.Offset(tx, cy + 1.5.dp.toPx()))
+                // Soft blurred elevation shadow without hard gray border ring
+                drawIntoCanvas { canvas ->
+                    val p = android.graphics.Paint().apply {
+                        isAntiAlias = true
+                        color = android.graphics.Color.argb(46, 0, 0, 0)
+                        maskFilter = android.graphics.BlurMaskFilter(5.dp.toPx(), android.graphics.BlurMaskFilter.Blur.NORMAL)
+                    }
+                    canvas.nativeCanvas.drawCircle(tx, cy + 1.5.dp.toPx(), r, p)
+                }
                 drawCircle(Color.White, radius = r,
                     center = androidx.compose.ui.geometry.Offset(tx, cy))
             }
@@ -677,12 +704,12 @@ private fun FontPanel(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: C
     }
 }
 
-// ref .switch: 52x32 track, #e4e4e4 off / #24c466 on, 24px white thumb 4px inset
+// ref .switch: 52x32 track, #e4e4e4 off / #22c55e on, 24px white thumb 4px inset
 @Composable
 private fun RefSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     val frac by androidx.compose.animation.core.animateFloatAsState(if (checked) 1f else 0f, label = "switch")
     Box(Modifier.size(52.dp, 32.dp).clip(RoundedCornerShape(20.dp))
-        .background(if (frac >= 0.5f) Color(0xFF24C466) else Color(0xFFE4E4E4))
+        .background(if (frac >= 0.5f) Color(0xFF22C55E) else Color(0xFFE4E4E4))
         .clickable { onCheckedChange(!checked) }) {
         Box(Modifier.padding(start = 4.dp, top = 4.dp)
             .offset(x = (20f * frac).dp)
