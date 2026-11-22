@@ -83,6 +83,7 @@ fun SessionView(
     var feedbackTarget by remember { mutableStateOf<Pair<Message.Assistant, FeedbackSheetVariant>?>(null) }
     var shareSession by remember { mutableStateOf<Session?>(null) }
     var editTarget by remember { mutableStateOf<Message.User?>(null) }
+    var selectTextTarget by remember { mutableStateOf<String?>(null) }
     val rootCtx = LocalContext.current
     val autoRead by settings.autoRead.collectAsState()
     val foldThinking by settings.foldThinking.collectAsState()
@@ -321,7 +322,7 @@ fun SessionView(
     io.github.lijiahua1024.dsnative.ui.DrawerGestureBlocker(
         sourcesPanel != null || bubbleMenu != null || assistantMenu != null ||
             feedbackTarget != null || shareSession != null || editTarget != null ||
-            voiceStatus != VoiceInput.Status.IDLE
+            selectTextTarget != null || voiceStatus != VoiceInput.Status.IDLE
     )
     if (voiceStatus != VoiceInput.Status.IDLE) {
         VoiceOverlay(canceling = voiceCanceling) { VoiceInput.level() }
@@ -378,6 +379,12 @@ fun SessionView(
                         DsToast.show(Strings.get("copied"))
                         bubbleMenu = null
                     }
+                    if (bmsg.content.isNotEmpty()) {
+                        MenuOption(Strings.get("androidSelectText"), R.drawable.ic_select_text, c.labelPrimary) {
+                            bubbleMenu = null
+                            selectTextTarget = bmsg.content
+                        }
+                    }
                     MenuOption(Strings.get("androidEditMessage"), R.drawable.ic_edit, c.labelPrimary) {
                         bubbleMenu = null
                         editTarget = bmsg
@@ -427,12 +434,19 @@ fun SessionView(
             ) {
                 Column(Modifier.padding(4.dp)) {
                     val replyTxt = replyText(amsg)
+                    val formattedCopy = formattedAssistantCopyText(amsg)
                     val sid = session?.id ?: ""
                     MenuOption(Strings.get("copy"), R.drawable.ic_copy, c.labelPrimary) {
                         val cb = rootCtx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                        cb.setPrimaryClip(android.content.ClipData.newPlainText("reply", replyTxt))
+                        cb.setPrimaryClip(android.content.ClipData.newPlainText("reply", formattedCopy))
                         DsToast.show(Strings.get("copied"))
                         assistantMenu = null
+                    }
+                    if (formattedCopy.isNotEmpty()) {
+                        MenuOption(Strings.get("androidSelectText"), R.drawable.ic_select_text, c.labelPrimary) {
+                            assistantMenu = null
+                            selectTextTarget = formattedCopy
+                        }
                     }
                     MenuOption(Strings.get("regenerate"), R.drawable.ic_refresh, c.labelPrimary) {
                         if (sid.isNotEmpty()) chatStore.regenerateReply(sid, amsg.id)
@@ -517,6 +531,12 @@ fun SessionView(
                 onClose = { editTarget = null },
             )
         }
+    }
+    selectTextTarget?.let { selectedText ->
+        TextSelectionOverlay(
+            text = selectedText,
+            onClose = { selectTextTarget = null },
+        )
     }
     }
     }
@@ -950,7 +970,8 @@ fun AssistantView(
                 val audioManager = ctx.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
                 val iconTint = if (c.dark) c.labelTertiary else Color(0xFF8E9094)
                 IconButton({
-                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("reply", replyText(msg)))
+                    val txt = formattedAssistantCopyText(msg)
+                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("reply", txt))
                     DsToast.show(Strings.get("copied"))
                 }, modifier = Modifier.size(34.dp)) {
                     Icon(painterResource(R.drawable.ic_copy), Strings.get("copy"), tint = iconTint, modifier = Modifier.size(18.dp))

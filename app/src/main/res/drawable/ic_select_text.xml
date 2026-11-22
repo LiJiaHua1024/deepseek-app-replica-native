@@ -1,0 +1,17 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="16dp"
+    android:height="16dp"
+    android:viewportWidth="16"
+    android:viewportHeight="16">
+    <!-- ref IconSelectTextOutline16: I-beam cursor left + dashed box right -->
+    <path
+        android:pathData="M1.1,2.4h3.3M2.75,2.4v12.6M1.1,15h3.3"
+        android:strokeWidth="1.45"
+        android:strokeLineCap="square"
+        android:strokeColor="#000000" />
+    <path
+        android:pathData="M7.2,2.7h1.4M10.1,2.7h1.4M13.0,2.7h1.4M7.2,15h1.4M10.1,15h1.4M13.0,15h1.4M7.2,5.0v1.6M7.2,8.1v1.6M7.2,11.2v1.6M15.7,5.0v1.6M15.7,8.1v1.6M15.7,11.2v1.6"
+        android:strokeWidth="1.45"
+        android:strokeLineCap="square"
+        android:strokeColor="#000000" />
+</vector>

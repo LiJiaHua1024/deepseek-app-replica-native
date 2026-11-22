@@ -106,6 +106,7 @@ object Strings {
             "submit" -> pick("提交", "Submit")
             "feedbackSubmitted" -> pick("感谢你的反馈", "Feedback submitted")
             "selectAll" -> pick("全选", "Select all")
+            "androidSelectText" -> pick("选择文本", "Select text")
             "selectedGroups" -> pick("已选 {count} 组", "{count} group selected")
             "generateImage" -> pick("生成图片", "Generate image")
             "copyLink" -> pick("复制链接", "Copy link")

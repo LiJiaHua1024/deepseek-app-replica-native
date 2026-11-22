@@ -250,7 +250,7 @@ internal fun formatShareTranscript(messages: List<Message>, selectedIds: Set<Str
         when (msg) {
             is Message.User -> if (msg.content.isNotBlank()) parts.add("User:\n${msg.content.trim()}")
             is Message.Assistant -> {
-                val txt = replyText(msg).trim()
+                val txt = formattedAssistantCopyText(msg).trim()
                 if (txt.isNotEmpty()) parts.add("DeepSeek:\n$txt")
             }
         }
