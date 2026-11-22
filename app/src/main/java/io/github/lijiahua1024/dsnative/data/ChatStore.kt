@@ -588,6 +588,17 @@ class ChatStore(
         }
     }
 
+    fun setReplyReaction(sessionId: String, messageId: String, reaction: String?) {
+        scope.launch {
+            updateSession(sessionId) { session ->
+                session.copy(messages = session.messages.map { m ->
+                    if (m is Message.Assistant && m.id == messageId) m.copy(reaction = reaction) else m
+                })
+            }
+            persist(sessionId)
+        }
+    }
+
     /** 提交草稿；null 目标表示新建会话。返回是否成功发出。 */
     fun sendMessage(targetSessionId: String?): Boolean {
         if (_importingHistory.value || !_ready.value) return false

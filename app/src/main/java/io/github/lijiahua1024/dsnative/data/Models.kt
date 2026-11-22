@@ -113,6 +113,7 @@ sealed class Message {
         val blocks: List<ReplyBlock> = emptyList(),
         val stopReason: String? = null,
         val error: ReplyError? = null,
+        val reaction: String? = null,
         override val parentId: String? = null,
         override val selectedChildId: String? = null,
     ) : Message()

@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.layout.*
@@ -28,11 +29,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
@@ -76,6 +80,9 @@ fun SessionView(
     // (msg, 气泡 boundsInWindow, edit 回调) —— 参照物菜单在页内 DOM，Popup 窗口
     // 会把强制对比度的黑色导航栏区域刷白，必须用窗口内 overlay
     var bubbleMenu by remember { mutableStateOf<Triple<Message.User, androidx.compose.ui.geometry.Rect, () -> Unit>?>(null) }
+    var assistantMenu by remember { mutableStateOf<Pair<Message.Assistant, androidx.compose.ui.geometry.Rect>?>(null) }
+    var feedbackTarget by remember { mutableStateOf<Pair<Message.Assistant, FeedbackSheetVariant>?>(null) }
+    var shareSession by remember { mutableStateOf<Session?>(null) }
     val rootCtx = LocalContext.current
     val autoRead by settings.autoRead.collectAsState()
     val foldThinking by settings.foldThinking.collectAsState()
@@ -197,7 +204,17 @@ fun SessionView(
                     when (val msg = visible[index]) {
                         is Message.User -> session?.let { UserBubble(msg, it, chatStore) { m, r, e -> bubbleMenu = Triple(m, r, e) } }
                         is Message.Assistant -> session?.let {
-                            AssistantView(msg, it, chatStore, index == visible.size - 1, onOpenSettings, foldThinking)
+                            AssistantView(
+                                msg = msg,
+                                session = it,
+                                chatStore = chatStore,
+                                isLast = index == visible.size - 1,
+                                onOpenSettings = onOpenSettings,
+                                foldThinking = foldThinking,
+                                onOpenMenu = { amsg, rect -> assistantMenu = amsg to rect },
+                                onFeedback = { amsg, variant -> feedbackTarget = amsg to variant },
+                                onShare = { shareSession = it },
+                            )
                         }
                     }
                 }
@@ -302,7 +319,8 @@ fun SessionView(
     val voiceStatus by VoiceInput.status.collectAsState()
     val voiceCanceling by VoiceInput.canceling.collectAsState()
     io.github.lijiahua1024.dsnative.ui.DrawerGestureBlocker(
-        sourcesPanel != null || bubbleMenu != null || voiceStatus != VoiceInput.Status.IDLE
+        sourcesPanel != null || bubbleMenu != null || assistantMenu != null ||
+            feedbackTarget != null || shareSession != null || voiceStatus != VoiceInput.Status.IDLE
     )
     if (voiceStatus != VoiceInput.Status.IDLE) {
         VoiceOverlay(canceling = voiceCanceling) { VoiceInput.level() }
@@ -365,6 +383,121 @@ fun SessionView(
                 }
             }
         }
+    }
+    assistantMenu?.let { (amsg, rect) ->
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        var overlayPos by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+        var overlayH by remember { mutableIntStateOf(0) }
+        var menuH by remember { mutableIntStateOf(0) }
+        val navBottomPx = WindowInsets.navigationBars.getBottom(density).toFloat()
+        val marginPx = with(density) { 8.dp.toPx() }
+        val topPad = with(density) {
+            clampMenuTopPx(
+                rawTopPx = (rect.top - overlayPos.y + 40f).coerceAtLeast(marginPx),
+                containerHeightPx = overlayH,
+                menuHeightPx = menuH,
+                bottomInsetPx = navBottomPx,
+                marginPx = marginPx,
+            ).toDp()
+        }
+        Box(Modifier.fillMaxSize()
+            .onGloballyPositioned {
+                overlayPos = it.localToRoot(androidx.compose.ui.geometry.Offset.Zero)
+                overlayH = it.size.height
+            }) {
+            Box(Modifier.fillMaxSize().clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }) { assistantMenu = null })
+            Surface(
+                color = c.menu,
+                shape = RoundedCornerShape(12.dp),
+                shadowElevation = 16.dp,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 24.dp)
+                    .offset(y = topPad)
+                    .width(154.dp)
+                    .onGloballyPositioned { menuH = it.size.height },
+            ) {
+                Column(Modifier.padding(4.dp)) {
+                    val replyTxt = replyText(amsg)
+                    val sid = session?.id ?: ""
+                    MenuOption(Strings.get("copy"), R.drawable.ic_copy, c.labelPrimary) {
+                        val cb = rootCtx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        cb.setPrimaryClip(android.content.ClipData.newPlainText("reply", replyTxt))
+                        DsToast.show(Strings.get("copied"))
+                        assistantMenu = null
+                    }
+                    MenuOption(Strings.get("regenerate"), R.drawable.ic_refresh, c.labelPrimary) {
+                        if (sid.isNotEmpty()) chatStore.regenerateReply(sid, amsg.id)
+                        assistantMenu = null
+                    }
+                    MenuOption(
+                        Strings.get("like"),
+                        if (amsg.reaction == "like") R.drawable.ic_thumb_up_filled else R.drawable.ic_thumb_up,
+                        if (amsg.reaction == "like") c.brandText else c.labelPrimary,
+                    ) {
+                        if (sid.isNotEmpty()) {
+                            chatStore.setReplyReaction(sid, amsg.id, if (amsg.reaction == "like") null else "like")
+                        }
+                        assistantMenu = null
+                    }
+                    MenuOption(
+                        Strings.get("dislike"),
+                        if (amsg.reaction == "dislike") R.drawable.ic_thumb_down_filled else R.drawable.ic_thumb_down,
+                        if (amsg.reaction == "dislike") c.brandText else c.labelPrimary,
+                    ) {
+                        assistantMenu = null
+                        if (amsg.reaction == "dislike" && sid.isNotEmpty()) {
+                            chatStore.setReplyReaction(sid, amsg.id, null)
+                        } else {
+                            feedbackTarget = amsg to FeedbackSheetVariant.FEEDBACK
+                        }
+                    }
+                    if (replyTxt.isNotEmpty() && amsg.stopReason != "refusal") {
+                        MenuOption(Strings.get("ttsPlay"), R.drawable.ic_speaker, c.labelPrimary) {
+                            val audioManager = rootCtx.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+                            ReadAloud.toggle(
+                                autoReadScope, amsg.id, replyTxt,
+                                settings.apiKey.value ?: "", settings.ttsVoice.value,
+                                { key -> DsToast.show(Strings.get(key)) },
+                                {
+                                    if (audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) == 0) {
+                                        DsToast.show(Strings.get("readAloudLowVolume"))
+                                    }
+                                },
+                            )
+                            assistantMenu = null
+                        }
+                        MenuOption(Strings.get("share"), R.drawable.ic_share, c.labelPrimary) {
+                            assistantMenu = null
+                            session?.let { shareSession = it }
+                        }
+                    }
+                    MenuOption(Strings.get("report"), R.drawable.ic_flag, c.labelPrimary) {
+                        assistantMenu = null
+                        feedbackTarget = amsg to FeedbackSheetVariant.REPORT
+                    }
+                }
+            }
+        }
+    }
+    feedbackTarget?.let { (amsg, variant) ->
+        val sid = session?.id ?: ""
+        MessageFeedbackSheetOverlay(
+            variant = variant,
+            onClose = { feedbackTarget = null },
+            onSubmit = { _, _ ->
+                if (variant == FeedbackSheetVariant.FEEDBACK && sid.isNotEmpty()) {
+                    chatStore.setReplyReaction(sid, amsg.id, "dislike")
+                }
+                feedbackTarget = null
+                DsToast.show(Strings.get("feedbackSubmitted"))
+            },
+        )
+    }
+    shareSession?.let { s ->
+        MessageShareOverlay(session = s, onClose = { shareSession = null })
     }
     }
     }
@@ -725,6 +858,7 @@ fun WaitingDots() {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AssistantView(
     msg: Message.Assistant,
@@ -733,13 +867,36 @@ fun AssistantView(
     isLast: Boolean = false,
     onOpenSettings: () -> Unit = {},
     foldThinking: Boolean = true,
+    onOpenMenu: (Message.Assistant, androidx.compose.ui.geometry.Rect) -> Unit = { _, _ -> },
+    onFeedback: (Message.Assistant, FeedbackSheetVariant) -> Unit = { _, _ -> },
+    onShare: () -> Unit = {},
 ) {
     val c = DsTheme.colors
     val ctx = LocalContext.current
     val sessionId = session.id
     val sources = remember(msg.blocks) { searchSources(msg.blocks) }
     val openSources = LocalOpenSources.current
-    Column(Modifier.fillMaxWidth().padding(start = 24.dp, end = 19.dp)) {
+    val hasFinishedReply = (msg.status == ReplyStatus.DONE || msg.status == ReplyStatus.STOPPED) &&
+        replyText(msg).isNotEmpty()
+    var responseBounds by remember { mutableStateOf(androidx.compose.ui.geometry.Rect.Zero) }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(start = 24.dp, end = 19.dp)
+            .onGloballyPositioned { coords ->
+                if (coords.isAttached) responseBounds = coords.boundsInWindow()
+            }
+            .then(
+                if (hasFinishedReply) {
+                    Modifier.combinedClickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {},
+                        onLongClick = { onOpenMenu(msg, responseBounds) },
+                    )
+                } else Modifier,
+            ),
+    ) {
     CompositionLocalProvider(LocalSources provides sources) {
         var prevWasStep = false
         for (block in withCitationMarkers(msg.blocks, sources)) {
@@ -834,6 +991,37 @@ fun AssistantView(
                 }, modifier = Modifier.size(34.dp)) {
                     Icon(painterResource(R.drawable.ic_copy), Strings.get("copy"), tint = iconTint, modifier = Modifier.size(18.dp))
                 }
+                val liked = msg.reaction == "like"
+                val disliked = msg.reaction == "dislike"
+                IconButton(
+                    onClick = { chatStore.setReplyReaction(sessionId, msg.id, if (liked) null else "like") },
+                    modifier = Modifier.size(34.dp).semantics {
+                        contentDescription = Strings.get("like")
+                    },
+                ) {
+                    Icon(
+                        painterResource(if (liked) R.drawable.ic_thumb_up_filled else R.drawable.ic_thumb_up),
+                        Strings.get("like"),
+                        tint = if (liked) c.brandText else iconTint,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                IconButton(
+                    onClick = {
+                        if (disliked) chatStore.setReplyReaction(sessionId, msg.id, null)
+                        else onFeedback(msg, FeedbackSheetVariant.FEEDBACK)
+                    },
+                    modifier = Modifier.size(34.dp).semantics {
+                        contentDescription = Strings.get("dislike")
+                    },
+                ) {
+                    Icon(
+                        painterResource(if (disliked) R.drawable.ic_thumb_down_filled else R.drawable.ic_thumb_down),
+                        Strings.get("dislike"),
+                        tint = if (disliked) c.brandText else iconTint,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
                 run {
                     // ref ReadAloudButton + ReadingBars: loading/playing 竖条动画,
                     // повторный тап по читаемой = стоп (stopReadAloud).
@@ -858,6 +1046,12 @@ fun AssistantView(
                                 tint = iconTint, modifier = Modifier.size(18.dp))
                         }
                     }
+                }
+                IconButton(
+                    onClick = onShare,
+                    modifier = Modifier.size(34.dp),
+                ) {
+                    Icon(painterResource(R.drawable.ic_share), Strings.get("share"), tint = iconTint, modifier = Modifier.size(18.dp))
                 }
                 Spacer(Modifier.weight(1f))
                 IconButton({ chatStore.regenerateReply(sessionId, msg.id) }, modifier = Modifier.size(34.dp)) {

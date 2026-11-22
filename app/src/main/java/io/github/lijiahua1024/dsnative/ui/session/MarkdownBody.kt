@@ -188,7 +188,12 @@ private fun bottomMargin(n: Node, isLast: Boolean): Int = when (n) {
 }
 
 @Composable
-fun MarkdownBody(text: String, modifier: Modifier = Modifier, streaming: Boolean = false) {
+fun MarkdownBody(
+    text: String,
+    modifier: Modifier = Modifier,
+    streaming: Boolean = false,
+    selectable: Boolean = false,
+) {
     val c = DsTheme.colors
     val baseUriHandler = LocalUriHandler.current
     val linkCtx = androidx.compose.ui.platform.LocalContext.current
@@ -210,7 +215,7 @@ fun MarkdownBody(text: String, modifier: Modifier = Modifier, streaming: Boolean
     }
     val prep = remember(text) { preprocessMarkdownMath(text) }
     val doc = remember(prep.markdown) { parser.parse(prep.markdown) }
-    SelectionContainer {
+    val content: @Composable () -> Unit = {
         Column(modifier) {
             var node = doc.firstChild
             var prev: Node? = null
@@ -223,6 +228,11 @@ fun MarkdownBody(text: String, modifier: Modifier = Modifier, streaming: Boolean
                 node = node.next
             }
         }
+    }
+    if (selectable) {
+        SelectionContainer { content() }
+    } else {
+        content()
     }
 }
 
