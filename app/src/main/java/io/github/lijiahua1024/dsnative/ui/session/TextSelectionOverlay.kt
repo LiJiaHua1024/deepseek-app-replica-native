@@ -35,8 +35,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +46,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -76,7 +80,36 @@ fun TextSelectionOverlay(
     text: String,
     onClose: () -> Unit,
 ) {
-    BackHandler { onClose() }
+    val scope = rememberCoroutineScope()
+    val anim = remember { androidx.compose.animation.core.Animatable(0f) }
+    var closing by remember { mutableStateOf(false) }
+    var backFrac by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        anim.animateTo(1f, androidx.compose.animation.core.tween(220, easing = io.github.lijiahua1024.dsnative.ui.TwoPhaseSpec.FadeInEase))
+    }
+    fun closeAnimated() {
+        if (closing) return
+        closing = true
+        scope.launch {
+            val s = (anim.value * (1f - backFrac)).coerceIn(0f, 1f)
+            anim.snapTo(s)
+            backFrac = 0f
+            anim.animateTo(0f, androidx.compose.animation.core.tween(180))
+            onClose()
+        }
+    }
+    androidx.activity.compose.PredictiveBackHandler(enabled = !closing) { flow ->
+        try {
+            flow.collect { ev -> backFrac = ev.progress.coerceIn(0f, 1f) }
+            closeAnimated()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            val s = backFrac
+            scope.launch {
+                androidx.compose.animation.core.animate(s, 0f, animationSpec = androidx.compose.animation.core.tween(150)) { v, _ -> backFrac = v }
+            }
+            throw e
+        }
+    }
     val c = DsTheme.colors
     val ctx = LocalContext.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -98,9 +131,14 @@ fun TextSelectionOverlay(
             backgroundColor = c.brandPrimary.copy(alpha = 0.22f),
         )
     }
+    val eff = (anim.value * (1f - backFrac)).coerceIn(0f, 1f)
 
     Column(
         Modifier.fillMaxSize()
+            .graphicsLayer {
+                alpha = eff
+                translationX = (1f - eff) * 40.dp.toPx()
+            }
             .background(c.bgBase)
             .clickable(
                 indication = null,
@@ -118,7 +156,7 @@ fun TextSelectionOverlay(
                 Modifier.size(40.dp)
                     .clip(CircleShape)
                     .semantics { contentDescription = Strings.get("close") }
-                    .clickable { onClose() },
+                    .clickable { closeAnimated() },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -173,7 +211,7 @@ fun TextSelectionOverlay(
                         val cb = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                         cb.setPrimaryClip(ClipData.newPlainText("selection", copied))
                         DsToast.show(Strings.get("copied"))
-                        onClose()
+                        closeAnimated()
                     }
                     .padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,

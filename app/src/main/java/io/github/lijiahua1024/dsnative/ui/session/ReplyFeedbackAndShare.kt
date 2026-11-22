@@ -20,6 +20,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -39,6 +40,9 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -81,16 +85,52 @@ fun MessageFeedbackSheetOverlay(
     val c = DsTheme.colors
     var reason by remember { mutableStateOf<String?>(null) }
     var detail by remember { mutableStateOf("") }
-    BackHandler { onClose() }
+    val scope = rememberCoroutineScope()
+    val prog = remember { androidx.compose.animation.core.Animatable(0f) }
+    var dragY by remember { mutableFloatStateOf(0f) }
+    var sheetH by remember { mutableIntStateOf(1) }
+    var closing by remember { mutableStateOf(false) }
+    var backFrac by remember { mutableFloatStateOf(0f) }
+    val sheetEase = io.github.lijiahua1024.dsnative.ui.TwoPhaseSpec.SheetEase
+    LaunchedEffect(Unit) {
+        prog.animateTo(1f, androidx.compose.animation.core.tween(220, easing = sheetEase))
+    }
+    fun closeAnimated(then: () -> Unit = onClose) {
+        if (closing) return
+        closing = true
+        val dragFrac = if (sheetH > 1) (dragY / sheetH).coerceIn(0f, 1f) else 0f
+        val start = (prog.value - dragFrac - backFrac * 0.45f).coerceIn(0f, 1f)
+        scope.launch {
+            dragY = 0f
+            backFrac = 0f
+            prog.snapTo(start)
+            prog.animateTo(0f, androidx.compose.animation.core.tween(180, easing = sheetEase))
+            then()
+        }
+    }
+    androidx.activity.compose.PredictiveBackHandler(enabled = !closing) { flow ->
+        try {
+            flow.collect { ev -> backFrac = ev.progress.coerceIn(0f, 1f) }
+            closeAnimated()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            val s = backFrac
+            scope.launch {
+                androidx.compose.animation.core.animate(s, 0f, animationSpec = androidx.compose.animation.core.tween(150)) { v, _ -> backFrac = v }
+            }
+            throw e
+        }
+    }
+    val dragFracNow = if (sheetH > 1) (dragY / sheetH).coerceIn(0f, 1f) else 0f
+    val eff = (prog.value * (1f - dragFracNow) * (1f - backFrac * 0.65f)).coerceIn(0f, 1f)
 
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.35f))
+            .background(Color.Black.copy(alpha = 0.35f * eff))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-            ) { onClose() },
+            ) { closeAnimated() },
         contentAlignment = Alignment.BottomCenter,
     ) {
         Surface(
@@ -98,8 +138,27 @@ fun MessageFeedbackSheetOverlay(
             shape = RoundedCornerShape(topStart = 21.dp, topEnd = 21.dp),
             modifier = Modifier
                 .fillMaxWidth()
+                .onGloballyPositioned { sheetH = it.size.height.coerceAtLeast(1) }
+                .graphicsLayer {
+                    translationY = ((1f - prog.value) + backFrac * 0.45f) * size.height + dragY
+                }
                 .imePadding()
                 .navigationBarsPadding()
+                .pointerInput(Unit) {
+                    detectVerticalDragGestures(
+                        onVerticalDrag = { _, d -> dragY = (dragY + d).coerceAtLeast(0f) },
+                        onDragEnd = {
+                            if (dragY > 100.dp.toPx()) closeAnimated()
+                            else {
+                                val s = dragY
+                                scope.launch {
+                                    androidx.compose.animation.core.animate(s, 0f, animationSpec = androidx.compose.animation.core.tween(160)) { v, _ -> dragY = v }
+                                }
+                            }
+                        },
+                        onDragCancel = { dragY = 0f },
+                    )
+                }
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -129,7 +188,7 @@ fun MessageFeedbackSheetOverlay(
                             .size(36.dp)
                             .clip(CircleShape)
                             .background(c.labelTertiary.copy(alpha = 0.09f))
-                            .clickable { onClose() },
+                            .clickable { closeAnimated() },
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
@@ -225,7 +284,7 @@ fun MessageFeedbackSheetOverlay(
                         .height(44.8.dp)
                         .clip(RoundedCornerShape(25.dp))
                         .background(c.brandText)
-                        .clickable { onSubmit(reason, detail.trim()) },
+                        .clickable { closeAnimated { onSubmit(reason, detail.trim()) } },
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -369,16 +428,49 @@ fun MessageShareOverlay(
     var selectedIds by remember(session.id) {
         mutableStateOf(messages.map { it.id }.toSet())
     }
-    BackHandler { onClose() }
+    val enter = remember { androidx.compose.animation.core.Animatable(0f) }
+    var closing by remember { mutableStateOf(false) }
+    var backFrac by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        enter.animateTo(1f, androidx.compose.animation.core.tween(220, easing = io.github.lijiahua1024.dsnative.ui.TwoPhaseSpec.FadeInEase))
+    }
+    fun closeAnimated() {
+        if (closing) return
+        closing = true
+        scope.launch {
+            val s = (enter.value * (1f - backFrac)).coerceIn(0f, 1f)
+            enter.snapTo(s)
+            backFrac = 0f
+            enter.animateTo(0f, androidx.compose.animation.core.tween(180))
+            onClose()
+        }
+    }
+    androidx.activity.compose.PredictiveBackHandler(enabled = !closing) { flow ->
+        try {
+            flow.collect { ev -> backFrac = ev.progress.coerceIn(0f, 1f) }
+            closeAnimated()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            val s = backFrac
+            scope.launch {
+                androidx.compose.animation.core.animate(s, 0f, animationSpec = androidx.compose.animation.core.tween(150)) { v, _ -> backFrac = v }
+            }
+            throw e
+        }
+    }
     DrawerGestureBlocker(true)
 
     val allSelected = messages.isNotEmpty() && selectedIds.size == messages.size
     val selectedGroups = selectedShareGroupCount(messages, selectedIds)
     val blue = Color(0xFF4D80F0)
+    val eff = (enter.value * (1f - backFrac)).coerceIn(0f, 1f)
 
     Column(
         Modifier
             .fillMaxSize()
+            .graphicsLayer {
+                alpha = eff
+                translationX = (1f - eff) * 40.dp.toPx()
+            }
             .background(c.bgBase)
             .statusBarsPadding()
             .navigationBarsPadding(),
@@ -496,7 +588,7 @@ fun MessageShareOverlay(
                     modifier = Modifier.align(Alignment.Center),
                 )
                 IconButton(
-                    onClick = onClose,
+                    onClick = { closeAnimated() },
                     modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp),
                 ) {
                     Icon(

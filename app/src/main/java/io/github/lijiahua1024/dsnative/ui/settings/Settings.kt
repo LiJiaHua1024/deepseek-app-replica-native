@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import io.github.lijiahua1024.dsnative.ui.backdropBlur
 import io.github.lijiahua1024.dsnative.ui.excludeFromDrawerGesture
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.alpha
@@ -143,48 +144,55 @@ fun ApiKeyScreen(settings: SettingsStore) {
 fun AndroidSettings(
     settings: SettingsStore,
     chatStore: ChatStore,
-    transitionProgress: Float = 1f,
+    bgAlpha: Float = 1f,
+    contentAlpha: Float = 1f,
+    contentShiftDp: Float = 0f,
     onRootBackProgress: (Float) -> Unit = {},
+    onRootBackCommit: () -> Unit = {},
+    onRootBackCancel: () -> Unit = {},
     onBack: () -> Unit,
 ) {
     val c = DsTheme.colors
     val themePref by settings.themePreference.collectAsState()
     val localePref by settings.localePreference.collectAsState()
     val ttsVoice by settings.ttsVoice.collectAsState()
-    var page by remember { mutableStateOf("root") }
     var popup by remember { mutableStateOf<String?>(null) }
     var confirmLogout by remember { mutableStateOf(false) }
     var checkingUpdate by remember { mutableStateOf(false) }
     var updateDialog by remember { mutableStateOf<io.github.lijiahua1024.dsnative.data.UpdateCheckResult.UpdateAvailable?>(null) }
     val updateScope = rememberCoroutineScope()
+    val subScope = rememberCoroutineScope()
     val ctx = LocalContext.current
 
-    // 2-phase settings motion per androidSettingsMotion.ts: handoff=0.35, 40dp slide + opacity.
-    val handoff = 0.35f
-    val fadeOutEase = remember { androidx.compose.animation.core.CubicBezierEasing(0.4f, 0f, 1f, 1f) }
-    val fadeInEase = remember { androidx.compose.animation.core.CubicBezierEasing(0.022f, 0.021f, 0.186f, 1f) }
-    val slideInEase = remember { androidx.compose.animation.core.CubicBezierEasing(0.04f, 0.085f, 0.19f, 1f) }
-    val rootBgAlpha = fadeOutEase.transform((transitionProgress / handoff).coerceIn(0f, 1f))
-    val rootContentFrac = ((transitionProgress - handoff) / (1f - handoff)).coerceIn(0f, 1f)
-    val rootContentAlpha = fadeInEase.transform(rootContentFrac)
-    val rootContentShiftDp = 40f * (1f - slideInEase.transform(rootContentFrac))
+    val subCtrl = remember {
+        io.github.lijiahua1024.dsnative.ui.TwoPhaseController("root", subScope)
+    }
+    var modalBlurFraction by remember { mutableStateOf(0f) }
+    var modalTargetBlurDp by remember { mutableStateOf(0f) }
 
-    var subBackProgress by remember { mutableStateOf(0f) }
-    androidx.activity.compose.PredictiveBackHandler(enabled = true) { flow ->
+    androidx.activity.compose.PredictiveBackHandler(
+        enabled = popup == null && !confirmLogout && updateDialog == null,
+    ) { flow ->
+        val pageNow = subCtrl.current
         try {
             flow.collect { ev ->
-                if (popup == null && page == "root") onRootBackProgress(ev.progress)
-                else subBackProgress = ev.progress
+                if (pageNow == "root") {
+                    onRootBackProgress(ev.progress)
+                } else {
+                    val backTarget = if (pageNow == "export") "data" else "root"
+                    subCtrl.beginBackSeek(backTarget, ev.progress)
+                }
+            }
+            if (pageNow == "root") {
+                onRootBackCommit()
+            } else {
+                val backTarget = if (pageNow == "export") "data" else "root"
+                subCtrl.commitBackSeek(backTarget)
             }
         } catch (e: kotlinx.coroutines.CancellationException) {
-            onRootBackProgress(0f)
-            subBackProgress = 0f
+            if (pageNow == "root") onRootBackCancel() else subCtrl.cancelBackSeek()
             throw e
         }
-        onRootBackProgress(0f)
-        subBackProgress = 0f
-        if (popup != null) popup = null
-        else if (page == "root") onBack() else page = if (page == "export") "data" else "root"
     }
 
     val bg = if (c.dark) Color(0xFF1E1E1E) else Color(0xFFF8F8F8)
@@ -202,174 +210,331 @@ fun AndroidSettings(
         "export" to Strings.get("exportAllLabel"),
     )
 
-    val subAnim = remember { androidx.compose.animation.core.Animatable(1f) }
-    var prevPage by remember { mutableStateOf<String?>(null) }
-    var curPage by remember { mutableStateOf("root") }
-    LaunchedEffect(page) {
-        if (page != curPage) {
-            prevPage = curPage
-            curPage = page
-            subAnim.snapTo(0f)
-            subAnim.animateTo(1f, androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.LinearEasing))
-            prevPage = null
-        }
+    val navigateSub: (String) -> Unit = { target ->
+        subCtrl.navigate(target, isForward = true)
     }
-    val effectiveSubT = (subAnim.value * (1f - subBackProgress)).coerceIn(0f, 1f)
-    val subContentFrac = ((effectiveSubT - handoff) / (1f - handoff)).coerceIn(0f, 1f)
-    val subAlpha = if (page == "root" && prevPage == null) 1f else fadeInEase.transform(subContentFrac)
-    val subShiftDp = if (page == "root" && prevPage == null) 0f else 40f * (1f - slideInEase.transform(subContentFrac))
+    val navigateBack: () -> Unit = {
+        val pageNow = subCtrl.current
+        if (pageNow == "root") onBack()
+        else subCtrl.navigate(if (pageNow == "export") "data" else "root", isForward = false)
+    }
 
-    Box(Modifier.fillMaxSize().background(bg.copy(alpha = rootBgAlpha))) {
-    Column(Modifier.fillMaxSize().statusBarsPadding()
-        .graphicsLayer {
-            alpha = rootContentAlpha
-            translationX = rootContentShiftDp.dp.toPx()
-        }) {
-        Box(Modifier.fillMaxWidth().height(44.dp)) {
-            Box(Modifier.align(Alignment.CenterStart).padding(start = 6.dp).size(48.dp)
-                .clickable(
-                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                    indication = null,
-                ) { if (page == "root") onBack() else page = if (page == "export") "data" else "root" },
-                contentAlignment = Alignment.Center) {
-                Box(Modifier.size(32.dp).clip(RoundedCornerShape(50)).background(btnBg),
-                    contentAlignment = Alignment.Center) {
-                    Icon(painterResource(R.drawable.ic_chevron_right), Strings.get("back"),
-                        tint = c.labelPrimary, modifier = Modifier.size(18.dp).rotate(180f))
+    val blurDp = (modalTargetBlurDp * modalBlurFraction).coerceAtLeast(0f).dp
+
+    Box(
+        Modifier.fillMaxSize()
+            // Isolate underlying Chat screen from touches whenever Settings is visible.
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        awaitPointerEvent()
+                    }
                 }
             }
-            Text(titles[page] ?: "", fontSize = 17.sp, lineHeight = 24.sp,
-                fontWeight = FontWeight.SemiBold, color = c.labelPrimary,
-                modifier = Modifier.align(Alignment.Center)
-                    .graphicsLayer { alpha = subAlpha })
-        }
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
-            .graphicsLayer {
-                alpha = subAlpha
-                translationX = subShiftDp.dp.toPx()
+            .background(bg.copy(alpha = bgAlpha.coerceIn(0f, 1f)))
+            .backdropBlur(blurDp),
+    ) {
+        Column(
+            Modifier.fillMaxSize()
+                .statusBarsPadding()
+                .graphicsLayer {
+                    alpha = contentAlpha
+                    translationX = contentShiftDp.dp.toPx()
+                },
+        ) {
+            val outPage = subCtrl.outgoing
+            val curPage = subCtrl.current
+            val layers = if (outPage != null && outPage != curPage) listOf(outPage, curPage) else listOf(curPage)
+
+            Box(Modifier.fillMaxWidth().height(44.dp)) {
+                Box(
+                    Modifier.align(Alignment.CenterStart).padding(start = 6.dp).size(48.dp)
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null,
+                            onClick = navigateBack,
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        Modifier.size(32.dp).clip(RoundedCornerShape(50)).background(btnBg),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            painterResource(R.drawable.ic_chevron_right),
+                            Strings.get("back"),
+                            tint = c.labelPrimary,
+                            modifier = Modifier.size(18.dp).rotate(180f),
+                        )
+                    }
+                }
+                layers.forEach { layerPage ->
+                    val la = subCtrl.layerAlpha(layerPage)
+                    if (la > 0.001f) {
+                        val ltx = subCtrl.layerShiftDp(layerPage)
+                        Text(
+                            titles[layerPage] ?: "",
+                            fontSize = 17.sp,
+                            lineHeight = 24.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = c.labelPrimary,
+                            modifier = Modifier.align(Alignment.Center).graphicsLayer {
+                                alpha = la
+                                translationX = ltx.dp.toPx()
+                            },
+                        )
+                    }
+                }
             }
-            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 36.dp)) {
-            when (page) {
-                "root" -> SettingsRootPage(c, card, muted,
-                    onPage = { page = it },
-                    onPopup = { popup = it },
-                    onHelp = { io.github.lijiahua1024.dsnative.SourceBrowserActivity.open(
-                        ctx, "https://static.deepseek.com/faq/index.html", c.dark, "") },
-                    onLogout = { confirmLogout = true },
-                    themePref = themePref, localePref = localePref,
-                    checkingUpdate = checkingUpdate,
-                    onCheckUpdate = {
-                        if (!checkingUpdate) {
-                            checkingUpdate = true
-                            updateScope.launch {
-                                try {
-                                    when (val res = io.github.lijiahua1024.dsnative.data.UpdateChecker.checkLatestRelease(BuildConfig.VERSION_NAME)) {
-                                        io.github.lijiahua1024.dsnative.data.UpdateCheckResult.UpToDate ->
-                                            DsToast.show(Strings.get("updateCurrent"))
-                                        is io.github.lijiahua1024.dsnative.data.UpdateCheckResult.UpdateAvailable ->
-                                            updateDialog = res
-                                    }
-                                } catch (_: Exception) {
-                                    DsToast.show(Strings.get("updateCheckFailed"))
-                                } finally {
-                                    checkingUpdate = false
-                                }
+
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                layers.forEach { layerPage ->
+                    val la = subCtrl.layerAlpha(layerPage)
+                    if (la > 0.001f) {
+                        val txDp = subCtrl.layerShiftDp(layerPage)
+                        Column(
+                            Modifier.fillMaxSize().graphicsLayer {
+                                alpha = la
+                                translationX = txDp.dp.toPx()
+                            },
+                        ) {
+                            Column(
+                                Modifier.weight(1f)
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 36.dp),
+                            ) {
+                                SettingsLayerBody(
+                                    layerPage = layerPage,
+                                    c = c,
+                                    card = card,
+                                    muted = muted,
+                                    settings = settings,
+                                    chatStore = chatStore,
+                                    themePref = themePref,
+                                    localePref = localePref,
+                                    checkingUpdate = checkingUpdate,
+                                    onPage = navigateSub,
+                                    onPopup = { popup = it },
+                                    onHelp = {
+                                        io.github.lijiahua1024.dsnative.SourceBrowserActivity.open(
+                                            ctx, "https://static.deepseek.com/faq/index.html", c.dark, "",
+                                        )
+                                    },
+                                    onLogout = { confirmLogout = true },
+                                    onModalBlur = { frac ->
+                                        modalTargetBlurDp = 2.1f
+                                        modalBlurFraction = frac
+                                    },
+                                    onCheckUpdate = {
+                                        if (!checkingUpdate) {
+                                            checkingUpdate = true
+                                            updateScope.launch {
+                                                try {
+                                                    when (val res = io.github.lijiahua1024.dsnative.data.UpdateChecker.checkLatestRelease(BuildConfig.VERSION_NAME)) {
+                                                        io.github.lijiahua1024.dsnative.data.UpdateCheckResult.UpToDate ->
+                                                            DsToast.show(Strings.get("updateCurrent"))
+                                                        is io.github.lijiahua1024.dsnative.data.UpdateCheckResult.UpdateAvailable ->
+                                                            updateDialog = res
+                                                    }
+                                                } catch (_: Exception) {
+                                                    DsToast.show(Strings.get("updateCheckFailed"))
+                                                } finally {
+                                                    checkingUpdate = false
+                                                }
+                                            }
+                                        }
+                                    },
+                                )
                             }
+                            if (layerPage == "font") FontPanel(c, card, muted, settings)
                         }
-                    })
-                "account" -> AccountPage(c, card, muted, settings)
-                "data" -> DataPage(c, card, muted, settings, chatStore, onPage = { page = it })
-                "font" -> FontPage(c, card, muted, settings)
-                "personalization" -> PersonalizationPage(c, card, muted, settings)
-                "agreements" -> AgreementsPage(c, card, muted)
-                "export" -> ExportPage(c, card, muted, chatStore)
+                    }
+                }
             }
         }
-        if (page == "font") FontPanel(c, card, muted, settings)
-    }
     }
 
     when (popup) {
-        "locale" -> ChoicePopup(c, card, muted, Strings.get("settingsLocalePreference"),
+        "locale" -> ChoicePopup(
+            c, card, muted, Strings.get("settingsLocalePreference"),
             options = listOf(
                 "system" to Strings.get("settingsThemeSystem"),
                 "zh-CN" to "中文 (简体中文)",
-                "en-US" to "English"),
+                "en-US" to "English",
+            ),
             selected = when (localePref) {
                 io.github.lijiahua1024.dsnative.data.LocalePreference.ZH_CN -> "zh-CN"
                 io.github.lijiahua1024.dsnative.data.LocalePreference.EN_US -> "en-US"
-                else -> "system" },
+                else -> "system"
+            },
+            onProgress = {
+                modalTargetBlurDp = 2.1f
+                modalBlurFraction = it
+            },
             onConfirm = { v ->
-                settings.setLocalePreference(when (v) {
-                    "zh-CN" -> io.github.lijiahua1024.dsnative.data.LocalePreference.ZH_CN
-                    "en-US" -> io.github.lijiahua1024.dsnative.data.LocalePreference.EN_US
-                    else -> io.github.lijiahua1024.dsnative.data.LocalePreference.SYSTEM })
-                popup = null },
-            onDismiss = { popup = null })
-        "theme" -> ChoicePopup(c, card, muted, Strings.get("settingsAppearance"),
+                settings.setLocalePreference(
+                    when (v) {
+                        "zh-CN" -> io.github.lijiahua1024.dsnative.data.LocalePreference.ZH_CN
+                        "en-US" -> io.github.lijiahua1024.dsnative.data.LocalePreference.EN_US
+                        else -> io.github.lijiahua1024.dsnative.data.LocalePreference.SYSTEM
+                    },
+                )
+                modalBlurFraction = 0f
+                popup = null
+            },
+            onDismiss = {
+                modalBlurFraction = 0f
+                popup = null
+            },
+        )
+        "theme" -> ChoicePopup(
+            c, card, muted, Strings.get("settingsAppearance"),
             options = listOf(
                 "system" to Strings.get("settingsThemeSystem"),
                 "light" to Strings.get("settingsThemeLight"),
-                "dark" to Strings.get("settingsThemeDark")),
+                "dark" to Strings.get("settingsThemeDark"),
+            ),
             selected = when (themePref) {
                 io.github.lijiahua1024.dsnative.data.ThemePreference.LIGHT -> "light"
                 io.github.lijiahua1024.dsnative.data.ThemePreference.DARK -> "dark"
-                else -> "system" },
+                else -> "system"
+            },
+            onProgress = {
+                modalTargetBlurDp = 2.1f
+                modalBlurFraction = it
+            },
             onConfirm = { v ->
-                settings.setThemePreference(when (v) {
-                    "light" -> io.github.lijiahua1024.dsnative.data.ThemePreference.LIGHT
-                    "dark" -> io.github.lijiahua1024.dsnative.data.ThemePreference.DARK
-                    else -> io.github.lijiahua1024.dsnative.data.ThemePreference.SYSTEM })
-                popup = null },
-            onDismiss = { popup = null })
-        "voice" -> VoiceSheet(c, card, muted, current = ttsVoice,
+                settings.setThemePreference(
+                    when (v) {
+                        "light" -> io.github.lijiahua1024.dsnative.data.ThemePreference.LIGHT
+                        "dark" -> io.github.lijiahua1024.dsnative.data.ThemePreference.DARK
+                        else -> io.github.lijiahua1024.dsnative.data.ThemePreference.SYSTEM
+                    },
+                )
+                modalBlurFraction = 0f
+                popup = null
+            },
+            onDismiss = {
+                modalBlurFraction = 0f
+                popup = null
+            },
+        )
+        "voice" -> VoiceSheet(
+            c, card, muted, current = ttsVoice,
             apiKey = settings.apiKey.collectAsState().value,
+            onProgress = {
+                modalTargetBlurDp = 3.2f
+                modalBlurFraction = it
+            },
             onConfirm = {
                 io.github.lijiahua1024.dsnative.data.ReadAloud.stop()
                 if (it != ttsVoice) {
-                    DsToast.show(Strings.get("ttsVoiceSwitched", "voice" to Strings.get(
-                        if (it == "stella") "settingsTtsVoiceStella" else "settingsTtsVoiceTide")))
+                    DsToast.show(
+                        Strings.get(
+                            "ttsVoiceSwitched",
+                            "voice" to Strings.get(if (it == "stella") "settingsTtsVoiceStella" else "settingsTtsVoiceTide"),
+                        ),
+                    )
                 }
-                settings.setTtsVoice(it); popup = null
+                settings.setTtsVoice(it)
+                modalBlurFraction = 0f
+                popup = null
             },
             onDismiss = {
                 io.github.lijiahua1024.dsnative.data.ReadAloud.stop()
+                modalBlurFraction = 0f
                 popup = null
-            })
+            },
+        )
     }
 
     if (confirmLogout) {
-        AlertDialog(onDismissRequest = { confirmLogout = false },
-            title = { Text(Strings.get("settingsLogoutConfirm")) },
-            confirmButton = {
-                TextButton({ settings.setApiKey(null); confirmLogout = false }) {
-                    Text(Strings.get("confirm"), color = c.stateErrorPrimary)
-                }
+        DsConfirmDialog(
+            title = Strings.get("settingsLogoutConfirm"),
+            body = null,
+            confirmText = Strings.get("confirm"),
+            cancelText = Strings.get("cancel"),
+            danger = true,
+            onProgress = {
+                modalTargetBlurDp = 2.1f
+                modalBlurFraction = it
             },
-            dismissButton = { TextButton({ confirmLogout = false }) { Text(Strings.get("cancel")) } })
-    }
-    updateDialog?.let { avail ->
-        AlertDialog(
-            onDismissRequest = { updateDialog = null },
-            title = { Text(Strings.get("updateAvailableTitle", "version" to avail.version)) },
-            text = { Text(Strings.get("updateAvailableBody")) },
-            confirmButton = {
-                TextButton({
-                    val targetUrl = avail.downloadUrl ?: avail.releaseUrl
-                    updateDialog = null
-                    try {
-                        ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl)))
-                    } catch (_: android.content.ActivityNotFoundException) {
-                        DsToast.show(Strings.get("updateCheckFailed"))
-                    }
-                }) {
-                    Text(Strings.get("updateOpenReleases"), color = c.brandPrimary)
-                }
+            onConfirm = {
+                settings.setApiKey(null)
+                modalBlurFraction = 0f
+                confirmLogout = false
             },
-            dismissButton = {
-                TextButton({ updateDialog = null }) { Text(Strings.get("cancel")) }
+            onDismiss = {
+                modalBlurFraction = 0f
+                confirmLogout = false
             },
         )
+    }
+    updateDialog?.let { avail ->
+        DsConfirmDialog(
+            title = Strings.get("updateAvailableTitle", "version" to avail.version),
+            body = Strings.get("updateAvailableBody"),
+            confirmText = Strings.get("updateOpenReleases"),
+            cancelText = Strings.get("cancel"),
+            danger = false,
+            onProgress = {
+                modalTargetBlurDp = 2.1f
+                modalBlurFraction = it
+            },
+            onConfirm = {
+                val targetUrl = avail.downloadUrl ?: avail.releaseUrl
+                modalBlurFraction = 0f
+                updateDialog = null
+                try {
+                    ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl)))
+                } catch (_: android.content.ActivityNotFoundException) {
+                    DsToast.show(Strings.get("updateCheckFailed"))
+                }
+            },
+            onDismiss = {
+                modalBlurFraction = 0f
+                updateDialog = null
+            },
+        )
+    }
+}
+
+@Composable
+private fun SettingsLayerBody(
+    layerPage: String,
+    c: io.github.lijiahua1024.dsnative.theme.DsColors,
+    card: Color,
+    muted: Color,
+    settings: SettingsStore,
+    chatStore: ChatStore,
+    themePref: io.github.lijiahua1024.dsnative.data.ThemePreference,
+    localePref: io.github.lijiahua1024.dsnative.data.LocalePreference,
+    checkingUpdate: Boolean,
+    onPage: (String) -> Unit,
+    onPopup: (String) -> Unit,
+    onHelp: () -> Unit,
+    onLogout: () -> Unit,
+    onModalBlur: (Float) -> Unit,
+    onCheckUpdate: () -> Unit,
+) {
+    when (layerPage) {
+        "root" -> SettingsRootPage(
+            c, card, muted,
+            onPage = onPage,
+            onPopup = onPopup,
+            onHelp = onHelp,
+            onLogout = onLogout,
+            themePref = themePref,
+            localePref = localePref,
+            checkingUpdate = checkingUpdate,
+            onCheckUpdate = onCheckUpdate,
+        )
+        "account" -> AccountPage(c, card, muted, settings)
+        "data" -> DataPage(c, card, muted, settings, chatStore, onPage = onPage, onModalBlur = onModalBlur)
+        "font" -> FontPage(c, card, muted, settings)
+        "personalization" -> PersonalizationPage(c, card, muted, settings)
+        "agreements" -> AgreementsPage(c, card, muted)
+        "export" -> ExportPage(c, card, muted, chatStore)
     }
 }
 
@@ -713,7 +878,15 @@ private fun formatImportOutcome(outcome: io.github.lijiahua1024.dsnative.data.Im
     }
 
 @Composable
-private fun DataPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Color, muted: Color, settings: SettingsStore, chatStore: ChatStore, onPage: (String) -> Unit) {
+private fun DataPage(
+    c: io.github.lijiahua1024.dsnative.theme.DsColors,
+    card: Color,
+    muted: Color,
+    settings: SettingsStore,
+    chatStore: ChatStore,
+    onPage: (String) -> Unit,
+    onModalBlur: (Float) -> Unit = {},
+) {
     var confirmDeleteAll by remember { mutableStateOf(false) }
     var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
     var importMode by remember { mutableStateOf(io.github.lijiahua1024.dsnative.data.ArchiveImportMode.MERGE) }
@@ -766,21 +939,41 @@ private fun DataPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Co
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 27.dp))
     }
     if (confirmDeleteAll) {
-        AlertDialog(onDismissRequest = { confirmDeleteAll = false },
-            title = { Text(Strings.get("deleteAllSessionsModalTitle")) },
-            text = { Text(Strings.get("deleteAllSessionsModalDescription")) },
-            confirmButton = {
-                TextButton({ chatStore.removeAllSessions(); confirmDeleteAll = false }) {
-                    Text(Strings.get("delete"), color = c.stateErrorPrimary)
-                }
+        DsConfirmDialog(
+            title = Strings.get("deleteAllSessionsModalTitle"),
+            body = Strings.get("deleteAllSessionsModalDescription"),
+            confirmText = Strings.get("delete"),
+            cancelText = Strings.get("cancel"),
+            danger = true,
+            usePopup = true,
+            onProgress = onModalBlur,
+            onConfirm = {
+                chatStore.removeAllSessions()
+                onModalBlur(0f)
+                confirmDeleteAll = false
             },
-            dismissButton = { TextButton({ confirmDeleteAll = false }) { Text(Strings.get("cancel")) } })
+            onDismiss = {
+                onModalBlur(0f)
+                confirmDeleteAll = false
+            },
+        )
     }
     pendingImportUri?.let { uri ->
-        AlertDialog(
-            onDismissRequest = { if (!busy) pendingImportUri = null },
-            title = { Text(Strings.get("historyImportConfirmTitle")) },
-            text = {
+        val importTitle = Strings.get("historyImportConfirmTitle")
+        val confirmLbl = Strings.get(
+            if (importMode == io.github.lijiahua1024.dsnative.data.ArchiveImportMode.MERGE)
+                "historyImportMergeConfirm"
+            else "historyImportReplaceConfirm",
+        )
+        DsConfirmDialog(
+            title = importTitle,
+            body = null,
+            confirmText = confirmLbl,
+            cancelText = Strings.get("cancel"),
+            danger = importMode == io.github.lijiahua1024.dsnative.data.ArchiveImportMode.REPLACE,
+            usePopup = true,
+            onProgress = onModalBlur,
+            content = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     val modes = listOf(
                         io.github.lijiahua1024.dsnative.data.ArchiveImportMode.MERGE to "historyImportModeMerge",
@@ -817,29 +1010,21 @@ private fun DataPage(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: Co
                     )
                 }
             },
-            confirmButton = {
-                TextButton({
-                    val chosenMode = importMode
-                    pendingImportUri = null
-                    scope.launch {
-                        busy = true
-                        importOutcome = chatStore.importArchive(ctx, uri, chosenMode)
-                        busy = false
-                    }
-                }) {
-                    Text(
-                        Strings.get(
-                            if (importMode == io.github.lijiahua1024.dsnative.data.ArchiveImportMode.MERGE)
-                                "historyImportMergeConfirm"
-                            else "historyImportReplaceConfirm",
-                        ),
-                        color = if (importMode == io.github.lijiahua1024.dsnative.data.ArchiveImportMode.REPLACE)
-                            c.stateErrorPrimary else c.brandPrimary,
-                    )
+            onConfirm = {
+                val chosenMode = importMode
+                onModalBlur(0f)
+                pendingImportUri = null
+                scope.launch {
+                    busy = true
+                    importOutcome = chatStore.importArchive(ctx, uri, chosenMode)
+                    busy = false
                 }
             },
-            dismissButton = {
-                TextButton({ pendingImportUri = null }) { Text(Strings.get("cancel")) }
+            onDismiss = {
+                if (!busy) {
+                    onModalBlur(0f)
+                    pendingImportUri = null
+                }
             },
         )
     }
@@ -1089,22 +1274,55 @@ private fun ChoicePopup(
     icon: (@Composable () -> Unit)? = null,
     options: List<Pair<String, String>>,
     selected: String,
+    onProgress: (Float) -> Unit = {},
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var next by remember { mutableStateOf(selected) }
     val ov = remember { androidx.compose.animation.core.Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    var closing by remember { mutableStateOf(false) }
+    var dragBack by remember { mutableFloatStateOf(0f) }
+
+    fun dismissAnimated(then: () -> Unit = onDismiss) {
+        if (closing) return
+        closing = true
+        val start = (ov.value * (1f - dragBack)).coerceIn(0f, 1f)
+        scope.launch {
+            ov.snapTo(start)
+            dragBack = 0f
+            ov.animateTo(0f, androidx.compose.animation.core.tween(150))
+            then()
+        }
+    }
+
     LaunchedEffect(Unit) { ov.animateTo(1f, androidx.compose.animation.core.tween(180)) }
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.60f * ov.value))
+    val eff = (ov.value * (1f - dragBack)).coerceIn(0f, 1f)
+    LaunchedEffect(eff) { onProgress(eff) }
+
+    androidx.activity.compose.PredictiveBackHandler(enabled = !closing) { flow ->
+        try {
+            flow.collect { ev -> dragBack = ev.progress.coerceIn(0f, 1f) }
+            dismissAnimated()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            val start = dragBack
+            scope.launch {
+                androidx.compose.animation.core.animate(start, 0f, animationSpec = androidx.compose.animation.core.tween(140)) { v, _ -> dragBack = v }
+            }
+            throw e
+        }
+    }
+
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.48f * eff))
         .statusBarsPadding()
         .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-            indication = null) { onDismiss() },
+            indication = null) { dismissAnimated() },
         contentAlignment = Alignment.Center) {
         Column(Modifier.padding(horizontal = 32.dp).widthIn(max = 294.dp).fillMaxWidth()
             .heightIn(max = 560.dp)
             .graphicsLayer {
-                val s = 0.94f + 0.06f * ov.value
-                scaleX = s; scaleY = s; alpha = ov.value
+                val s = 0.94f + 0.06f * eff
+                scaleX = s; scaleY = s; alpha = eff
             }
             .clip(RoundedCornerShape(24.dp)).background(card)
             .clickable(enabled = false) {}) {
@@ -1139,22 +1357,20 @@ private fun ChoicePopup(
                 }
             }
             Box(Modifier.fillMaxWidth().height(54.dp)
-                .clickable { onConfirm(next) }, contentAlignment = Alignment.Center) {
+                .clickable { dismissAnimated { onConfirm(next) } }, contentAlignment = Alignment.Center) {
                 Text(Strings.get("confirm"), fontSize = 16.sp, fontWeight = FontWeight.Medium, color = c.brandText)
             }
         }
     }
 }
 
-// ref .overlay[data-sheet]+.voiceSheet: 35% dim bottom sheet h70vh r21top,
-// centered tone art 180x100 r60 + label + desc + dots, horizontal swipe switches
-// tone, primary confirm commits.
 @Composable
 private fun VoiceSheet(
     c: io.github.lijiahua1024.dsnative.theme.DsColors,
     card: Color, muted: Color,
     current: String,
     apiKey: String?,
+    onProgress: (Float) -> Unit = {},
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -1163,14 +1379,33 @@ private fun VoiceSheet(
         "stella" to (Strings.get("settingsTtsVoiceStella") to Strings.get("settingsTtsVoiceStellaDesc")),
         "tide" to (Strings.get("settingsTtsVoiceTide") to Strings.get("settingsTtsVoiceTideDesc")))
     val now = tones.firstOrNull { it.first == tone } ?: tones[0]
-    // ref .overlay-enter 170ms + .sheet-enter 220ms cubic-bezier(0.2,0.72,0.25,1)
     val ov = remember { androidx.compose.animation.core.Animatable(0f) }
     val sheet = remember { androidx.compose.animation.core.Animatable(0f) }
     var dragY by remember { mutableFloatStateOf(0f) }
+    var sheetH by remember { mutableIntStateOf(1) }
+    var closing by remember { mutableStateOf(false) }
+    var backDragFrac by remember { mutableFloatStateOf(0f) }
     val sheetEase = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.72f, 0.25f, 1f)
     val scope = rememberCoroutineScope()
     DisposableEffect(Unit) {
         onDispose { io.github.lijiahua1024.dsnative.data.ReadAloud.stop() }
+    }
+    fun dismissAnimated(then: () -> Unit = onDismiss) {
+        if (closing) return
+        closing = true
+        io.github.lijiahua1024.dsnative.data.ReadAloud.stop()
+        val dragFrac = if (sheetH > 1) (dragY / sheetH).coerceIn(0f, 1f) else 0f
+        val startSheet = (sheet.value - dragFrac - backDragFrac * 0.45f).coerceIn(0f, 1f)
+        val startOv = (ov.value * startSheet).coerceIn(0f, 1f)
+        scope.launch {
+            dragY = 0f
+            backDragFrac = 0f
+            sheet.snapTo(startSheet)
+            ov.snapTo(startOv)
+            launch { ov.animateTo(0f, androidx.compose.animation.core.tween(180)) }
+            sheet.animateTo(0f, androidx.compose.animation.core.tween(200, easing = sheetEase))
+            then()
+        }
     }
     fun previewTone(targetTone: String) {
         if (!apiKey.isNullOrBlank()) {
@@ -1190,19 +1425,39 @@ private fun VoiceSheet(
     LaunchedEffect(Unit) {
         sheet.animateTo(1f, androidx.compose.animation.core.tween(220, easing = sheetEase))
     }
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.28f * ov.value))
+    val dragFracNow = if (sheetH > 1) (dragY / sheetH).coerceIn(0f, 1f) else 0f
+    val effVis = (ov.value * (1f - dragFracNow) * (1f - backDragFrac * 0.65f)).coerceIn(0f, 1f)
+    LaunchedEffect(effVis) { onProgress(effVis) }
+
+    androidx.activity.compose.PredictiveBackHandler(enabled = !closing) { flow ->
+        try {
+            flow.collect { ev -> backDragFrac = ev.progress.coerceIn(0f, 1f) }
+            dismissAnimated()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            val s = backDragFrac
+            scope.launch {
+                androidx.compose.animation.core.animate(s, 0f, animationSpec = androidx.compose.animation.core.tween(160)) { v, _ -> backDragFrac = v }
+            }
+            throw e
+        }
+    }
+
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.34f * effVis))
         .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-            indication = null) { onDismiss() },
+            indication = null) { dismissAnimated() },
         contentAlignment = Alignment.BottomCenter) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(0.814f)
-            .graphicsLayer { translationY = (1f - sheet.value) * size.height + dragY }
+            .onGloballyPositioned { sheetH = it.size.height.coerceAtLeast(1) }
+            .graphicsLayer {
+                translationY = ((1f - sheet.value) + backDragFrac * 0.45f) * size.height + dragY
+            }
             .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)).background(card)
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
                     onVerticalDrag = { _, d -> dragY = (dragY + d).coerceAtLeast(0f) },
                     onDragEnd = {
                         if (dragY > 110.dp.toPx()) {
-                            onDismiss()
+                            dismissAnimated()
                         } else {
                             val start = dragY
                             scope.launch {
@@ -1223,7 +1478,7 @@ private fun VoiceSheet(
                 Box(Modifier.align(Alignment.CenterEnd).padding(end = 12.dp)
                     .size(32.dp).clip(RoundedCornerShape(50))
                     .background(if (c.dark) Color(0xFF3C3C3D) else Color(0xFFEDEDED))
-                    .clickable { onDismiss() }, contentAlignment = Alignment.Center) {
+                    .clickable { dismissAnimated() }, contentAlignment = Alignment.Center) {
                     Icon(painterResource(R.drawable.ic_close), Strings.get("close"),
                         tint = c.labelPrimary, modifier = Modifier.size(16.dp))
                 }
@@ -1269,9 +1524,139 @@ private fun VoiceSheet(
                     .navigationBarsPadding()
                     .padding(start = 24.dp, end = 24.dp, bottom = 16.dp)
                     .height(48.dp).clip(RoundedCornerShape(28.dp)).background(c.brandText)
-                    .clickable { onConfirm(tone) }
+                    .clickable { dismissAnimated { onConfirm(tone) } }
                     .wrapContentHeight(Alignment.CenterVertically))
         }
+    }
+}
+
+@Composable
+private fun DsConfirmDialog(
+    title: String,
+    body: String?,
+    confirmText: String,
+    cancelText: String,
+    danger: Boolean,
+    usePopup: Boolean = false,
+    onProgress: (Float) -> Unit = {},
+    content: (@Composable () -> Unit)? = null,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val c = DsTheme.colors
+    val ov = remember { androidx.compose.animation.core.Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    var closing by remember { mutableStateOf(false) }
+
+    fun dismissAnimated(then: () -> Unit = onDismiss) {
+        if (closing) return
+        closing = true
+        scope.launch {
+            ov.animateTo(0f, androidx.compose.animation.core.tween(140))
+            then()
+        }
+    }
+
+    LaunchedEffect(Unit) { ov.animateTo(1f, androidx.compose.animation.core.tween(160)) }
+    LaunchedEffect(ov.value) { onProgress(ov.value) }
+
+    val cardBg = if (c.dark) Color(0xFF292929) else Color.White
+    val cancelBg = if (c.dark) Color(0xFF3A3A3D) else Color(0xFFFFFFFF)
+    val confirmFill = if (danger) Color(0xFFEF4444) else c.brandPrimary
+
+    val dialogBody: @Composable () -> Unit = {
+        Box(
+            Modifier.fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.60f * ov.value))
+                .clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null,
+                ) { dismissAnimated() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                Modifier.padding(horizontal = 35.dp)
+                    .widthIn(max = 310.dp)
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        val s = 0.94f + 0.06f * ov.value
+                        scaleX = s; scaleY = s; alpha = ov.value
+                    }
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(cardBg)
+                    .clickable(enabled = false) {}
+                    .padding(horizontal = 24.dp, vertical = 22.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    title,
+                    fontSize = 17.sp,
+                    lineHeight = 24.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = c.labelPrimary,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+                if (body != null) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        body,
+                        fontSize = 14.sp,
+                        lineHeight = 21.sp,
+                        color = c.labelSecondary,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
+                }
+                if (content != null) {
+                    Spacer(Modifier.height(12.dp))
+                    content()
+                }
+                Spacer(Modifier.height(20.dp))
+                Box(
+                    Modifier.fillMaxWidth()
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(confirmFill)
+                        .clickable { dismissAnimated(onConfirm) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(confirmText, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Color.White)
+                }
+                Spacer(Modifier.height(8.dp))
+                Box(
+                    Modifier.fillMaxWidth()
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(cancelBg)
+                        .clickable { dismissAnimated() },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(cancelText, fontSize = 16.sp, color = c.labelPrimary)
+                }
+            }
+        }
+    }
+
+    if (usePopup) {
+        val atOrigin = remember {
+            object : androidx.compose.ui.window.PopupPositionProvider {
+                override fun calculatePosition(
+                    anchorBounds: androidx.compose.ui.unit.IntRect,
+                    windowSize: androidx.compose.ui.unit.IntSize,
+                    layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+                    popupContentSize: androidx.compose.ui.unit.IntSize,
+                ) = androidx.compose.ui.unit.IntOffset(-anchorBounds.left, -anchorBounds.top)
+            }
+        }
+        androidx.compose.ui.window.Popup(
+            popupPositionProvider = atOrigin,
+            onDismissRequest = { dismissAnimated() },
+            properties = androidx.compose.ui.window.PopupProperties(
+                focusable = true, dismissOnBackPress = true, dismissOnClickOutside = true,
+            ),
+        ) { dialogBody() }
+    } else {
+        androidx.activity.compose.BackHandler(enabled = !closing) { dismissAnimated() }
+        dialogBody()
     }
 }
 

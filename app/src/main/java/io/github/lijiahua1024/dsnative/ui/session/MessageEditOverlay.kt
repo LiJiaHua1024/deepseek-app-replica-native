@@ -31,8 +31,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +43,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
@@ -77,11 +81,40 @@ fun MessageEditOverlay(
     isStreaming: Boolean,
     onClose: () -> Unit,
 ) {
-    BackHandler { onClose() }
+    val scope = rememberCoroutineScope()
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val enter = remember { androidx.compose.animation.core.Animatable(0f) }
+    var closing by remember { mutableStateOf(false) }
+    var backFrac by remember { mutableFloatStateOf(0f) }
+    val ease = remember { androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.72f, 0.25f, 1f) }
+    LaunchedEffect(Unit) { enter.animateTo(1f, androidx.compose.animation.core.tween(210, easing = ease)) }
+    fun closeAnimated() {
+        if (closing) return
+        closing = true
+        keyboardController?.hide()
+        scope.launch {
+            val s = (enter.value * (1f - backFrac * 0.45f)).coerceIn(0f, 1f)
+            enter.snapTo(s)
+            backFrac = 0f
+            enter.animateTo(0f, androidx.compose.animation.core.tween(170, easing = ease))
+            onClose()
+        }
+    }
+    androidx.activity.compose.PredictiveBackHandler(enabled = !closing) { flow ->
+        try {
+            flow.collect { ev -> backFrac = ev.progress.coerceIn(0f, 1f) }
+            closeAnimated()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            val s = backFrac
+            scope.launch {
+                androidx.compose.animation.core.animate(s, 0f, animationSpec = androidx.compose.animation.core.tween(140)) { v, _ -> backFrac = v }
+            }
+            throw e
+        }
+    }
     val c = DsTheme.colors
     val thinking by settings.thinking.collectAsState()
     val search by settings.search.collectAsState()
-    val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember(msg.id) { FocusRequester() }
     var value by remember(msg.id) {
         mutableStateOf(TextFieldValue(msg.content, selection = TextRange(msg.content.length)))
@@ -92,20 +125,25 @@ fun MessageEditOverlay(
     }
     val canSend = canSubmitEditedMessage(value.text, isStreaming)
     val sheetShape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    val eff = (enter.value * (1f - backFrac * 0.45f)).coerceIn(0f, 1f)
 
     Box(Modifier.fillMaxSize()) {
         Box(
             Modifier.fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.25f))
+                .background(Color.Black.copy(alpha = 0.25f * eff))
                 .clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() },
-                ) { onClose() },
+                ) { closeAnimated() },
         )
         Column(
             Modifier.align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .imePadding()
+                .graphicsLayer {
+                    alpha = eff
+                    translationY = (1f - eff) * 180f
+                }
                 .softShadow(
                     cornerRadius = 24.dp,
                     blurRadius = 16.dp,
@@ -137,7 +175,7 @@ fun MessageEditOverlay(
                     Modifier.size(44.dp)
                         .clip(CircleShape)
                         .semantics { contentDescription = Strings.get("discard") }
-                        .clickable { onClose() },
+                        .clickable { closeAnimated() },
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -192,7 +230,7 @@ fun MessageEditOverlay(
                         .background(if (canSend) c.buttonPrimaryFill else disabledSendBg)
                         .clickable(enabled = canSend) {
                             chatStore.editMessage(sessionId, msg.id, value.text.trim())
-                            onClose()
+                            closeAnimated()
                         },
                     contentAlignment = Alignment.Center,
                 ) {

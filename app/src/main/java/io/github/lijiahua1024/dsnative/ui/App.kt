@@ -114,30 +114,41 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
         val freePan = nav == NavState.Chat &&
             (sessionCache[activeId]?.let { io.github.lijiahua1024.dsnative.data.visibleMessages(it).isNotEmpty() } != true)
         Box(Modifier.fillMaxSize()) {
-            var showSettings by remember { mutableStateOf(false) }
-            val settingsProg = remember { androidx.compose.animation.core.Animatable(0f) }
-            var settingsDragBack by remember { mutableStateOf(0f) }
-            val settingsMounted = nav == NavState.Settings || settingsProg.value > 0.001f || showSettings
             val settingsScope = rememberCoroutineScope()
-            LaunchedEffect(nav) {
-                if (nav == NavState.Settings) {
-                    showSettings = true
-                    settingsDragBack = 0f
-                    settingsProg.animateTo(1f, androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.LinearEasing))
-                } else if (showSettings) {
-                    settingsProg.animateTo(0f, androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.LinearEasing))
-                    showSettings = false
-                    settingsDragBack = 0f
+            val settingsCtrl = remember {
+                TwoPhaseController(if (nav == NavState.Settings) "settings" else "chat", settingsScope) { settled ->
+                    if (settled == "chat" && nav == NavState.Settings) nav = NavState.Chat
                 }
             }
-            val effectiveSettingsT = (settingsProg.value * (1f - settingsDragBack)).coerceIn(0f, 1f)
-            val parentShiftDp = run {
-                val outEase = androidx.compose.animation.core.CubicBezierEasing(0.415f, 0f, 0.63f, 0.225f)
-                val p = (effectiveSettingsT / 0.35f).coerceIn(0f, 1f)
-                -40f * outEase.transform(p)
+            LaunchedEffect(nav) {
+                if (nav == NavState.Settings && settingsCtrl.current != "settings") {
+                    settingsCtrl.navigate("settings", isForward = true)
+                } else if (nav == NavState.Chat && settingsCtrl.current != "chat" && !settingsCtrl.interactiveSeek) {
+                    settingsCtrl.navigate("chat", isForward = false)
+                }
+            }
+            val settingsMounted = settingsCtrl.current == "settings" || settingsCtrl.outgoing == "settings"
+            val chatAlpha = settingsCtrl.layerAlpha("chat")
+            val chatShiftDp = settingsCtrl.layerShiftDp("chat")
+            val settingsContentAlpha = settingsCtrl.layerAlpha("settings")
+            val settingsContentShiftDp = settingsCtrl.layerShiftDp("settings")
+            val settingsBgAlpha = run {
+                val u = settingsCtrl.effectiveProgress
+                when {
+                    settingsCtrl.outgoing == null -> if (settingsCtrl.current == "settings") 1f else 0f
+                    settingsCtrl.forward -> TwoPhaseSpec.FadeOutEase.transform((u / TwoPhaseSpec.HANDOFF).coerceIn(0f, 1f))
+                    u <= TwoPhaseSpec.HANDOFF -> 1f
+                    else -> {
+                        val p2 = ((u - TwoPhaseSpec.HANDOFF) / (1f - TwoPhaseSpec.HANDOFF)).coerceIn(0f, 1f)
+                        1f - TwoPhaseSpec.FadeInEase.transform(p2)
+                    }
+                }
             }
             BoxWithConstraints(Modifier.fillMaxSize().graphicsLayer {
-                if (settingsMounted) translationX = with(contentDensity) { parentShiftDp.dp.toPx() }
+                if (settingsMounted) {
+                    alpha = chatAlpha
+                    translationX = with(contentDensity) { chatShiftDp.dp.toPx() }
+                }
             }) {
                 val wideLayout = maxWidth >= 768.dp
                 val siderCollapsed by settings.siderCollapsed.collectAsState()
@@ -184,10 +195,11 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
                         dark = dark,
                         freePan = freePan,
                         closeImmediately = false,
+                        collapseBehindOverlay = settingsMounted && settingsBgAlpha >= 0.99f,
                         onNavigate = { nav = it },
                         siderContent = { close ->
                             Sider(settings, chatStore,
-                                onNavigateSettings = { nav = NavState.Settings; close() },
+                                onNavigateSettings = { nav = NavState.Settings },
                                 onClose = close)
                         },
                     ) { open ->
@@ -206,8 +218,12 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
                 AndroidSettings(
                     settings = settings,
                     chatStore = chatStore,
-                    transitionProgress = effectiveSettingsT,
-                    onRootBackProgress = { settingsDragBack = it },
+                    bgAlpha = settingsBgAlpha,
+                    contentAlpha = settingsContentAlpha,
+                    contentShiftDp = settingsContentShiftDp,
+                    onRootBackProgress = { settingsCtrl.beginBackSeek("chat", it) },
+                    onRootBackCommit = { settingsCtrl.commitBackSeek("chat") },
+                    onRootBackCancel = { settingsCtrl.cancelBackSeek() },
                     onBack = { nav = NavState.Chat },
                 )
                 io.github.lijiahua1024.dsnative.ui.session.DsToastHost()
@@ -224,6 +240,7 @@ fun DrawerFrame(
     dark: Boolean,
     freePan: Boolean,
     closeImmediately: Boolean = false,
+    collapseBehindOverlay: Boolean = false,
     onNavigate: (NavState) -> Unit,
     siderContent: @Composable (close: () -> Unit) -> Unit,
     mainContent: @Composable (open: () -> Unit) -> Unit,
@@ -253,12 +270,23 @@ fun DrawerFrame(
             }
         }
 
-        // Back gesture closes an open drawer only while on Chat nav.
-        androidx.activity.compose.PredictiveBackHandler(enabled = nav == NavState.Chat && progress >= 0.999f) { flow ->
+        LaunchedEffect(collapseBehindOverlay) {
+            if (collapseBehindOverlay && progress > 0f) {
+                settleJob?.cancel()
+                progress = 0f
+            }
+        }
+
+        // Back gesture closes an open drawer only while on Chat nav; latch active state so first move doesn't self-cancel.
+        var drawerBackActive by remember { mutableStateOf(false) }
+        androidx.activity.compose.PredictiveBackHandler(enabled = nav == NavState.Chat && (progress >= 0.999f || drawerBackActive)) { flow ->
+            drawerBackActive = true
             try {
                 flow.collect { ev -> progress = (1f - ev.progress).coerceIn(0f, 1f) }
+                drawerBackActive = false
                 settleTo(0f)
             } catch (e: kotlinx.coroutines.CancellationException) {
+                drawerBackActive = false
                 settleTo(1f)
                 throw e
             }

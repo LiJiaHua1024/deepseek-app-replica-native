@@ -349,12 +349,90 @@ fun Sider(
 
 
     renameFor?.let { s ->
-        var text by remember { mutableStateOf(s.title) }
-        AlertDialog(onDismissRequest = { renameFor = null },
-            title = { Text(Strings.get("sessionItemMenuRenameOption")) },
-            text = { OutlinedTextField(text, { text = it }, singleLine = true) },
-            confirmButton = { TextButton({ chatStore.renameSession(s.id, text.trim()); renameFor = null }) { Text(Strings.get("confirm")) } },
-            dismissButton = { TextButton({ renameFor = null }) { Text(Strings.get("cancel")) } })
+        var text by remember(s.id) { mutableStateOf(s.title) }
+        val c = DsTheme.colors
+        val ov = remember { androidx.compose.animation.core.Animatable(0f) }
+        val scope = rememberCoroutineScope()
+        var closing by remember { mutableStateOf(false) }
+        fun dismissRename(after: () -> Unit = { renameFor = null }) {
+            if (closing) return
+            closing = true
+            scope.launch {
+                ov.animateTo(0f, androidx.compose.animation.core.tween(140))
+                after()
+            }
+        }
+        LaunchedEffect(s.id) { ov.animateTo(1f, androidx.compose.animation.core.tween(160)) }
+        val atOrigin = remember {
+            object : androidx.compose.ui.window.PopupPositionProvider {
+                override fun calculatePosition(
+                    anchorBounds: androidx.compose.ui.unit.IntRect,
+                    windowSize: androidx.compose.ui.unit.IntSize,
+                    layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+                    popupContentSize: androidx.compose.ui.unit.IntSize,
+                ) = androidx.compose.ui.unit.IntOffset(-anchorBounds.left, -anchorBounds.top)
+            }
+        }
+        val dark = c.bgBase.red < 0.3f
+        androidx.compose.ui.window.Popup(
+            popupPositionProvider = atOrigin,
+            onDismissRequest = { dismissRename() },
+            properties = androidx.compose.ui.window.PopupProperties(
+                focusable = true, dismissOnBackPress = true, dismissOnClickOutside = true,
+            ),
+        ) {
+            Box(
+                Modifier.fillMaxSize()
+                    .background(Color.Black.copy(alpha = (if (dark) 0.6f else 0.36f) * ov.value))
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null,
+                    ) { dismissRename() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(
+                    Modifier.padding(horizontal = 24.dp)
+                        .widthIn(max = 360.dp)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(24.dp))
+                        .clickable(enabled = false) {}
+                        .background(c.bgLayer2)
+                        .then(
+                            if (c.borderInverted.alpha > 0f)
+                                Modifier.border(1.dp, c.borderInverted, RoundedCornerShape(24.dp))
+                            else Modifier,
+                        )
+                        .padding(horizontal = 24.dp, vertical = 22.dp),
+                ) {
+                    Text(
+                        Strings.get("sessionItemMenuRenameOption"),
+                        fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight.Medium, color = c.labelPrimary,
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    OutlinedTextField(
+                        value = text,
+                        onValueChange = { text = it },
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        DsModalButton(Strings.get("cancel"), DsBtn.Outlined) { dismissRename() }
+                        DsModalButton(Strings.get("confirm"), DsBtn.Primary) {
+                            val trimmed = text.trim()
+                            dismissRename {
+                                if (trimmed.isNotEmpty()) chatStore.renameSession(s.id, trimmed)
+                                renameFor = null
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     deleteFor?.let { s ->
