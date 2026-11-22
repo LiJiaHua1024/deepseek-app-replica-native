@@ -138,12 +138,30 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     val openDocs = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.OpenMultipleDocuments()
     ) { uris -> if (uris.isNotEmpty()) addFiles(uris) }
-    var cameraUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var cameraFile by remember { mutableStateOf<java.io.File?>(null) }
     val takePicture = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.TakePicture()
     ) { ok ->
-        val u = cameraUri
-        if (ok && u != null) addFiles(listOf(u))
+        val file = cameraFile
+        cameraFile = null
+        if (file != null) {
+            inputScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                if (ok && file.exists() && file.length() > 0L) {
+                    val att = DraftAttachment(
+                        id = java.util.UUID.randomUUID().toString(),
+                        name = file.name,
+                        mimeType = "image/jpeg",
+                        isImage = true,
+                        localPath = file.absolutePath,
+                    )
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        chatStore.addDraftAttachments(activeId, listOf(att))
+                    }
+                } else {
+                    file.delete()
+                }
+            }
+        }
     }
     val voiceMode by VoiceInput.enabled.collectAsState()
     val voiceStatus by VoiceInput.status.collectAsState()
@@ -481,11 +499,11 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
             }
         },
         onCamera = {
-            val dir = java.io.File(context.cacheDir, "attaches").apply { mkdirs() }
+            val dir = attachDir(context)
             val f = java.io.File(dir, "camera-${System.currentTimeMillis()}.jpg")
             val u = androidx.core.content.FileProvider.getUriForFile(
                 context, "${context.packageName}.fileprovider", f)
-            cameraUri = u
+            cameraFile = f
             takePicture.launch(u)
         },
         onGallery = {

@@ -41,6 +41,32 @@ import java.util.UUID
 /** sessions 排序：updatedAt 新→旧 */
 private fun sortSessions(sessions: List<SessionSummary>) = sessions.sortedByDescending { it.updatedAt }
 
+internal fun orphanAttachmentPaths(
+    removed: Session?,
+    removedDrafts: List<DraftAttachment>,
+    remainingSessions: Collection<Session>,
+    remainingDrafts: Collection<List<DraftAttachment>>,
+): Set<String> {
+    val candidates = buildSet {
+        removed?.messages?.forEach { m ->
+            if (m is Message.User) m.files.mapNotNullTo(this) { it.localPath }
+        }
+        removedDrafts.forEach { add(it.localPath) }
+    }
+    if (candidates.isEmpty()) return emptySet()
+    val referenced = buildSet {
+        remainingSessions.forEach { s ->
+            s.messages.forEach { m ->
+                if (m is Message.User) m.files.mapNotNullTo(this) { it.localPath }
+            }
+        }
+        remainingDrafts.forEach { list ->
+            list.forEach { add(it.localPath) }
+        }
+    }
+    return candidates - referenced
+}
+
 internal fun toAssistantMessageParam(
     reply: Message.Assistant,
     prefix: Boolean = false,
@@ -255,6 +281,8 @@ class ChatStore(
     private val scope: CoroutineScope,
 ) {
     private val chatDir = File(context.filesDir, "chat").apply { mkdirs() }
+    private val attachesDir = File(context.filesDir, "attaches").apply { mkdirs() }
+    private val legacyCacheAttachesDir = File(context.cacheDir, "attaches")
     private val mutex = Mutex()
 
     private val _ready = MutableStateFlow(false)
@@ -311,6 +339,9 @@ class ChatStore(
                 ?: emptyMap()
             _sessionCache.value = loaded.mapValues { it.value.normalized() }
             _sessions.value = sortSessions(loaded.values.map { it.toSummary() })
+            val validIds = loaded.keys
+            val pinned = settings.pinnedSessions.value.filter { it in validIds }
+            if (pinned != settings.pinnedSessions.value) settings.setPinnedSessions(pinned)
             _ready.value = true
         }
     }
@@ -369,9 +400,33 @@ class ChatStore(
             _draftAttachments.value + (sessionId to (draftAttachments(sessionId) + items))
     }
 
+    private fun isManagedAttachPath(path: String): Boolean = try {
+        val parent = File(path).canonicalFile.parentFile
+        parent == attachesDir.canonicalFile ||
+            (legacyCacheAttachesDir.exists() && parent == legacyCacheAttachesDir.canonicalFile)
+    } catch (_: Exception) {
+        false
+    }
+
+    private fun deleteOrphanAttachFiles(paths: Set<String>) {
+        paths.forEach { path ->
+            if (isManagedAttachPath(path)) {
+                try { File(path).delete() } catch (_: Exception) {}
+            }
+        }
+    }
+
     fun removeDraftAttachment(sessionId: String?, attachmentId: String) {
-        _draftAttachments.value = _draftAttachments.value +
-            (sessionId to draftAttachments(sessionId).filterNot { it.id == attachmentId })
+        val current = draftAttachments(sessionId)
+        val removed = current.filter { it.id == attachmentId }
+        if (removed.isEmpty()) return
+        val remainingList = current.filterNot { it.id == attachmentId }
+        val nextDrafts = _draftAttachments.value + (sessionId to remainingList)
+        _draftAttachments.value = nextDrafts
+        val orphans = orphanAttachmentPaths(null, removed, _sessionCache.value.values, nextDrafts.values)
+        if (orphans.isNotEmpty()) {
+            scope.launch(Dispatchers.IO) { deleteOrphanAttachFiles(orphans) }
+        }
     }
 
     fun renameSession(id: String, title: String) {
@@ -383,18 +438,35 @@ class ChatStore(
     }
 
     fun removeSession(id: String) {
+        titleSessions.remove(id)
         scope.launch {
+            var orphans = emptySet<String>()
             mutex.withLock {
-                _sessionCache.value = _sessionCache.value - id
+                val removed = _sessionCache.value[id]
+                val nextSessions = _sessionCache.value - id
+                _sessionCache.value = nextSessions
                 _sessions.value = _sessions.value.filter { it.id != id }
                 if (_activeId.value == id) _activeId.value = null
+                _drafts.value = _drafts.value - id
+                val removedDrafts = _draftAttachments.value[id].orEmpty()
+                val nextDrafts = _draftAttachments.value - id
+                _draftAttachments.value = nextDrafts
+                orphans = orphanAttachmentPaths(removed, removedDrafts, nextSessions.values, nextDrafts.values)
+            }
+            val pinned = settings.pinnedSessions.value
+            if (id in pinned) {
+                settings.setPinnedSessions(pinned.filterNot { it == id })
             }
             streamJobs.remove(id)?.cancel()
-            withContext(Dispatchers.IO) { File(chatDir, "$id.json").delete() }
+            withContext(Dispatchers.IO) {
+                File(chatDir, "$id.json").delete()
+                deleteOrphanAttachFiles(orphans)
+            }
         }
     }
 
     fun removeAllSessions() {
+        titleSessions.clear()
         scope.launch {
             _importingHistory.value = true
             try {
@@ -402,11 +474,18 @@ class ChatStore(
                     _sessionCache.value = emptyMap()
                     _sessions.value = emptyList()
                     _activeId.value = null
+                    _drafts.value = emptyMap()
+                    _draftAttachments.value = emptyMap()
                 }
+                settings.setPinnedSessions(emptyList())
                 streamJobs.values.forEach { it.cancel() }
                 streamJobs.clear()
                 withContext(Dispatchers.IO) {
                     chatDir.listFiles()?.forEach { it.delete() }
+                    attachesDir.listFiles()?.forEach { it.delete() }
+                    if (legacyCacheAttachesDir.exists()) {
+                        legacyCacheAttachesDir.listFiles()?.forEach { it.delete() }
+                    }
                 }
             } finally {
                 _importingHistory.value = false

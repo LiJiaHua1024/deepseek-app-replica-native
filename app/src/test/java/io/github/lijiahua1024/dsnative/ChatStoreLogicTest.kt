@@ -1,11 +1,14 @@
 package io.github.lijiahua1024.dsnative
 
+import io.github.lijiahua1024.dsnative.data.DraftAttachment
+import io.github.lijiahua1024.dsnative.data.FileAttachment
 import io.github.lijiahua1024.dsnative.data.Message
 import io.github.lijiahua1024.dsnative.data.ReplyBlock
 import io.github.lijiahua1024.dsnative.data.ReplyStatus
 import io.github.lijiahua1024.dsnative.data.Session
 import io.github.lijiahua1024.dsnative.data.SessionSummary
 import io.github.lijiahua1024.dsnative.data.groupSessions
+import io.github.lijiahua1024.dsnative.data.orphanAttachmentPaths
 import io.github.lijiahua1024.dsnative.data.replyText
 import io.github.lijiahua1024.dsnative.data.toAssistantMessageParam
 import io.github.lijiahua1024.dsnative.data.visibleMessages
@@ -210,5 +213,30 @@ class ReplyGrowthKeyTest {
         val t3 = t2.copy(blocks = t2.blocks + ReplyBlock.Text("answer"))
         assertTrue(replyGrowthKey(t2) > replyGrowthKey(t1))
         assertTrue(replyGrowthKey(t3) > replyGrowthKey(t2))
+    }
+}
+
+class OrphanAttachmentPathsTest {
+
+    @Test
+    fun deletesUnsharedFilesAndPreservesSharedOnes() {
+        val f1 = FileAttachment(id = "f1", name = "a.png", size = 100L, isImage = true, localPath = "/app/files/attaches/a.png")
+        val shared = FileAttachment(id = "f2", name = "s.png", size = 200L, isImage = true, localPath = "/app/files/attaches/s.png")
+        val draftOnly = DraftAttachment(id = "d1", name = "d.png", mimeType = "image/png", isImage = true, localPath = "/app/files/attaches/d.png")
+        val removed = Session(
+            id = "s1", title = "", createdAt = 0, updatedAt = 0,
+            messages = listOf(Message.User(id = "u1", content = "hi", files = listOf(f1, shared), createdAt = 0)),
+        )
+        val kept = Session(
+            id = "s2", title = "", createdAt = 0, updatedAt = 0,
+            messages = listOf(Message.User(id = "u2", content = "keep", files = listOf(shared), createdAt = 0)),
+        )
+        val orphans = orphanAttachmentPaths(
+            removed = removed,
+            removedDrafts = listOf(draftOnly),
+            remainingSessions = listOf(kept),
+            remainingDrafts = emptyList(),
+        )
+        assertEquals(setOf("/app/files/attaches/a.png", "/app/files/attaches/d.png"), orphans)
     }
 }

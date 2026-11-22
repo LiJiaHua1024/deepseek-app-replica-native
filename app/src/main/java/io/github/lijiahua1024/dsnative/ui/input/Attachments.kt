@@ -122,7 +122,10 @@ suspend fun queryRecentPhotos(context: Context, limit: Int = 40): List<RecentPho
         out
     }
 
-/** 复制 content:// 源到缓存目录，返回 DraftAttachment。 */
+/** 返回持久化附件目录（filesDir/attaches）。 */
+fun attachDir(context: Context): File = File(context.filesDir, "attaches").apply { mkdirs() }
+
+/** 复制 content:// 源到应用私有附件目录，返回 DraftAttachment。 */
 suspend fun importToDraft(context: Context, uri: Uri, photoId: String? = null): DraftAttachment? =
     withContext(Dispatchers.IO) {
         try {
@@ -136,7 +139,7 @@ suspend fun importToDraft(context: Context, uri: Uri, photoId: String? = null): 
                 }
             }
             if (mime.isEmpty()) mime = guessMime(name)
-            val dir = File(context.cacheDir, "attaches").apply { mkdirs() }
+            val dir = attachDir(context)
             val file = File(dir, "${UUID.randomUUID()}-$name")
             resolver.openInputStream(uri)?.use { input ->
                 file.outputStream().use { input.copyTo(it) }
