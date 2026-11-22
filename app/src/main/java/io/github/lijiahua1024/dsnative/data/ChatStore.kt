@@ -320,6 +320,25 @@ fun groupSessions(sessions: List<SessionSummary>, now: Long): List<Pair<String, 
     return groups
 }
 
+internal fun sessionMatchesQuery(session: Session, rawQuery: String): Boolean {
+    val q = rawQuery.trim()
+    if (q.isEmpty()) return true
+    if (session.title.contains(q, ignoreCase = true)) return true
+    return session.messages.any { msg ->
+        when (msg) {
+            is Message.User -> msg.content.contains(q, ignoreCase = true) ||
+                msg.files.any { it.name.contains(q, ignoreCase = true) }
+            is Message.Assistant -> msg.blocks.any { block ->
+                when (block) {
+                    is ReplyBlock.Thinking -> block.thinking.contains(q, ignoreCase = true)
+                    is ReplyBlock.Text -> block.text.contains(q, ignoreCase = true)
+                    is ReplyBlock.Tool -> false
+                }
+            }
+        }
+    }
+}
+
 private fun createId(): String = UUID.randomUUID().toString()
 
 private val json = Json {
@@ -442,6 +461,20 @@ class ChatStore(
     suspend fun getSession(id: String): Session? = mutex.withLock { _sessionCache.value[id] }
 
     fun sessionSnapshot(id: String): Session? = _sessionCache.value[id]
+
+    suspend fun searchSessionIds(query: String): Set<String> {
+        val q = query.trim()
+        val snapshot = _sessionCache.value.values.toList()
+        if (q.isEmpty()) return snapshot.mapTo(HashSet(snapshot.size)) { it.id }
+        return withContext(Dispatchers.Default) {
+            buildSet {
+                for (session in snapshot) {
+                    ensureActive()
+                    if (sessionMatchesQuery(session, q)) add(session.id)
+                }
+            }
+        }
+    }
 
     fun newChat() {
         ReadAloud.stop()

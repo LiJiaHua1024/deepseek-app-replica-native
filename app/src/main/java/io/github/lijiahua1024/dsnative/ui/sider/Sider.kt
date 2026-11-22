@@ -53,6 +53,29 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
     }
 
     var query by remember { mutableStateOf("") }
+    val trimmedQuery = query.trim()
+    val titleMatchIds = remember(sessions, trimmedQuery) {
+        if (trimmedQuery.isEmpty()) emptySet()
+        else sessions.asSequence()
+            .filter { it.title.contains(trimmedQuery, ignoreCase = true) }
+            .map { it.id }
+            .toSet()
+    }
+    var settledSearch by remember { mutableStateOf<Pair<String, Set<String>>?>(null) }
+    LaunchedEffect(trimmedQuery, sessions) {
+        if (trimmedQuery.isEmpty()) {
+            settledSearch = null
+            return@LaunchedEffect
+        }
+        delay(200)
+        val matched = chatStore.searchSessionIds(trimmedQuery)
+        settledSearch = trimmedQuery to matched
+    }
+    val matchedIds = when {
+        trimmedQuery.isEmpty() -> null
+        settledSearch?.first == trimmedQuery -> settledSearch!!.second
+        else -> titleMatchIds
+    }
     var selectionMode by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf(setOf<String>()) }
     var menuFor by remember { mutableStateOf<SessionSummary?>(null) }
@@ -107,13 +130,36 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
                     textStyle = androidx.compose.ui.text.TextStyle(fontSize = 16.sp, color = c.labelPrimary),
                     modifier = Modifier.fillMaxSize(),
                     decorationBox = { inner ->
-                        Box(Modifier.fillMaxSize().padding(start = 38.dp), contentAlignment = Alignment.CenterStart) { inner() }
+                        Box(
+                            Modifier.fillMaxSize().padding(
+                                start = 38.dp,
+                                end = if (query.isNotEmpty()) 38.dp else 14.dp,
+                            ),
+                            contentAlignment = Alignment.CenterStart,
+                        ) { inner() }
                     },
                 )
                 Icon(painterResource(R.drawable.ic_search), null, tint = c.labelTertiary,
                     modifier = Modifier.align(Alignment.CenterStart).padding(start = 14.dp).size(16.dp))
                 if (query.isEmpty()) Text(Strings.get("androidSearchChats"), fontSize = 16.sp, color = c.labelTertiary,
                     modifier = Modifier.align(Alignment.CenterStart).padding(start = 38.dp))
+                if (query.isNotEmpty()) {
+                    Box(
+                        Modifier.align(Alignment.CenterEnd)
+                            .padding(end = 6.dp)
+                            .size(32.dp)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .clickable { query = "" },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            painterResource(R.drawable.ic_close),
+                            Strings.get("close"),
+                            tint = c.labelTertiary,
+                            modifier = Modifier.size(14.dp),
+                        )
+                    }
+                }
             }
         }
         // .listWrap: margin-top 10, relative container for selectChats icon + bottom fade
@@ -123,7 +169,7 @@ fun Sider(settings: SettingsStore, chatStore: ChatStore, onNavigateSettings: () 
                 .nestedScroll(remember { io.github.lijiahua1024.dsnative.ui.ScrollTracker("sider") }),
                 contentPadding = PaddingValues(bottom = 18.dp)) {
             val filtered = groups.map { g ->
-                g.first to g.second.filter { s -> query.isBlank() || s.title.contains(query, true) }
+                g.first to g.second.filter { s -> matchedIds == null || s.id in matchedIds }
             }.filter { it.second.isNotEmpty() }
             filtered.forEachIndexed { gi, (label, list) ->
                 item(key = "g-$label") {
