@@ -8,7 +8,9 @@ import io.github.lijiahua1024.dsnative.data.SessionSummary
 import io.github.lijiahua1024.dsnative.data.groupSessions
 import io.github.lijiahua1024.dsnative.data.replyText
 import io.github.lijiahua1024.dsnative.data.visibleMessages
+import io.github.lijiahua1024.dsnative.ui.session.thinkingDurationSeconds
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -83,5 +85,32 @@ class GroupSessionsTest {
                 "sessionHistoryTimelineLabel30days"),
             groups.map { it.first },
         )
+    }
+}
+
+class ThinkingDurationTest {
+
+    @Test
+    fun prefersElapsedSecondsWhenPresentAndStartedAtMissing() {
+        val block = ReplyBlock.Thinking(thinking = "t", elapsedSeconds = 12L, startedAt = null, endedAt = null)
+        assertEquals(12L, thinkingDurationSeconds(block, now = 1_795_000_000_000L))
+    }
+
+    @Test
+    fun clampsElapsedSecondsBelowOneToOne() {
+        val block = ReplyBlock.Thinking(thinking = "t", elapsedSeconds = 0L)
+        assertEquals(1L, thinkingDurationSeconds(block, now = 1_795_000_000_000L))
+    }
+
+    @Test
+    fun usesTimestampsWhenElapsedSecondsAbsent() {
+        val block = ReplyBlock.Thinking(thinking = "t", startedAt = 10_000L, endedAt = 14_400L)
+        assertEquals(4L, thinkingDurationSeconds(block, now = 99_999L))
+    }
+
+    @Test
+    fun returnsNullWhenBothElapsedSecondsAndStartedAtMissing() {
+        val block = ReplyBlock.Thinking(thinking = "t", startedAt = null, endedAt = null)
+        assertNull(thinkingDurationSeconds(block, now = 1_795_000_000_000L))
     }
 }

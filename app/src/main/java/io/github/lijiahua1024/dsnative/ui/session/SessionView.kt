@@ -815,6 +815,18 @@ fun AssistantView(msg: Message.Assistant, session: Session, chatStore: ChatStore
     }
 }
 
+internal fun thinkingDurationSeconds(
+    block: ReplyBlock.Thinking,
+    now: Long = System.currentTimeMillis(),
+): Long? {
+    block.elapsedSeconds?.let { secs ->
+        return maxOf(1L, secs)
+    }
+    val start = block.startedAt ?: return null
+    val end = block.endedAt ?: now
+    return maxOf(1L, kotlin.math.round((end - start) / 1000.0).toLong())
+}
+
 @Composable
 fun ThinkingBlock(block: ReplyBlock.Thinking, msg: Message.Assistant) {
     val c = DsTheme.colors
@@ -824,11 +836,12 @@ fun ThinkingBlock(block: ReplyBlock.Thinking, msg: Message.Assistant) {
       mutableStateOf(msg.status == ReplyStatus.STREAMING && !hasResponse)
     }
     val title = when {
-        msg.status == ReplyStatus.STREAMING -> Strings.get("messageThinking")
-        msg.status == ReplyStatus.STOPPED -> Strings.get("messageThinkStopped")
+        msg.status == ReplyStatus.STREAMING && !hasResponse -> Strings.get("messageThinking")
+        msg.status == ReplyStatus.STOPPED && !hasResponse -> Strings.get("messageThinkStopped")
         else -> {
-            val secs = ((block.endedAt ?: System.currentTimeMillis()) - (block.startedAt ?: 0)) / 1000
-            Strings.get("messageThinkDuration", "count" to secs)
+            val secs = thinkingDurationSeconds(block)
+            if (secs == null) Strings.get("thinkingSwitch")
+            else Strings.get(if (secs == 1L) "messageThinkDuration" else "messageThinkDurationPlural", "count" to secs)
         }
     }
     // ref ReplyArea.module.css: disclosure grid-rows 0fr->1fr 220ms cubic-bezier(0.2,0,0,1),
