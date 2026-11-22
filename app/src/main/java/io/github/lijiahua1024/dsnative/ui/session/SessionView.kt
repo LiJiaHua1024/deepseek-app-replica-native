@@ -745,6 +745,7 @@ fun AssistantView(
         }
         when (msg.status) {
             // ref .waiting: three 6px dots fading in a 34px row
+            ReplyStatus.PENDING -> WaitingDots()
             ReplyStatus.STREAMING -> if (msg.blocks.isEmpty()) WaitingDots()
             ReplyStatus.ERROR -> {
                 // ref .notice: warning icon + 14/22 error text + inline brand action
