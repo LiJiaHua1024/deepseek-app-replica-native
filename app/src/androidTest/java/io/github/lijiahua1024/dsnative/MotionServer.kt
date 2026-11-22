@@ -112,6 +112,33 @@ class MotionServer {
                         MotionEvent.ACTION_UP, p[1].toFloat(), p[2].toFloat(), 0))
                     liveLog("up ${SystemClock.uptimeMillis()}\n")
                 }
+                "rawseq", "rawflingseq", "rawdrag" -> {
+                    val x1 = p[1].toFloat(); val y1 = p[2].toFloat()
+                    val x2 = p[3].toFloat(); val y2 = p[4].toFloat()
+                    val steps = p[5].toInt(); val durMs = p[6].toLong()
+                    val fling = p[0] == "rawflingseq"
+                    val dragOnly = p[0] == "rawdrag"
+                    downAt = SystemClock.uptimeMillis()
+                    inject(auto, MotionEvent.obtain(downAt, downAt, MotionEvent.ACTION_DOWN, x1, y1, 0))
+                    liveLog("${p[0]}-start $downAt\n")
+                    val moveCount = if (fling || dragOnly) steps else steps - 1
+                    for (i in 1..moveCount) {
+                        val target = downAt + durMs * i / steps
+                        val x = x1 + (x2 - x1) * i / steps
+                        val y = y1 + (y2 - y1) * i / steps
+                        sleepUntil(target)
+                        inject(auto, MotionEvent.obtain(downAt, target, MotionEvent.ACTION_MOVE, x, y, 0))
+                        liveLog("seq-move $target %.1f %.1f\n".format(x, y))
+                    }
+                    if (!dragOnly) {
+                        val upAt = downAt + durMs
+                        sleepUntil(upAt)
+                        inject(auto, MotionEvent.obtain(downAt, upAt, MotionEvent.ACTION_UP, x2, y2, 0))
+                        liveLog("seq-end $upAt\n")
+                    } else {
+                        liveLog("drag-hold ${SystemClock.uptimeMillis()}\n")
+                    }
+                }
                 "seq", "flingseq" -> {
                     val x1 = p[1].toFloat(); val y1 = p[2].toFloat()
                     val x2 = p[3].toFloat(); val y2 = p[4].toFloat()
