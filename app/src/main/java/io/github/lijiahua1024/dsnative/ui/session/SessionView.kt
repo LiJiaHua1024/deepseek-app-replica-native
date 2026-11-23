@@ -29,8 +29,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.onPlaced
+import io.github.lijiahua1024.dsnative.theme.dsPainterResource as painterResource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -45,6 +45,8 @@ import io.github.lijiahua1024.dsnative.R
 import io.github.lijiahua1024.dsnative.data.*
 import io.github.lijiahua1024.dsnative.data.replyText
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -71,11 +73,13 @@ fun SessionView(
 ) {
     val c = DsTheme.colors
     val activeId by chatStore.activeId.collectAsState()
-    val sessions by chatStore.sessions.collectAsState()
-    val session by chatStore.sessionCache.collectAsState().let { s ->
-        derivedStateOf { s.value[activeId ?: ""] }
-    }
-    val streaming by chatStore.streaming.collectAsState()
+    val session by remember(chatStore, activeId) {
+        val id = activeId ?: ""
+        chatStore.sessionCache.map { it[id] }.distinctUntilChanged()
+    }.collectAsState(initial = activeId?.let { chatStore.sessionSnapshot(it) })
+    val streaming by remember(chatStore) {
+        chatStore.streaming
+    }.collectAsState()
     val listState = rememberLazyListState()
     var sourcesPanel by remember { mutableStateOf<List<Source>?>(null) }
     // (msg, 气泡 boundsInWindow) —— 参照物菜单在页内 DOM，Popup 窗口
@@ -162,7 +166,15 @@ fun SessionView(
             }
         }
 
-        val visible = session?.let { visibleMessages(it) } ?: emptyList()
+        val visible = remember(session) { session?.let { visibleMessages(it) } ?: emptyList() }
+        val siblingIdsByParent = remember(session?.messages) {
+            val msgs = session?.messages ?: return@remember emptyMap()
+            val map = HashMap<String?, MutableList<String>>()
+            for (m in msgs) {
+                map.getOrPut(m.parentId) { ArrayList(2) }.add(m.id)
+            }
+            map
+        }
         val lastAssistant = visible.lastOrNull() as? Message.Assistant
         var streamingMsgId by remember(activeId) { mutableStateOf<String?>(null) }
         LaunchedEffect(activeId, lastAssistant?.id, lastAssistant?.status, lastAssistant?.stopReason) {
@@ -210,26 +222,49 @@ fun SessionView(
                         (last.offset + last.size - info.viewportEndOffset) > jumpThreshPx
                 }
             }
+            val curSession by rememberUpdatedState(session)
+            val curVisible by rememberUpdatedState(visible)
+            val curSessionId = session?.id ?: ""
+            val onUserMenu = remember {
+                { m: Message.User, r: androidx.compose.ui.geometry.Rect -> bubbleMenu = m to r }
+            }
+            val onAssistantMenu = remember {
+                { amsg: Message.Assistant, rect: androidx.compose.ui.geometry.Rect -> assistantMenu = amsg to rect }
+            }
+            val onAssistantFeedback = remember {
+                { amsg: Message.Assistant, variant: FeedbackSheetVariant -> feedbackTarget = amsg to variant }
+            }
+            val onShareCurrent: () -> Unit = remember {
+                {
+                    curSession?.let { shareSession = it }
+                }
+            }
             Box(Modifier.weight(1f).fillMaxWidth()) {
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize()
                 .nestedScroll(remember { io.github.lijiahua1024.dsnative.ui.ScrollTracker("chat") }),
                 contentPadding = PaddingValues(bottom = 20.5.dp)) {
-                items(visible.size, key = { visible[it].id }) { index ->
+                items(visible.size, key = { visible[it].id }, contentType = { if (visible[it] is Message.User) "user" else "assistant" }) { index ->
                     when (val msg = visible[index]) {
-                        is Message.User -> session?.let { UserBubble(msg, it, chatStore) { m, r -> bubbleMenu = m to r } }
-                        is Message.Assistant -> session?.let {
-                            AssistantView(
-                                msg = msg,
-                                session = it,
-                                chatStore = chatStore,
-                                isLast = index == visible.size - 1,
-                                onOpenSettings = onOpenSettings,
-                                foldThinking = foldThinking,
-                                onOpenMenu = { amsg, rect -> assistantMenu = amsg to rect },
-                                onFeedback = { amsg, variant -> feedbackTarget = amsg to variant },
-                                onShare = { shareSession = it },
-                            )
-                        }
+                        is Message.User -> UserBubble(
+                            msg = msg,
+                            sessionId = curSessionId,
+                            siblingIds = siblingIdsByParent[msg.parentId].orEmpty(),
+                            uploadReply = visible.getOrNull(index + 1) as? Message.Assistant,
+                            chatStore = chatStore,
+                            onMenu = onUserMenu,
+                        )
+                        is Message.Assistant -> AssistantView(
+                            msg = msg,
+                            sessionId = curSessionId,
+                            siblingIds = siblingIdsByParent[msg.parentId].orEmpty(),
+                            chatStore = chatStore,
+                            isLast = index == visible.size - 1,
+                            onOpenSettings = onOpenSettings,
+                            foldThinking = foldThinking,
+                            onOpenMenu = onAssistantMenu,
+                            onFeedback = onAssistantFeedback,
+                            onShare = onShareCurrent,
+                        )
                     }
                 }
             }
@@ -295,31 +330,30 @@ fun SessionView(
             }
             LaunchedEffect(session?.id) {
                 snapshotFlow {
-                    val msgs = session?.let { visibleMessages(it) } ?: emptyList()
-                    val last = msgs.lastOrNull() as? Message.Assistant
-                    Triple(msgs.size,
-                        last?.let { replyGrowthKey(it) } ?: 0,
-                        listState.layoutInfo.viewportEndOffset)
-                }.collect {
-                    val msgs = session?.let { visibleMessages(it) } ?: return@collect
-                    if (sticky && msgs.isNotEmpty()) {
-                        listState.scrollToItem(msgs.size - 1, Int.MAX_VALUE)
-                    }
-                }
-            }
-            // Re-check after layout settles: a growth-triggered scroll can land
-            // short when the last item measured taller afterwards.
-            LaunchedEffect(session?.id) {
-                snapshotFlow {
                     val info = listState.layoutInfo
-                    val last = info.visibleItemsInfo.lastOrNull()
-                    if (last == null || info.totalItemsCount == 0) false
-                    else last.index == info.totalItemsCount - 1 &&
-                        last.offset + last.size - info.viewportEndOffset < stickyPx
-                }.collect { atEnd ->
-                    val msgs = session?.let { visibleMessages(it) } ?: return@collect
-                    if (sticky && !atEnd && msgs.isNotEmpty()) {
-                        listState.scrollToItem(msgs.size - 1, Int.MAX_VALUE)
+                    val msgs = curVisible
+                    val last = msgs.lastOrNull() as? Message.Assistant
+                    val lastVis = info.visibleItemsInfo.lastOrNull()
+                    val atEnd = lastVis != null && info.totalItemsCount > 0 &&
+                        lastVis.index == info.totalItemsCount - 1 &&
+                        (lastVis.offset + lastVis.size - info.viewportEndOffset) < stickyPx
+                    Triple(
+                        msgs.size,
+                        last?.let { replyGrowthKey(it) } ?: 0,
+                        atEnd to info.viewportEndOffset,
+                    )
+                }.collect { (size, _, _) ->
+                    if (sticky && size > 0) {
+                        val info = listState.layoutInfo
+                        val lastVis = info.visibleItemsInfo.lastOrNull()
+                        if (lastVis != null && lastVis.index == size - 1 && info.totalItemsCount == size) {
+                            val overflow = (lastVis.offset + lastVis.size - info.viewportEndOffset) + info.afterContentPadding
+                            if (overflow > 2) {
+                                listState.dispatchRawDelta(overflow.toFloat())
+                            }
+                        } else {
+                            listState.scrollToItem(size - 1, Int.MAX_VALUE)
+                        }
                     }
                 }
             }
@@ -341,18 +375,7 @@ fun SessionView(
         VoiceOverlay(canceling = voiceCanceling) { VoiceInput.level() }
     }
     if (session != null) {
-        val keyboardOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
-        if (!keyboardOpen) {
-            Text(
-                Strings.get("androidContentCaveat"),
-                fontSize = 11.sp, lineHeight = 16.sp,
-                color = c.labelTertiary.copy(alpha = 0.26f),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 10.dp),
-            )
-        }
+        ContentCaveatOverlay(c)
     }
     bubbleMenu?.let { (bmsg, rect) ->
         val density = androidx.compose.ui.platform.LocalDensity.current
@@ -367,7 +390,7 @@ fun SessionView(
             clampMenuTopPx(rect.top - overlayPos.y + 97f, overlayH, menuH, navBottomPx, marginPx).toDp()
         }
         Box(Modifier.fillMaxSize()
-            .onGloballyPositioned {
+            .onPlaced {
                 overlayPos = it.localToRoot(androidx.compose.ui.geometry.Offset.Zero)
                 overlayH = it.size.height
             }) {
@@ -383,7 +406,7 @@ fun SessionView(
                     .padding(end = endPad)
                     .offset(y = topPad)
                     .width(136.dp)
-                    .onGloballyPositioned { menuH = it.size.height },
+                    .onPlaced { menuH = it.size.height },
             ) {
                 Column(Modifier.padding(4.dp)) {
                     MenuOption(Strings.get("copy"), R.drawable.ic_copy, c.labelPrimary) {
@@ -427,7 +450,7 @@ fun SessionView(
             ).toDp()
         }
         Box(Modifier.fillMaxSize()
-            .onGloballyPositioned {
+            .onPlaced {
                 overlayPos = it.localToRoot(androidx.compose.ui.geometry.Offset.Zero)
                 overlayH = it.size.height
             }) {
@@ -443,7 +466,7 @@ fun SessionView(
                     .padding(start = 24.dp)
                     .offset(y = topPad)
                     .width(154.dp)
-                    .onGloballyPositioned { menuH = it.size.height },
+                    .onPlaced { menuH = it.size.height },
             ) {
                 Column(Modifier.padding(4.dp)) {
                     val replyTxt = replyText(amsg)
@@ -616,23 +639,43 @@ fun DsToastHost() {
     }
 }
 
-/** versions of a message = siblings sharing parentId, in insertion order */
-private fun versionsOf(session: Session, msg: Message): Pair<List<String>, Int> {
-    val ids = session.messages.filter { it.parentId == msg.parentId }.map { it.id }
-    return ids to ids.indexOf(msg.id).coerceAtLeast(0)
+private class CoordsRef(var coords: androidx.compose.ui.layout.LayoutCoordinates? = null)
+
+@Composable
+private fun BoxScope.ContentCaveatOverlay(c: io.github.lijiahua1024.dsnative.theme.DsColors) {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val imeInsets = WindowInsets.ime
+    val keyboardOpen by remember(density, imeInsets) {
+        derivedStateOf { imeInsets.getBottom(density) > 0 }
+    }
+    if (!keyboardOpen) {
+        Text(
+            Strings.get("androidContentCaveat"),
+            fontSize = 11.sp, lineHeight = 16.sp,
+            color = c.labelTertiary.copy(alpha = 0.26f),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 10.dp),
+        )
+    }
 }
 
 @Composable
-fun BranchSwitcher(session: Session, msg: Message, chatStore: ChatStore) {
-    val c = DsTheme.colors
-    val (ids, index) = versionsOf(session, msg)
-    if (ids.size <= 1) return
+fun BranchSwitcher(
+    sessionId: String,
+    siblingIds: List<String>,
+    activeMessageId: String,
+    chatStore: ChatStore,
+) {
+    if (siblingIds.size <= 1) return
+    val index = siblingIds.indexOf(activeMessageId).coerceAtLeast(0)
     val activeColor = Color(0xFF8E9094)
     val disabledColor = Color(0xFFD4D4D4)
     Row(Modifier.padding(end = 5.dp).height(42.dp),
         verticalAlignment = Alignment.CenterVertically) {
         IconButton(enabled = index > 0,
-            onClick = { chatStore.selectVersion(session.id, ids[index - 1]) },
+            onClick = { chatStore.selectVersion(sessionId, siblingIds[index - 1]) },
             modifier = Modifier.size(43.4.dp)) {
             Icon(painterResource(R.drawable.ic_chevron_right), null,
                 tint = if (index > 0) activeColor else disabledColor,
@@ -642,16 +685,16 @@ fun BranchSwitcher(session: Session, msg: Message, chatStore: ChatStore) {
         }
         Box(Modifier.semantics {
             contentDescription = Strings.get(
-                "messageBranchCount", "index" to index + 1, "total" to ids.size)
+                "messageBranchCount", "index" to index + 1, "total" to siblingIds.size)
         }) {
-            Text("${index + 1}/${ids.size}", fontSize = 15.sp, lineHeight = 18.sp,
+            Text("${index + 1}/${siblingIds.size}", fontSize = 15.sp, lineHeight = 18.sp,
                 fontWeight = FontWeight.Medium, color = activeColor)
         }
-        IconButton(enabled = index < ids.size - 1,
-            onClick = { chatStore.selectVersion(session.id, ids[index + 1]) },
+        IconButton(enabled = index < siblingIds.size - 1,
+            onClick = { chatStore.selectVersion(sessionId, siblingIds[index + 1]) },
             modifier = Modifier.size(43.4.dp)) {
             Icon(painterResource(R.drawable.ic_chevron_right), null,
-                tint = if (index < ids.size - 1) activeColor else disabledColor,
+                tint = if (index < siblingIds.size - 1) activeColor else disabledColor,
                 modifier = Modifier.size(16.dp)
                     .semantics { contentDescription = Strings.get("nextMessage") }
                     .offset(x = (-0.45).dp))
@@ -661,10 +704,16 @@ fun BranchSwitcher(session: Session, msg: Message, chatStore: ChatStore) {
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
-fun UserBubble(msg: Message.User, session: Session, chatStore: ChatStore,
-               onMenu: (Message.User, androidx.compose.ui.geometry.Rect) -> Unit = { _, _ -> }) {
+fun UserBubble(
+    msg: Message.User,
+    sessionId: String,
+    siblingIds: List<String>,
+    uploadReply: Message.Assistant?,
+    chatStore: ChatStore,
+    onMenu: (Message.User, androidx.compose.ui.geometry.Rect) -> Unit = { _, _ -> },
+) {
     val c = DsTheme.colors
-    var bubbleRect by remember(msg.id) { mutableStateOf(androidx.compose.ui.geometry.Rect.Zero) }
+    val coordsRef = remember { CoordsRef() }
     Column(Modifier.fillMaxWidth().padding(top = 22.dp)) {
         // ref .files: wrap 行右对齐 gap 10px mb 8px；混排文档时缩略图 64px
         if (msg.files.isNotEmpty()) {
@@ -680,14 +729,14 @@ fun UserBubble(msg: Message.User, session: Session, chatStore: ChatStore,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 msg.files.forEach { file ->
-                    MessageFileView(session, msg, file, imgSize, chatStore)
+                    MessageFileView(sessionId, file, uploadReply, imgSize, chatStore)
                 }
             }
         }
         if (msg.content.isNotEmpty()) {
             Box(Modifier.fillMaxWidth().padding(start = 48.dp, end = 16.dp)) {
                 Box(Modifier.align(Alignment.TopEnd)
-                    .onGloballyPositioned { val p = it.localToRoot(androidx.compose.ui.geometry.Offset.Zero); bubbleRect = androidx.compose.ui.geometry.Rect(p.x, p.y, p.x + it.size.width, p.y + it.size.height) }
+                    .onPlaced { coordsRef.coords = it }
                     .clip(RoundedCornerShape(22.dp, 22.dp, 5.dp, 22.dp))
                     .background(c.bubble)
                     .combinedClickable(
@@ -695,14 +744,23 @@ fun UserBubble(msg: Message.User, session: Session, chatStore: ChatStore,
                         indication = null,
                         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                         onClick = {},
-                        onLongClick = { onMenu(msg, bubbleRect) })
+                        onLongClick = {
+                            val coords = coordsRef.coords
+                            val rect = if (coords != null && coords.isAttached) {
+                                val p = coords.localToRoot(androidx.compose.ui.geometry.Offset.Zero)
+                                androidx.compose.ui.geometry.Rect(
+                                    p.x, p.y, p.x + coords.size.width, p.y + coords.size.height,
+                                )
+                            } else androidx.compose.ui.geometry.Rect.Zero
+                            onMenu(msg, rect)
+                        })
                     .padding(horizontal = 16.dp, vertical = 10.dp)) {
                     Text(msg.content, fontSize = 16.sp, lineHeight = 24.sp, color = c.labelPrimary)
                 }
             }
         }
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-            BranchSwitcher(session, msg, chatStore)
+            BranchSwitcher(sessionId, siblingIds, msg.id, chatStore)
         }
         Spacer(Modifier.height(21.6.dp))
     }
@@ -737,18 +795,14 @@ private fun fileIconRes(ext: String): Int = when {
  */
 @Composable
 private fun MessageFileView(
-    session: Session,
-    user: Message.User,
+    sessionId: String,
     file: FileAttachment,
+    reply: Message.Assistant?,
     imgSize: androidx.compose.ui.unit.Dp,
     chatStore: ChatStore,
 ) {
     val c = DsTheme.colors
     var preview by remember { mutableStateOf(false) }
-    // 紧随其后的 assistant 回复若是 upload 错误则文件可重试（ref retryUploadId）
-    val path = visibleMessages(session)
-    val userIndex = path.indexOfFirst { it.id == user.id }
-    val reply = path.getOrNull(userIndex + 1) as? Message.Assistant
     val uploadError = reply?.takeIf { it.error?.kind == "upload" }
     val uploading = file.serverId == null && reply?.status == ReplyStatus.PENDING
 
@@ -769,7 +823,7 @@ private fun MessageFileView(
                 }
             } else if (uploadError != null) {
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f))
-                        .clickable { chatStore.retryUpload(session.id, uploadError.id) },
+                        .clickable { chatStore.retryUpload(sessionId, uploadError.id) },
                     contentAlignment = Alignment.Center) {
                     Icon(painterResource(R.drawable.ic_refresh), null, tint = Color.White,
                         modifier = Modifier.size(20.dp))
@@ -783,7 +837,7 @@ private fun MessageFileView(
             .border(1.dp, if (uploadError != null) c.stateErrorPrimary else c.borderL2,
                 RoundedCornerShape(16.dp))
             .background(c.inputMajor)
-            .clickable(uploadError != null) { chatStore.retryUpload(session.id, uploadError!!.id) }
+            .clickable(uploadError != null) { chatStore.retryUpload(sessionId, uploadError!!.id) }
             .padding(start = 14.dp, end = 12.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(28.dp).padding(end = 0.dp), contentAlignment = Alignment.Center) {
@@ -820,7 +874,7 @@ private fun MessageFileView(
                 file.localPath ?: ""),
             onClose = { preview = false },
             onConfirmCrop = { cropped ->
-                chatStore.addDraftAttachments(session.id, listOf(cropped))
+                chatStore.addDraftAttachments(sessionId, listOf(cropped))
                 preview = false
                 chatStore.requestFocusComposer()
             },
@@ -873,7 +927,8 @@ fun WaitingDots() {
 @Composable
 fun AssistantView(
     msg: Message.Assistant,
-    session: Session,
+    sessionId: String,
+    siblingIds: List<String>,
     chatStore: ChatStore,
     isLast: Boolean = false,
     onOpenSettings: () -> Unit = {},
@@ -884,33 +939,37 @@ fun AssistantView(
 ) {
     val c = DsTheme.colors
     val ctx = LocalContext.current
-    val sessionId = session.id
     val sources = remember(msg.blocks) { searchSources(msg.blocks) }
     val openSources = LocalOpenSources.current
     val hasFinishedReply = (msg.status == ReplyStatus.DONE || msg.status == ReplyStatus.STOPPED) &&
         replyText(msg).isNotEmpty()
-    var responseBounds by remember { mutableStateOf(androidx.compose.ui.geometry.Rect.Zero) }
+    val coordsRef = remember { CoordsRef() }
+    val interactionSource = remember { MutableInteractionSource() }
     Column(
         Modifier
             .fillMaxWidth()
             .padding(start = 24.dp, end = 19.dp)
-            .onGloballyPositioned { coords ->
-                if (coords.isAttached) responseBounds = coords.boundsInWindow()
-            }
             .then(
                 if (hasFinishedReply) {
-                    Modifier.combinedClickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {},
-                        onLongClick = { onOpenMenu(msg, responseBounds) },
-                    )
+                    Modifier
+                        .onPlaced { coordsRef.coords = it }
+                        .combinedClickable(
+                            interactionSource = interactionSource,
+                            indication = null,
+                            onClick = {},
+                            onLongClick = {
+                                val rect = coordsRef.coords?.takeIf { it.isAttached }?.boundsInWindow()
+                                    ?: androidx.compose.ui.geometry.Rect.Zero
+                                onOpenMenu(msg, rect)
+                            },
+                        )
                 } else Modifier,
             ),
     ) {
     CompositionLocalProvider(LocalSources provides sources) {
+        val renderBlocks = remember(msg.blocks, sources) { withCitationMarkers(msg.blocks, sources) }
         var prevWasStep = false
-        for (block in withCitationMarkers(msg.blocks, sources)) {
+        for (block in renderBlocks) {
             when (block) {
                 is ReplyBlock.Thinking -> ThinkingBlock(block, msg, foldThinking).also { prevWasStep = true }
                 is ReplyBlock.Text -> MarkdownBody(block.text,
@@ -988,13 +1047,17 @@ fun AssistantView(
         if (msg.status == ReplyStatus.DONE || msg.status == ReplyStatus.STOPPED) {
             Row(Modifier.fillMaxWidth().offset(x = (-6).dp).padding(top = 8.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically) {
-                BranchSwitcher(session, msg, chatStore)
+                BranchSwitcher(sessionId, siblingIds, msg.id, chatStore)
                 Row(modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically) {
-                val clipboard = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                val clipboard = remember(ctx) {
+                    ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                }
                 val scope = androidx.compose.runtime.rememberCoroutineScope()
-                val audioManager = ctx.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+                val audioManager = remember(ctx) {
+                    ctx.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+                }
                 val iconTint = if (c.dark) c.labelTertiary else Color(0xFF8E9094)
                 IconButton({
                     val txt = formattedAssistantCopyText(msg)

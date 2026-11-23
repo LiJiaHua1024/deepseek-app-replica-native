@@ -21,7 +21,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import io.github.lijiahua1024.dsnative.theme.dsPainterResource as painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -43,6 +43,11 @@ import io.github.lijiahua1024.dsnative.theme.Strings
 import io.github.lijiahua1024.dsnative.ui.DrawerGestureBlocker
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+private val SiderRowShape = RoundedCornerShape(12.dp)
+private val searchCalLocal = ThreadLocal.withInitial { java.util.Calendar.getInstance() }
+private val searchZhFmtLocal = ThreadLocal.withInitial { java.text.SimpleDateFormat("M月d日", java.util.Locale.CHINA) }
+private val searchEnFmtLocal = ThreadLocal.withInitial { java.text.SimpleDateFormat("MMM d", java.util.Locale.US) }
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -285,7 +290,7 @@ fun Sider(
                         .nestedScroll(remember { io.github.lijiahua1024.dsnative.ui.ScrollTracker("siderSearch") }),
                     contentPadding = PaddingValues(bottom = 24.dp),
                 ) {
-                    items(results, key = { "sr-${it.id}" }) { s ->
+                    items(results, key = { "sr-${it.id}" }, contentType = { "search_row" }) { s ->
                         SearchSessionRow(
                             s = s,
                             snippet = matchedSnippets?.get(s.id).orEmpty(),
@@ -306,7 +311,7 @@ fun Sider(
                 g.first to g.second.filter { s -> matchedIds == null || s.id in matchedIds }
             }.filter { it.second.isNotEmpty() }
             filtered.forEachIndexed { gi, (label, list) ->
-                item(key = "g-$label") {
+                item(key = "g-$label", contentType = "group_header") {
                     Row(
                         Modifier.fillMaxWidth().padding(top = (if (gi == 0) 2 else 12).dp, start = 6.dp, end = 6.dp).height(26.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -328,7 +333,7 @@ fun Sider(
                         }
                     }
                 }
-                items(list, key = { it.id }) { s ->
+                items(list, key = { it.id }, contentType = { "sider_row" }) { s ->
                     SiderRow(s, s.id == activeId, selectionMode, selected.contains(s.id),
                         isPinned = pinned.contains(s.id),
                         pressPhase = pressGesture?.takeIf { it.sessionId == s.id }?.phase
@@ -640,16 +645,18 @@ private fun DsModal(title: String, body: String?, onDismiss: () -> Unit,
 }
 
 private fun formatSearchDate(tsMs: Long, nowMs: Long = System.currentTimeMillis()): String {
-    val startOfToday = java.util.Calendar.getInstance().apply {
-        timeInMillis = nowMs
-        set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0)
-        set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
-    }.timeInMillis
+    val cal = searchCalLocal.get()!!
+    cal.timeInMillis = nowMs
+    cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
+    cal.set(java.util.Calendar.MINUTE, 0)
+    cal.set(java.util.Calendar.SECOND, 0)
+    cal.set(java.util.Calendar.MILLISECOND, 0)
+    val startOfToday = cal.timeInMillis
     val dayMs = 86_400_000L
     return when {
         tsMs >= startOfToday -> Strings.get("sessionHistoryTimelineLabelToday")
         tsMs >= startOfToday - dayMs -> Strings.get("sessionHistoryTimelineLabelYesterday")
-        else -> java.text.SimpleDateFormat(if (Strings.isZh()) "M月d日" else "MMM d", java.util.Locale.getDefault())
+        else -> (if (Strings.isZh()) searchZhFmtLocal else searchEnFmtLocal).get()!!
             .format(java.util.Date(tsMs))
     }
 }
@@ -687,7 +694,7 @@ private fun SearchSessionRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(SiderRowShape)
             .clickable(onClick = onClick)
             .padding(horizontal = 6.dp, vertical = 12.dp),
         verticalAlignment = Alignment.Top,
@@ -760,7 +767,7 @@ private fun SiderRow(s: SessionSummary, active: Boolean, selectionMode: Boolean,
     val pressed by pressSrc.collectIsPressedAsState()
     Row(
         Modifier.fillMaxWidth().padding(bottom = 2.dp).height(50.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(SiderRowShape)
             // selection rows render as plain .select buttons — no active accent;
             // ref .item:active -> bg-skeleton
             .background(

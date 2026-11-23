@@ -13,6 +13,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -101,6 +102,12 @@ private val parser: Parser by lazy {
         .build()
 }
 
+/** Pre-warms CommonMark parser, extensions, and code-highlight regex off the UI thread. */
+internal fun prewarmMarkdownParser() {
+    parser.parse("**a** `b` ~~c~~")
+    CODE_TOKEN_RE.find("val x = 1")
+}
+
 private val mathBlock = Regex("\\$\\$([\\s\\S]+?)\\$\\$")
 
 // Body text uses DsTheme.fontFamily: the ref WebView resolves its
@@ -132,43 +139,145 @@ private val chipPadContent = mapOf(
     ) {},
 )
 
+private val CITE_BADGE_SHAPE = androidx.compose.foundation.shape.RoundedCornerShape(
+    topStart = 6.dp, topEnd = 6.dp, bottomEnd = 6.dp, bottomStart = 0.dp)
+private val URI_SCHEME_RE = Regex("^[a-zA-Z][a-zA-Z0-9+.-]*:")
+private val ORDERED_LIST_PREFIX_RE = Regex("^\\d+[.)]\\s.*")
+
 // ref .ds-markdown-cite: 14px 高角标（top -5px），圆角 6px 6px 6px 0，
 // 0.5px l1 边框，markdown-placeholder 底，9px/500 等宽三级色数字
 @Composable
 private fun citeContent(c: io.github.lijiahua1024.dsnative.theme.DsColors): Map<String, InlineTextContent> {
     val sources = LocalSources.current
+    if (sources.isEmpty()) return emptyMap()
     val open = LocalOpenSources.current
-    val map = HashMap<String, InlineTextContent>()
-    val badgeShape = androidx.compose.foundation.shape.RoundedCornerShape(
-        topStart = 6.dp, topEnd = 6.dp, bottomEnd = 6.dp, bottomStart = 0.dp)
-    for (s in sources) {
-        val src = s
-        map["cite_" + s.index] = InlineTextContent(
-            Placeholder(
-                width = 18.sp,
-                height = 14.sp,
-                placeholderVerticalAlign = PlaceholderVerticalAlign.TextTop,
-            ),
-        ) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Box(
-                    Modifier
-                        .size(width = 14.dp, height = 14.dp)
-                        .clip(badgeShape)
-                        .background(c.markdownPlaceholder)
-                        .border(0.5.dp, c.borderL1, badgeShape)
-                        .clickable { open(listOf(src)) },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(src.index.toString(), fontSize = 9.sp, lineHeight = 14.sp,
-                        modifier = Modifier.semantics { contentDescription = Strings.get("citationLabel", "count" to src.index) },
-                        fontWeight = FontWeight.Medium, fontFamily = FontFamily.Monospace,
-                        color = c.labelTertiary)
+    return remember(sources, c.dark, open) {
+        val map = HashMap<String, InlineTextContent>(sources.size)
+        for (s in sources) {
+            val src = s
+            map["cite_" + s.index] = InlineTextContent(
+                Placeholder(
+                    width = 18.sp,
+                    height = 14.sp,
+                    placeholderVerticalAlign = PlaceholderVerticalAlign.TextTop,
+                ),
+            ) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier
+                            .size(width = 14.dp, height = 14.dp)
+                            .clip(CITE_BADGE_SHAPE)
+                            .background(c.markdownPlaceholder)
+                            .border(0.5.dp, c.borderL1, CITE_BADGE_SHAPE)
+                            .clickable { open(listOf(src)) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(src.index.toString(), fontSize = 9.sp, lineHeight = 14.sp,
+                            modifier = Modifier.semantics { contentDescription = Strings.get("citationLabel", "count" to src.index) },
+                            fontWeight = FontWeight.Medium, fontFamily = FontFamily.Monospace,
+                            color = c.labelTertiary)
+                    }
                 }
             }
         }
+        map
     }
-    return map
+}
+
+private data class ParsedMarkdownChunk(
+    val source: String,
+    val tokens: Map<Int, ExtractedMathToken>,
+    val blocks: List<Node>,
+)
+
+private val markdownChunkCache = object : android.util.LruCache<String, ParsedMarkdownChunk>(64) {}
+
+private fun getParsedMarkdownChunk(rawChunk: String): ParsedMarkdownChunk {
+    synchronized(markdownChunkCache) {
+        markdownChunkCache.get(rawChunk)?.let { return it }
+    }
+    val prep = preprocessMarkdownMath(rawChunk)
+    val doc = parser.parse(prep.markdown)
+    val blocks = ArrayList<Node>()
+    var cur = doc.firstChild
+    while (cur != null) {
+        blocks.add(cur)
+        cur = cur.next
+    }
+    return ParsedMarkdownChunk(rawChunk, prep.tokens, blocks).also { parsed ->
+        synchronized(markdownChunkCache) {
+            markdownChunkCache.put(rawChunk, parsed)
+        }
+    }
+}
+
+private fun isUnsafeContinuationStart(line: String): Boolean {
+    if (line.isEmpty()) return true
+    val first = line[0]
+    if (first == ' ' || first == '\t' || first == '>' || first == '|' || first == '=' || first == '-') return true
+    if ((first == '*' || first == '+') && line.length > 1 && line[1] == ' ') return true
+    if (first.isDigit() && ORDERED_LIST_PREFIX_RE.matches(line)) return true
+    return false
+}
+
+/**
+ * Splits long streaming/static Markdown at safe top-level blank-line block boundaries outside
+ * fenced code, $$ math, lists, blockquotes, tables, and reference-link definitions so finished
+ * prefix blocks cache their AST and skip Compose recomposition as trailing text grows.
+ */
+internal fun splitMarkdownChunks(input: String): List<String> {
+    if (input.length < 400 || input.contains("]:")) return listOf(input)
+    val chunks = ArrayList<String>()
+    var chunkStart = 0
+    var i = 0
+    var inFenceChar = '\u0000'
+    var inFenceLen = 0
+    var inMath = false
+    var lastNonBlankLine = ""
+    while (i < input.length) {
+        val nl = input.indexOf('\n', i)
+        val lineEnd = if (nl < 0) input.length else nl
+        val line = input.substring(i, lineEnd)
+        val trimmed = line.trimStart()
+        if (inFenceLen > 0) {
+            var count = 0
+            while (count < trimmed.length && trimmed[count] == inFenceChar) count++
+            if (count >= inFenceLen && trimmed.substring(count).isBlank()) inFenceLen = 0
+            lastNonBlankLine = trimmed
+            i = if (nl < 0) input.length else nl + 1
+            continue
+        }
+        if (trimmed.startsWith("```") || trimmed.startsWith("~~~")) {
+            val ch = trimmed[0]
+            var count = 0
+            while (count < trimmed.length && trimmed[count] == ch) count++
+            inFenceChar = ch
+            inFenceLen = count
+            lastNonBlankLine = trimmed
+            i = if (nl < 0) input.length else nl + 1
+            continue
+        }
+        if (trimmed.startsWith("$$")) {
+            val rest = trimmed.substring(2)
+            if (!rest.contains("$$")) inMath = !inMath
+        }
+        if (line.isBlank() && !inMath && nl >= 0) {
+            val nextStart = nl + 1
+            if (nextStart < input.length && nextStart - chunkStart >= 280) {
+                val nextNl = input.indexOf('\n', nextStart).let { if (it < 0) input.length else it }
+                val nextLine = input.substring(nextStart, nextNl)
+                if (!nextLine.isBlank() && !isUnsafeContinuationStart(lastNonBlankLine) && !isUnsafeContinuationStart(nextLine)) {
+                    chunks.add(input.substring(chunkStart, nextStart))
+                    chunkStart = nextStart
+                }
+            }
+        } else if (line.isNotBlank()) {
+            lastNonBlankLine = trimmed
+        }
+        i = if (nl < 0) input.length else nl + 1
+    }
+    if (chunkStart < input.length) chunks.add(input.substring(chunkStart))
+    return if (chunks.isEmpty()) listOf(input) else chunks
 }
 
 // CSS margins collapse between siblings: the visible gap is the max of the
@@ -204,7 +313,7 @@ fun MarkdownBody(
     val uriHandler = remember(baseUriHandler, linkCtx, dark) {
         object : androidx.compose.ui.platform.UriHandler {
             override fun openUri(uri: String) {
-                val sanitized = if (uri.matches(Regex("^[a-zA-Z][a-zA-Z0-9+.-]*:"))) uri
+                val sanitized = if (uri.matches(URI_SCHEME_RE)) uri
                     else "https://$uri"
                 if (io.github.lijiahua1024.dsnative.SourceBrowserActivity.webUri(sanitized) != null) {
                     io.github.lijiahua1024.dsnative.SourceBrowserActivity.open(linkCtx, sanitized, dark)
@@ -214,19 +323,23 @@ fun MarkdownBody(
             }
         }
     }
-    val prep = remember(text) { preprocessMarkdownMath(text) }
-    val doc = remember(prep.markdown) { parser.parse(prep.markdown) }
+    val parsedChunks = remember(text) {
+        splitMarkdownChunks(text).map(::getParsedMarkdownChunk)
+    }
     val content: @Composable () -> Unit = {
         Column(modifier) {
-            var node = doc.firstChild
-            var prev: Node? = null
-            while (node != null) {
-                if (prev != null) {
-                    Spacer(Modifier.height(maxOf(bottomMargin(prev, false), topMargin(node)).dp))
+            parsedChunks.forEachIndexed { chunkIdx, chunk ->
+                if (chunkIdx > 0) {
+                    val prevLast = parsedChunks[chunkIdx - 1].blocks.lastOrNull()
+                    val nextFirst = chunk.blocks.firstOrNull()
+                    if (prevLast != null && nextFirst != null) {
+                        Spacer(Modifier.height(maxOf(bottomMargin(prevLast, false), topMargin(nextFirst)).dp))
+                    }
                 }
-                RenderBlock(node, c, uriHandler, streaming, prep.tokens)
-                prev = node
-                node = node.next
+                val tailStreaming = streaming && chunkIdx == parsedChunks.lastIndex
+                key(chunkIdx, chunk.source) {
+                    RenderMarkdownChunk(chunk, c, uriHandler, tailStreaming)
+                }
             }
         }
     }
@@ -234,6 +347,23 @@ fun MarkdownBody(
         SelectionContainer { content() }
     } else {
         content()
+    }
+}
+
+@Composable
+private fun RenderMarkdownChunk(
+    chunk: ParsedMarkdownChunk,
+    c: io.github.lijiahua1024.dsnative.theme.DsColors,
+    uriHandler: androidx.compose.ui.platform.UriHandler,
+    streaming: Boolean,
+) {
+    val blocks = chunk.blocks
+    for (idx in blocks.indices) {
+        val node = blocks[idx]
+        if (idx > 0) {
+            Spacer(Modifier.height(maxOf(bottomMargin(blocks[idx - 1], false), topMargin(node)).dp))
+        }
+        RenderBlock(node, c, uriHandler, streaming, chunk.tokens)
     }
 }
 
@@ -271,8 +401,9 @@ private fun RenderBlock(
             if (lang.trim().lowercase() == "mermaid") {
                 MermaidCodeBlock(literal, streaming, c) { code ->
                     val mScroll = rememberScrollState()
+                    val highlighted = remember(code, c.dark) { highlightCode(code, c) }
                     Text(
-                        highlightCode(code, c),
+                        highlighted,
                         fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 22.sp,
                         style = cssLeading,
                         modifier = Modifier.fillMaxWidth()
@@ -329,8 +460,10 @@ private fun RenderBlock(
                         .then(if (codeScroll.maxValue > 0) Modifier.excludeFromDrawerGesture() else Modifier)
                         .horizontalScroll(codeScroll)
                 ) {
+                    val trimmedCode = remember(literal) { literal.trimEnd('\n') }
+                    val highlightedCode = remember(trimmedCode, c.dark) { highlightCode(trimmedCode, c) }
                     Text(
-                        highlightCode(literal.trimEnd('\n'), c),
+                        highlightedCode,
                         fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 18.8.sp,
                         style = cssLeading,
                         modifier = Modifier
@@ -453,8 +586,14 @@ private fun ParagraphText(
     mathTokens: Map<Int, ExtractedMathToken> = emptyMap(),
 ) {
     val (styled, mathInlineContent) = rememberInlineMathPrepared(str, c, mathTokens, fontSizeSp = 16f)
+    val hasInlineCodeChip = remember(styled) {
+        styled.spanStyles.any { it.item.fontFamily == FontFamily.Monospace && it.end > it.start }
+    }
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
-    val inlineContent = chipPadContent + citeContent(c) + mathInlineContent
+    val cite = citeContent(c)
+    val inlineContent = remember(cite, mathInlineContent) {
+        chipPadContent + cite + mathInlineContent
+    }
     Text(
         styled, fontSize = 16.sp, lineHeight = 28.sp, color = c.labelPrimary,
         fontFamily = DsTheme.fontFamily,
@@ -463,9 +602,9 @@ private fun ParagraphText(
         // and shifts all following content up. Center+None reproduces CSS
         // half-leading exactly for this font.
         style = cssLeading,
-        onTextLayout = { layout = it },
+        onTextLayout = { if (hasInlineCodeChip) layout = it },
         inlineContent = inlineContent,
-        modifier = Modifier.drawBehind {
+        modifier = if (!hasInlineCodeChip) Modifier else Modifier.drawBehind {
             val l = layout ?: return@drawBehind
             val padX = 5.dp.toPx()
             val radius = 6.dp.toPx()
@@ -1060,6 +1199,7 @@ private val KEYWORDS = setOf(
 )
 
 private val BOOLEANS = setOf("true", "false", "True", "False")
+private val CODE_TOKEN_RE = Regex("(\"([^\"\\\\]|\\\\.)*\"|'([^'\\\\]|\\\\.)*'|//[^\n]*|#[^\n]*|/\\*[\\s\\S]*?\\*/|\\b\\d+(\\.\\d+)?\\b|\\b[A-Za-z_][A-Za-z0-9_]*\\b)")
 
 // Atom One Light palette matching official DeepSeek code card (light + dark)
 private fun highlightCode(
@@ -1073,9 +1213,8 @@ private fun highlightCode(
     val number = if (c.dark) Color(0xFFE6D37A) else Color(0xFF986801)
     val className = if (c.dark) Color(0xFF6CB8E6) else Color(0xFFC18401)
     val plain = if (c.dark) Color(0xFFE3EAF2) else Color(0xFF191B23)
-    val token = Regex("(\"([^\"\\\\]|\\\\.)*\"|'([^'\\\\]|\\\\.)*'|//[^\n]*|#[^\n]*|/\\*[\\s\\S]*?\\*/|\\b\\d+(\\.\\d+)?\\b|\\b[A-Za-z_][A-Za-z0-9_]*\\b)")
     var i = 0
-    for (m in token.findAll(code)) {
+    for (m in CODE_TOKEN_RE.findAll(code)) {
         if (m.range.first > i) withStyle(SpanStyle(color = plain)) { append(code.substring(i, m.range.first)) }
         val t = m.value
         val color = when {

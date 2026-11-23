@@ -297,21 +297,28 @@ private fun isUsableReply(message: Message): Boolean =
 
 /** 会话分组：今天 / 昨天 / 7 天内 / 30 天内 / 按月（yyyy-MM） */
 fun groupSessions(sessions: List<SessionSummary>, now: Long): List<Pair<String, List<SessionSummary>>> {
+    if (sessions.isEmpty()) return emptyList()
     val day = 86_400_000L
+    val cal = java.util.Calendar.getInstance()
+    var monthFmt: SimpleDateFormat? = null
     val groups = mutableListOf<Pair<String, MutableList<SessionSummary>>>()
     for (session in sessions) {
-        val startOfDay = java.util.Calendar.getInstance().apply {
-            timeInMillis = session.updatedAt
-            set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0)
-            set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
-        }.timeInMillis
+        cal.timeInMillis = session.updatedAt
+        cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        cal.set(java.util.Calendar.MINUTE, 0)
+        cal.set(java.util.Calendar.SECOND, 0)
+        cal.set(java.util.Calendar.MILLISECOND, 0)
+        val startOfDay = cal.timeInMillis
         val diff = ((now - startOfDay) / day).toInt()
         val key = when {
             diff <= 0 -> "sessionHistoryTimelineLabelToday"
             diff <= 1 -> "sessionHistoryTimelineLabelYesterday"
             diff < 7 -> "sessionHistoryTimelineLabel7days"
             diff < 30 -> "sessionHistoryTimelineLabel30days"
-            else -> SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(Date(session.updatedAt))
+            else -> {
+                val fmt = monthFmt ?: SimpleDateFormat("yyyy-MM", Locale.getDefault()).also { monthFmt = it }
+                fmt.format(Date(session.updatedAt))
+            }
         }
         val last = groups.lastOrNull()
         if (last?.first == key) last.second.add(session)
@@ -468,15 +475,19 @@ class ChatStore(
             val session = update(previous)
             if (session === previous) return@withLock
             _sessionCache.value = _sessionCache.value + (id to session)
-            _sessions.value = sortSessions(
-                _sessions.value.map { if (it.id == id) session.toSummary() else it }
-            )
+            if (session.title != previous.title || session.updatedAt != previous.updatedAt) {
+                _sessions.value = sortSessions(
+                    _sessions.value.map { if (it.id == id) session.toSummary() else it }
+                )
+            }
         }
     }
 
     suspend fun getSession(id: String): Session? = mutex.withLock { _sessionCache.value[id] }
 
     fun sessionSnapshot(id: String): Session? = _sessionCache.value[id]
+
+    fun isStreamingSnapshot(id: String?): Boolean = id != null && _streaming.value.contains(id)
 
     suspend fun searchSessionSnippets(query: String): Map<String, String> {
         val q = query.trim()
@@ -1055,7 +1066,7 @@ class ChatStore(
     // ---------- 流式回复 ----------
 
     private fun updateReply(sessionId: String, reply: Message.Assistant) {
-        scope.launch {
+        scope.launch(Dispatchers.Default) {
             updateSession(sessionId) { session ->
                 session.copy(messages = session.messages.map { message ->
                     if (message.id == reply.id) {

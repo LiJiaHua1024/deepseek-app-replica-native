@@ -273,6 +273,9 @@ private fun findClosingSingleDollar(s: String, from: Int): Int {
  * 避免代码围栏/行内代码误判及 CommonMark 转义/斜体破坏公式内容。
  */
 fun preprocessMarkdownMath(input: String): PreprocessedMarkdown {
+    if (!input.contains('$') && !input.contains('\\')) {
+        return PreprocessedMarkdown(input, emptyMap())
+    }
     val tokens = LinkedHashMap<Int, ExtractedMathToken>()
     val out = StringBuilder(input.length)
     var nextId = 0

@@ -28,7 +28,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.Alignment
@@ -641,7 +641,7 @@ fun SearchSourcesPanel(sources: List<Source>, numbered: Boolean, onClose: () -> 
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .heightIn(max = this.maxHeight - 44.dp)
-                .onGloballyPositioned { sheetH = it.size.height }
+                .onSizeChanged { sheetH = it.height }
                 .offset { androidx.compose.ui.unit.IntOffset(0, ((1f - prog.value) * sheetH + dragOffsetY).toInt()) }
                 .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                 .background(if (c.dark) androidx.compose.ui.graphics.Color(0xFF292929) else c.bgBase)

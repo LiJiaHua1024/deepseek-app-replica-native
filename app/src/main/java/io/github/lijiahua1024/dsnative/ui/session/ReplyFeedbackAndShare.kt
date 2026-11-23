@@ -42,9 +42,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import io.github.lijiahua1024.dsnative.theme.dsPainterResource as painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -138,7 +138,7 @@ fun MessageFeedbackSheetOverlay(
             shape = RoundedCornerShape(topStart = 21.dp, topEnd = 21.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .onGloballyPositioned { sheetH = it.size.height.coerceAtLeast(1) }
+                .onSizeChanged { sheetH = it.height.coerceAtLeast(1) }
                 .graphicsLayer {
                     translationY = ((1f - prog.value) + backFrac * 0.45f) * size.height + dragY
                 }

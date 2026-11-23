@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.BlendMode
@@ -42,7 +43,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
+import io.github.lijiahua1024.dsnative.theme.dsPainterResource as painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -57,7 +58,11 @@ import io.github.lijiahua1024.dsnative.data.SettingsStore
 import io.github.lijiahua1024.dsnative.theme.DsTheme
 import io.github.lijiahua1024.dsnative.theme.Strings
 import io.github.lijiahua1024.dsnative.theme.softShadow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+
+private val InputCardShape = RoundedCornerShape(24.dp)
 
 internal fun showDisabledSend(
     focused: Boolean,
@@ -76,12 +81,14 @@ internal fun showDisabledSend(
 fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     val c = DsTheme.colors
     val activeId by chatStore.activeId.collectAsState()
-    val streaming by chatStore.streaming.collectAsState()
-    val drafts by chatStore.drafts.collectAsState()
-    val storeDraft = drafts[activeId] ?: ""
-    var text by remember(activeId) { mutableStateOf(storeDraft) }
-    LaunchedEffect(activeId, storeDraft) {
-        if (text != storeDraft) text = storeDraft
+    var text by remember(activeId) { mutableStateOf(chatStore.draft(activeId)) }
+    LaunchedEffect(chatStore, activeId) {
+        chatStore.drafts
+            .map { it[activeId] ?: "" }
+            .distinctUntilChanged()
+            .collect { storeDraft ->
+                if (text != storeDraft) text = storeDraft
+            }
     }
     var focused by remember { mutableStateOf(false) }
     var focusAt by remember { mutableStateOf(0L) }
@@ -91,9 +98,12 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     val holdScope = androidx.compose.runtime.rememberCoroutineScope()
     val thinking by settings.thinking.collectAsState()
     val search by settings.search.collectAsState()
-    val isStreaming = activeId != null && streaming.contains(activeId)
-    val draftAtts by chatStore.draftAttachments.collectAsState()
-    val atts = draftAtts[activeId] ?: emptyList()
+    val isStreaming by remember(chatStore, activeId) {
+        chatStore.streaming.map { activeId != null && it.contains(activeId) }.distinctUntilChanged()
+    }.collectAsState(initial = chatStore.isStreamingSnapshot(activeId))
+    val atts by remember(chatStore, activeId) {
+        chatStore.draftAttachments.map { it[activeId] ?: emptyList() }.distinctUntilChanged()
+    }.collectAsState(initial = chatStore.draftAttachments(activeId))
     // ref android: send 按钮只在 draftReady（文本非空或附件就绪）时出现；
     // 本地附件即时就绪
     val canSend = (text.isNotBlank() || atts.isNotEmpty()) && !isStreaming
@@ -234,13 +244,16 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
     }
 
     val density = LocalDensity.current
-    val keyboardOpen = WindowInsets.ime.getBottom(density) > 0
+    val imeInsets = WindowInsets.ime
+    val keyboardOpen by remember(density, imeInsets) {
+        derivedStateOf { imeInsets.getBottom(density) > 0 }
+    }
     var previousKeyboardOpen by remember { mutableStateOf(false) }
     LaunchedEffect(keyboardOpen) {
         if (previousKeyboardOpen && !keyboardOpen && focused) focusManager.clearFocus()
         previousKeyboardOpen = keyboardOpen
     }
-    val cardShape = RoundedCornerShape(24.dp)
+    val cardShape = InputCardShape
     val cardBorder = if (c.dark) Color(0xFF333333) else Color.Black.copy(alpha = 0.055f)
     Column(
         Modifier.fillMaxWidth()
@@ -391,6 +404,7 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
         }
         }
         val togglesScroll = rememberScrollState()
+        val needToggleFade by remember { derivedStateOf { togglesScroll.maxValue > 0 } }
         Row(
             Modifier.fillMaxWidth()
                 .padding(start = 12.dp, end = 10.dp, top = if (voiceMode) 10.dp else 0.dp, bottom = 11.dp),
@@ -398,38 +412,43 @@ fun ChatInput(settings: SettingsStore, chatStore: ChatStore) {
         ) {
             Row(
                 Modifier.weight(1f)
-                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                    .drawWithContent {
-                        drawContent()
-                        val overflow = togglesScroll.maxValue > 0
-                        val fadeLeft = overflow && togglesScroll.value > 1
-                        val fadeRight = overflow && togglesScroll.value < togglesScroll.maxValue - 1
-                        if (fadeLeft) {
-                            val fadeW = 16.dp.toPx()
-                            drawRect(
-                                brush = Brush.horizontalGradient(
+                    .then(
+                        if (!needToggleFade) Modifier else Modifier
+                            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                            .drawWithCache {
+                                val fadeLeftW = 16.dp.toPx()
+                                val fadeRightW = 20.dp.toPx()
+                                val leftBrush = Brush.horizontalGradient(
                                     listOf(Color.Transparent, Color.Black),
                                     startX = 0f,
-                                    endX = fadeW,
-                                ),
-                                size = Size(fadeW, size.height),
-                                blendMode = BlendMode.DstIn,
-                            )
-                        }
-                        if (fadeRight) {
-                            val fadeW = 20.dp.toPx()
-                            drawRect(
-                                brush = Brush.horizontalGradient(
+                                    endX = fadeLeftW,
+                                )
+                                val rightBrush = Brush.horizontalGradient(
                                     listOf(Color.Black, Color.Transparent),
-                                    startX = size.width - fadeW,
+                                    startX = size.width - fadeRightW,
                                     endX = size.width,
-                                ),
-                                topLeft = Offset(size.width - fadeW, 0f),
-                                size = Size(fadeW, size.height),
-                                blendMode = BlendMode.DstIn,
-                            )
-                        }
-                    }
+                                )
+                                onDrawWithContent {
+                                    drawContent()
+                                    val overflow = togglesScroll.maxValue > 0
+                                    if (overflow && togglesScroll.value > 1) {
+                                        drawRect(
+                                            brush = leftBrush,
+                                            size = Size(fadeLeftW, size.height),
+                                            blendMode = BlendMode.DstIn,
+                                        )
+                                    }
+                                    if (overflow && togglesScroll.value < togglesScroll.maxValue - 1) {
+                                        drawRect(
+                                            brush = rightBrush,
+                                            topLeft = Offset(size.width - fadeRightW, 0f),
+                                            size = Size(fadeRightW, size.height),
+                                            blendMode = BlendMode.DstIn,
+                                        )
+                                    }
+                                }
+                            }
+                    )
                     .horizontalScroll(togglesScroll),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),

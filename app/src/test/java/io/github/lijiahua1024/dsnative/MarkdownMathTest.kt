@@ -9,6 +9,7 @@ import io.github.lijiahua1024.dsnative.ui.session.normalizeLatexColorArg
 import io.github.lijiahua1024.dsnative.ui.session.parseLatexInlineAst
 import io.github.lijiahua1024.dsnative.ui.session.preprocessMarkdownMath
 import io.github.lijiahua1024.dsnative.ui.session.sanitizeLatexDialect
+import io.github.lijiahua1024.dsnative.ui.session.splitMarkdownChunks
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -103,5 +104,25 @@ class MarkdownMathTest {
         val bbScript = bbAst as LatexNode.Script
         assertEquals(MathTextStyle.BLACKBOARD, (bbScript.base as LatexNode.Text).style)
         assertEquals("ℝ", (bbScript.base as LatexNode.Text).text)
+    }
+
+    @Test
+    fun splitMarkdownChunksNeverBreaksFencesOrMathAndReusesPrefixChunks() {
+        val prefixPara = "A".repeat(320) + "\n\n"
+        val fenceBlock = "```kotlin\nval x = 1\n\nval y = 2\n```\n\n"
+        val mathBlock = "\$\$\na + b\n\n= c\n\$\$\n\n"
+        val tail1 = "Tail partial text being streamed."
+        val tail2 = "Tail partial text being streamed. More tokens appended."
+        val doc1 = prefixPara + fenceBlock + mathBlock + tail1
+        val doc2 = prefixPara + fenceBlock + mathBlock + tail2
+
+        val chunks1 = splitMarkdownChunks(doc1)
+        val chunks2 = splitMarkdownChunks(doc2)
+        assertEquals(doc1, chunks1.joinToString(""))
+        assertEquals(doc2, chunks2.joinToString(""))
+        assertTrue(chunks1.size >= 2)
+        assertEquals(chunks1.dropLast(1), chunks2.dropLast(1))
+        assertFalse(chunks1.any { it.contains("val x = 1") && !it.contains("```kotlin") })
+        assertFalse(chunks1.any { it.contains("a + b") && !it.contains("= c") })
     }
 }
