@@ -16,6 +16,8 @@ class UpdateCheckerTest {
         assertTrue((UpdateChecker.compareSemanticVersions("0.5.0", "0.4.0") ?: 0) > 0)
         assertTrue((UpdateChecker.compareSemanticVersions("v1.0.0", "0.9.9") ?: 0) > 0)
         assertEquals(0, UpdateChecker.compareSemanticVersions("v0.4.0", "0.4.0"))
+        assertEquals(0, UpdateChecker.compareSemanticVersions("v0.1.0", "0.1.0"))
+        assertTrue((UpdateChecker.compareSemanticVersions("0.2.0", "0.1.0") ?: 0) > 0)
         assertTrue((UpdateChecker.compareSemanticVersions("0.3.9", "0.4.0") ?: 0) < 0)
         assertNull(UpdateChecker.compareSemanticVersions("invalid", "0.4.0"))
     }

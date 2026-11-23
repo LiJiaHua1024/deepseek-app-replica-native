@@ -27,6 +27,8 @@ render.experimental.xml
 # Keystore files
 *.jks
 *.keystore
+keystore.properties
+keystore/
 
 # Google Services (e.g. APIs or Firebase)
 google-services.json
@@ -34,3 +36,4 @@ google-services.json
 # Android Profiling
 *.hprof
 tools/__pycache__/
+tools/device/__pycache__/

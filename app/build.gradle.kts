@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     kotlin("android")
@@ -14,9 +16,40 @@ android {
         minSdk = 23
         targetSdk = 35
         versionCode = 1
-        versionName = "1.0"
+        versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    val keystorePropsFile = rootProject.file("keystore.properties")
+    val keystoreProps = Properties()
+    if (keystorePropsFile.isFile) {
+        keystorePropsFile.inputStream().use { keystoreProps.load(it) }
+    }
+    val releaseStorePath = keystoreProps.getProperty("storeFile")
+        ?: System.getenv("ANDROID_KEYSTORE_PATH")
+    val releaseStorePassword = keystoreProps.getProperty("storePassword")
+        ?: System.getenv("ANDROID_KEYSTORE_PASSWORD")
+    val releaseKeyAlias = keystoreProps.getProperty("keyAlias")
+        ?: System.getenv("ANDROID_KEY_ALIAS")
+    val releaseKeyPassword = keystoreProps.getProperty("keyPassword")
+        ?: System.getenv("ANDROID_KEY_PASSWORD")
+    val releaseStoreFile = releaseStorePath?.takeIf { it.isNotBlank() }?.let { rootProject.file(it) }
+    val hasReleaseSigning = releaseStoreFile != null &&
+        releaseStoreFile.isFile &&
+        !releaseStorePassword.isNullOrBlank() &&
+        !releaseKeyAlias.isNullOrBlank() &&
+        !releaseKeyPassword.isNullOrBlank()
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = releaseStoreFile
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
     }
 
     buildTypes {
@@ -28,6 +61,9 @@ android {
         }
         release {
             buildConfigField("String", "API_ORIGIN", "\"https://api.deepseek.com\"")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
