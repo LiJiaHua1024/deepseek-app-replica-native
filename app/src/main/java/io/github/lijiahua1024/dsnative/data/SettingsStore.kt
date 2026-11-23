@@ -1,6 +1,7 @@
 package io.github.lijiahua1024.dsnative.data
 
 import android.content.Context
+import androidx.compose.runtime.Immutable
 import androidx.core.content.edit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,6 +13,7 @@ enum class LocalePreference { SYSTEM, ZH_CN, EN_US }
 private const val MAX_USERNAME_LENGTH = 40
 private val AVATAR_DATA_URL_RE = Regex("^data:image/(webp|png|jpeg);base64,[A-Za-z0-9+/=\\s]+$")
 
+@Immutable
 data class AccountProfile(
     val username: String = "",
     val avatarDataUrl: String? = null,
@@ -101,10 +103,12 @@ class SettingsStore(context: Context) {
     }
 
     private fun readFontSize(): Int? {
-        return when (val value = prefs.all["font-size"]) {
-            is Int -> value.coerceIn(0, 6)
-            is String -> if (value == "system") null else value.toIntOrNull()?.coerceIn(0, 6)
-            else -> null
+        if (!prefs.contains("font-size")) return null
+        return try {
+            val s = prefs.getString("font-size", null) ?: return null
+            if (s == "system") null else s.toIntOrNull()?.coerceIn(0, 6)
+        } catch (_: ClassCastException) {
+            prefs.getInt("font-size", -1).takeIf { it >= 0 }?.coerceIn(0, 6)
         }
     }
 

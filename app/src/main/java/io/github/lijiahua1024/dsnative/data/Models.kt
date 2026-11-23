@@ -1,9 +1,11 @@
 package io.github.lijiahua1024.dsnative.data
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 
 /** 草稿附件（尚未发送），localPath 指向缓存目录里的拷贝。 */
+@Immutable
 data class DraftAttachment(
     val id: String,
     val name: String,
@@ -17,6 +19,7 @@ data class DraftAttachment(
             localPath = localPath)
 }
 
+@Immutable
 @Serializable
 data class FileAttachment(
     val id: String,
@@ -32,6 +35,7 @@ data class FileAttachment(
     val serverImageConverted: Boolean? = null,
 )
 
+@Immutable
 @Serializable
 data class Citation(
     val url: String,
@@ -39,8 +43,10 @@ data class Citation(
     val cited_text: String = "",
 )
 
+@Immutable
 @Serializable
 sealed class ReplyBlock {
+    @Immutable
     @Serializable
     data class Thinking(
         val thinking: String,
@@ -50,6 +56,7 @@ sealed class ReplyBlock {
         val elapsedSeconds: Long? = null,
     ) : ReplyBlock()
 
+    @Immutable
     @Serializable
     data class Text(
         val text: String,
@@ -58,6 +65,7 @@ sealed class ReplyBlock {
     ) : ReplyBlock()
 
     /** 服务端工具调用/结果块按协议原样保存 */
+    @Immutable
     @Serializable
     data class Tool(val payload: JsonObject) : ReplyBlock()
 }
@@ -65,6 +73,7 @@ sealed class ReplyBlock {
 enum class ReplyStatus { PENDING, STREAMING, DONE, STOPPED, ERROR }
 
 /** 渲染用的搜索来源条目（对应参照物 Source；index 为全回复注册顺序） */
+@Immutable
 data class Source(
     val index: Int,
     val url: String,
@@ -75,6 +84,7 @@ data class Source(
     val siteIcon: String? = null,
 )
 
+@Immutable
 @Serializable
 data class ReplyError(
     val kind: String,
@@ -83,6 +93,7 @@ data class ReplyError(
     val retryable: Boolean? = null,
 )
 
+@Immutable
 @Serializable
 sealed class Message {
     abstract val id: String
@@ -90,6 +101,7 @@ sealed class Message {
     abstract val parentId: String?
     abstract val selectedChildId: String?
 
+    @Immutable
     @Serializable
     data class User(
         override val id: String,
@@ -100,6 +112,7 @@ sealed class Message {
         override val selectedChildId: String? = null,
     ) : Message()
 
+    @Immutable
     @Serializable
     data class Assistant(
         override val id: String,
@@ -119,6 +132,7 @@ sealed class Message {
     ) : Message()
 }
 
+@Immutable
 @Serializable
 data class ContextCheckpoint(
     val replyId: String,
@@ -126,6 +140,7 @@ data class ContextCheckpoint(
     val offset: Int? = null,
 )
 
+@Immutable
 @Serializable
 data class Session(
     val id: String,
@@ -138,6 +153,7 @@ data class Session(
     val contextCheckpoints: List<ContextCheckpoint> = emptyList(),
 )
 
+@Immutable
 @Serializable
 data class SessionSummary(
     val id: String,

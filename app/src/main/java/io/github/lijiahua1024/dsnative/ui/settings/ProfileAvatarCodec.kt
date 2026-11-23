@@ -7,6 +7,7 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
 import android.util.Base64
+import android.util.LruCache
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.shape.CircleShape
@@ -89,8 +90,13 @@ suspend fun encodeProfileAvatarFromUri(context: Context, uri: Uri): String? =
         }
     }
 
+private val avatarBitmapCache = object : LruCache<String, ImageBitmap>(8) {}
+
 internal fun decodeAvatarBitmap(dataUrl: String?): ImageBitmap? {
     if (dataUrl.isNullOrBlank()) return null
+    synchronized(avatarBitmapCache) {
+        avatarBitmapCache.get(dataUrl)?.let { return it }
+    }
     val marker = ";base64,"
     val idx = dataUrl.indexOf(marker)
     if (!dataUrl.startsWith("data:image/") || idx < 0) return null
@@ -98,7 +104,11 @@ internal fun decodeAvatarBitmap(dataUrl: String?): ImageBitmap? {
         Base64.decode(dataUrl.substring(idx + marker.length), Base64.DEFAULT)
     }.getOrNull() ?: return null
     val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return null
-    return bmp.asImageBitmap()
+    return bmp.asImageBitmap().also { img ->
+        synchronized(avatarBitmapCache) {
+            avatarBitmapCache.put(dataUrl, img)
+        }
+    }
 }
 
 @Composable

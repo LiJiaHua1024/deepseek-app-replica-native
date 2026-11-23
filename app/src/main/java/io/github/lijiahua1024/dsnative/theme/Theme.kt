@@ -1,14 +1,44 @@
 package io.github.lijiahua1024.dsnative.theme
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import java.util.concurrent.ConcurrentHashMap
+
+private val preloadedVectors = ConcurrentHashMap<Int, ImageVector>()
+
+/** Decodes XML vector icons on a background thread so UI frames never block on XML parsing. */
+fun preloadVectorIcons(context: android.content.Context, vararg ids: Int) {
+    val res = context.resources
+    val theme = context.theme
+    for (id in ids) {
+        if (!preloadedVectors.containsKey(id)) {
+            runCatching { ImageVector.vectorResource(theme, res, id) }
+                .getOrNull()
+                ?.let { preloadedVectors.putIfAbsent(id, it) }
+        }
+    }
+}
+
+@Composable
+fun dsPainterResource(resId: Int): Painter {
+    val cached = preloadedVectors[resId]
+    if (cached != null) return rememberVectorPainter(cached)
+    return androidx.compose.ui.res.painterResource(resId)
+}
 
 /** DeepSeek design tokens, mirrored from src/app/theme.css of the WebView reference. */
+@Immutable
 data class DsColors(
     val dark: Boolean,
     // surfaces
@@ -234,20 +264,23 @@ fun Modifier.softShadow(
     offsetY: Dp = 0.dp,
     offsetX: Dp = 0.dp,
     color: Color = Color.Black.copy(alpha = 0.08f),
-): Modifier = if (color.alpha <= 0f) this else this.drawBehind {
-    drawIntoCanvas { canvas ->
-        val paint = androidx.compose.ui.graphics.Paint()
-        val fw = paint.asFrameworkPaint()
+): Modifier = if (color.alpha <= 0f) this else this.drawWithCache {
+    val paint = androidx.compose.ui.graphics.Paint().also { p ->
+        val fw = p.asFrameworkPaint()
         fw.isAntiAlias = true
         fw.color = color.toArgb()
         fw.maskFilter = android.graphics.BlurMaskFilter(
             blurRadius.toPx().coerceAtLeast(1f),
             android.graphics.BlurMaskFilter.Blur.NORMAL,
         )
-        val dx = offsetX.toPx()
-        val dy = offsetY.toPx()
-        val r = cornerRadius.toPx()
-        canvas.drawRoundRect(dx, dy, size.width + dx, size.height + dy, r, r, paint)
+    }
+    val dx = offsetX.toPx()
+    val dy = offsetY.toPx()
+    val r = cornerRadius.toPx()
+    onDrawBehind {
+        drawIntoCanvas { canvas ->
+            canvas.drawRoundRect(dx, dy, size.width + dx, size.height + dy, r, r, paint)
+        }
     }
 }
 

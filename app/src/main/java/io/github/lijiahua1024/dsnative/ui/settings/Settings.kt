@@ -27,12 +27,12 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.draw.rotate
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
+import io.github.lijiahua1024.dsnative.theme.dsPainterResource as painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -140,13 +140,24 @@ fun ApiKeyScreen(settings: SettingsStore) {
     }
 }
 
+private fun settingsPageTitle(page: String): String = when (page) {
+    "root" -> Strings.get("settings")
+    "account" -> Strings.get("settingsAccountPage")
+    "data" -> Strings.get("settingsDataPage")
+    "font" -> Strings.get("settingsFontPage")
+    "personalization" -> Strings.get("settingsPersonalizationPage")
+    "agreements" -> Strings.get("settingsAgreementsPage")
+    "export" -> Strings.get("exportAllLabel")
+    else -> ""
+}
+
 @Composable
 fun AndroidSettings(
     settings: SettingsStore,
     chatStore: ChatStore,
-    bgAlpha: Float = 1f,
-    contentAlpha: Float = 1f,
-    contentShiftDp: Float = 0f,
+    bgAlpha: () -> Float = { 1f },
+    contentAlpha: () -> Float = { 1f },
+    contentShiftDp: () -> Float = { 0f },
     onRootBackProgress: (Float) -> Unit = {},
     onRootBackCommit: () -> Unit = {},
     onRootBackCancel: () -> Unit = {},
@@ -167,8 +178,8 @@ fun AndroidSettings(
     val subCtrl = remember {
         io.github.lijiahua1024.dsnative.ui.TwoPhaseController("root", subScope)
     }
-    var modalBlurFraction by remember { mutableStateOf(0f) }
-    var modalTargetBlurDp by remember { mutableStateOf(0f) }
+    var modalBlurFraction by remember { mutableFloatStateOf(0f) }
+    var modalTargetBlurDp by remember { mutableFloatStateOf(0f) }
 
     androidx.activity.compose.PredictiveBackHandler(
         enabled = popup == null && !confirmLogout && updateDialog == null,
@@ -200,16 +211,6 @@ fun AndroidSettings(
     val muted = if (c.dark) Color(0xFF8E9094) else Color(0xFF8C9097)
     val btnBg = if (c.dark) Color(0xFF3C3C3D) else Color(0xFFEDEDED)
 
-    val titles = mapOf(
-        "root" to Strings.get("settings"),
-        "account" to Strings.get("settingsAccountPage"),
-        "data" to Strings.get("settingsDataPage"),
-        "font" to Strings.get("settingsFontPage"),
-        "personalization" to Strings.get("settingsPersonalizationPage"),
-        "agreements" to Strings.get("settingsAgreementsPage"),
-        "export" to Strings.get("exportAllLabel"),
-    )
-
     val navigateSub: (String) -> Unit = { target ->
         subCtrl.navigate(target, isForward = true)
     }
@@ -218,8 +219,6 @@ fun AndroidSettings(
         if (pageNow == "root") onBack()
         else subCtrl.navigate(if (pageNow == "export") "data" else "root", isForward = false)
     }
-
-    val blurDp = (modalTargetBlurDp * modalBlurFraction).coerceAtLeast(0f).dp
 
     Box(
         Modifier.fillMaxSize()
@@ -231,20 +230,25 @@ fun AndroidSettings(
                     }
                 }
             }
-            .background(bg.copy(alpha = bgAlpha.coerceIn(0f, 1f)))
-            .backdropBlur(blurDp),
+            .drawBehind {
+                val a = bgAlpha().coerceIn(0f, 1f)
+                if (a > 0f) drawRect(bg.copy(alpha = a))
+            }
+            .backdropBlur { (modalTargetBlurDp * modalBlurFraction).coerceAtLeast(0f).dp },
     ) {
         Column(
             Modifier.fillMaxSize()
                 .statusBarsPadding()
                 .graphicsLayer {
-                    alpha = contentAlpha
-                    translationX = contentShiftDp.dp.toPx()
+                    alpha = contentAlpha()
+                    translationX = contentShiftDp().dp.toPx()
                 },
         ) {
             val outPage = subCtrl.outgoing
             val curPage = subCtrl.current
-            val layers = if (outPage != null && outPage != curPage) listOf(outPage, curPage) else listOf(curPage)
+            val layers = remember(outPage, curPage) {
+                if (outPage != null && outPage != curPage) listOf(outPage, curPage) else listOf(curPage)
+            }
 
             Box(Modifier.fillMaxWidth().height(44.dp)) {
                 Box(
@@ -269,18 +273,16 @@ fun AndroidSettings(
                     }
                 }
                 layers.forEach { layerPage ->
-                    val la = subCtrl.layerAlpha(layerPage)
-                    if (la > 0.001f) {
-                        val ltx = subCtrl.layerShiftDp(layerPage)
+                    key(layerPage) {
                         Text(
-                            titles[layerPage] ?: "",
+                            settingsPageTitle(layerPage),
                             fontSize = 17.sp,
                             lineHeight = 24.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = c.labelPrimary,
                             modifier = Modifier.align(Alignment.Center).graphicsLayer {
-                                alpha = la
-                                translationX = ltx.dp.toPx()
+                                alpha = subCtrl.layerAlpha(layerPage)
+                                translationX = subCtrl.layerShiftDp(layerPage).dp.toPx()
                             },
                         )
                     }
@@ -289,13 +291,11 @@ fun AndroidSettings(
 
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 layers.forEach { layerPage ->
-                    val la = subCtrl.layerAlpha(layerPage)
-                    if (la > 0.001f) {
-                        val txDp = subCtrl.layerShiftDp(layerPage)
+                    key(layerPage) {
                         Column(
                             Modifier.fillMaxSize().graphicsLayer {
-                                alpha = la
-                                translationX = txDp.dp.toPx()
+                                alpha = subCtrl.layerAlpha(layerPage)
+                                translationX = subCtrl.layerShiftDp(layerPage).dp.toPx()
                             },
                         ) {
                             Column(
@@ -1177,7 +1177,7 @@ private fun FontPanel(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: C
             var stdWidthPx by remember { mutableStateOf(0) }
             Text(Strings.get("fontStandard"), fontSize = 12.sp, color = c.labelPrimary, lineHeight = 19.sp,
                 modifier = Modifier.align(Alignment.BottomStart)
-                    .onGloballyPositioned { stdWidthPx = it.size.width }
+                    .onSizeChanged { stdWidthPx = it.width }
                     .offset {
                         val cx = with(density) { stdOffset.roundToPx() }
                         androidx.compose.ui.unit.IntOffset(cx - stdWidthPx / 2, 0)
@@ -1205,6 +1205,14 @@ private fun FontPanel(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: C
                     }
                 },
         ) {
+            val shadowBlurPx = with(LocalDensity.current) { 5.dp.toPx() }
+            val thumbShadowPaint = remember(shadowBlurPx) {
+                android.graphics.Paint().apply {
+                    isAntiAlias = true
+                    color = android.graphics.Color.argb(46, 0, 0, 0)
+                    maskFilter = android.graphics.BlurMaskFilter(shadowBlurPx, android.graphics.BlurMaskFilter.Blur.NORMAL)
+                }
+            }
             androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
                 val r = thumbR.toPx()
                 val usable = (size.width - 2 * r).coerceAtLeast(1f)
@@ -1219,12 +1227,7 @@ private fun FontPanel(c: io.github.lijiahua1024.dsnative.theme.DsColors, card: C
                 val tx = r + usable * (sliderValue / 6f)
                 // Soft blurred elevation shadow without hard gray border ring
                 drawIntoCanvas { canvas ->
-                    val p = android.graphics.Paint().apply {
-                        isAntiAlias = true
-                        color = android.graphics.Color.argb(46, 0, 0, 0)
-                        maskFilter = android.graphics.BlurMaskFilter(5.dp.toPx(), android.graphics.BlurMaskFilter.Blur.NORMAL)
-                    }
-                    canvas.nativeCanvas.drawCircle(tx, cy + 1.5.dp.toPx(), r, p)
+                    canvas.nativeCanvas.drawCircle(tx, cy + 1.5.dp.toPx(), r, thumbShadowPaint)
                 }
                 drawCircle(Color.White, radius = r,
                     center = androidx.compose.ui.geometry.Offset(tx, cy))
@@ -1241,7 +1244,7 @@ private fun RefSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
         .background(if (frac >= 0.5f) Color(0xFF22C55E) else Color(0xFFE4E4E4))
         .clickable { onCheckedChange(!checked) }) {
         Box(Modifier.padding(start = 4.dp, top = 4.dp)
-            .offset(x = (20f * frac).dp)
+            .graphicsLayer { translationX = (20f * frac).dp.toPx() }
             .size(24.dp).clip(RoundedCornerShape(50)).background(Color.White))
     }
 }
@@ -1441,7 +1444,7 @@ private fun VoiceSheet(
             indication = null) { dismissAnimated() },
         contentAlignment = Alignment.BottomCenter) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(0.814f)
-            .onGloballyPositioned { sheetH = it.size.height.coerceAtLeast(1) }
+            .onSizeChanged { sheetH = it.height.coerceAtLeast(1) }
             .graphicsLayer {
                 translationY = ((1f - sheet.value) + backDragFrac * 0.45f) * size.height + dragY
             }

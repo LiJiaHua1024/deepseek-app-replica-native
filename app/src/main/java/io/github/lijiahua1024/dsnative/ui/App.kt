@@ -47,8 +47,11 @@ import io.github.lijiahua1024.dsnative.data.SettingsStore
 import io.github.lijiahua1024.dsnative.theme.DsTheme
 import io.github.lijiahua1024.dsnative.theme.Strings
 import io.github.lijiahua1024.dsnative.theme.softShadow
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onPlaced
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import io.github.lijiahua1024.dsnative.ui.sider.Sider
 import io.github.lijiahua1024.dsnative.ui.session.SessionView
@@ -58,6 +61,10 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+
+private val DrawerCornerShapes = Array(33) {
+    androidx.compose.foundation.shape.RoundedCornerShape(it.dp)
+}
 
 // From useAndroidDrawerGesture.ts / Sider.module.css of the WebView reference:
 // drawer edge = min(width - 68.4px, 380px); gain 1.031; touchSlop 8px;
@@ -106,13 +113,15 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
             }
             return@CompositionLocalProvider
         }
-        val activeId by chatStore.activeId.collectAsState()
-        val sessionCache by chatStore.sessionCache.collectAsState()
         val newChatRequests by chatStore.newChatRequests.collectAsState()
         var coldStartWelcome by remember { mutableStateOf(true) }
         LaunchedEffect(newChatRequests) { coldStartWelcome = newChatRequests == 0 }
-        val freePan = nav == NavState.Chat &&
-            (sessionCache[activeId]?.let { io.github.lijiahua1024.dsnative.data.visibleMessages(it).isNotEmpty() } != true)
+        val isCurrentSessionEmpty by remember(chatStore) {
+            combine(chatStore.activeId, chatStore.sessionCache) { id, cache ->
+                cache[id]?.let { io.github.lijiahua1024.dsnative.data.visibleMessages(it).isNotEmpty() } != true
+            }.distinctUntilChanged()
+        }.collectAsState(initial = true)
+        val freePan = nav == NavState.Chat && isCurrentSessionEmpty
         Box(Modifier.fillMaxSize()) {
             val settingsScope = rememberCoroutineScope()
             val settingsCtrl = remember {
@@ -128,26 +137,19 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
                 }
             }
             val settingsMounted = settingsCtrl.current == "settings" || settingsCtrl.outgoing == "settings"
-            val chatAlpha = settingsCtrl.layerAlpha("chat")
-            val chatShiftDp = settingsCtrl.layerShiftDp("chat")
-            val settingsContentAlpha = settingsCtrl.layerAlpha("settings")
-            val settingsContentShiftDp = settingsCtrl.layerShiftDp("settings")
-            val settingsBgAlpha = run {
-                val u = settingsCtrl.effectiveProgress
-                when {
-                    settingsCtrl.outgoing == null -> if (settingsCtrl.current == "settings") 1f else 0f
-                    settingsCtrl.forward -> TwoPhaseSpec.FadeOutEase.transform((u / TwoPhaseSpec.HANDOFF).coerceIn(0f, 1f))
-                    u <= TwoPhaseSpec.HANDOFF -> 1f
-                    else -> {
-                        val p2 = ((u - TwoPhaseSpec.HANDOFF) / (1f - TwoPhaseSpec.HANDOFF)).coerceIn(0f, 1f)
-                        1f - TwoPhaseSpec.FadeInEase.transform(p2)
-                    }
-                }
-            }
+            val collapseDrawerBehindSettings = settingsCtrl.current == "settings" && settingsCtrl.outgoing == null
+            val chatAlphaProvider = remember(settingsCtrl) { { settingsCtrl.layerAlpha("chat") } }
+            val chatShiftDpProvider = remember(settingsCtrl) { { settingsCtrl.layerShiftDp("chat") } }
+            val settingsBgAlphaProvider = remember(settingsCtrl) { { settingsCtrl.overlayBgAlpha("settings") } }
+            val settingsAlphaProvider = remember(settingsCtrl) { { settingsCtrl.layerAlpha("settings") } }
+            val settingsShiftDpProvider = remember(settingsCtrl) { { settingsCtrl.layerShiftDp("settings") } }
             BoxWithConstraints(Modifier.fillMaxSize().graphicsLayer {
                 if (settingsMounted) {
-                    alpha = chatAlpha
-                    translationX = with(contentDensity) { chatShiftDp.dp.toPx() }
+                    alpha = chatAlphaProvider()
+                    translationX = with(contentDensity) { chatShiftDpProvider().dp.toPx() }
+                } else {
+                    alpha = 1f
+                    translationX = 0f
                 }
             }) {
                 val wideLayout = maxWidth >= 768.dp
@@ -196,7 +198,7 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
                         dark = dark,
                         freePan = freePan,
                         closeImmediately = false,
-                        collapseBehindOverlay = settingsMounted && settingsBgAlpha >= 0.99f,
+                        collapseBehindOverlay = collapseDrawerBehindSettings,
                         searchExpanded = drawerSearchExpanded,
                         onCollapseSearch = { drawerSearchExpanded = false },
                         onNavigate = { nav = it },
@@ -229,9 +231,9 @@ fun App(settings: SettingsStore, chatStore: ChatStore) {
                 AndroidSettings(
                     settings = settings,
                     chatStore = chatStore,
-                    bgAlpha = settingsBgAlpha,
-                    contentAlpha = settingsContentAlpha,
-                    contentShiftDp = settingsContentShiftDp,
+                    bgAlpha = settingsBgAlphaProvider,
+                    contentAlpha = settingsAlphaProvider,
+                    contentShiftDp = settingsShiftDpProvider,
                     onRootBackProgress = { settingsCtrl.beginBackSeek("chat", it) },
                     onRootBackCommit = { settingsCtrl.commitBackSeek("chat") },
                     onRootBackCancel = { settingsCtrl.cancelBackSeek() },
@@ -263,15 +265,27 @@ fun DrawerFrame(
         val widthPx = constraints.maxWidth.toFloat()
         val drawerWidthPx = with(density) { min(widthPx * 0.80f, 360.dp.toPx()) }
         val edgePx = with(density) { min(drawerWidthPx + 9.dp.toPx(), widthPx - 63.dp.toPx()) }
-        var progress by remember { mutableStateOf(0f) }
-        var settling by remember { mutableStateOf(false) }
+        var progress by remember { mutableFloatStateOf(0f) }
+        val drawerVisible by remember { derivedStateOf { progress > 0f } }
+        val drawerPastHalf by remember { derivedStateOf { progress > 0.5f } }
+        val drawerAtRestOpen by remember { derivedStateOf { progress >= 0.999f } }
+        var siderWarmed by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) {
+            withFrameNanos { }
+            kotlinx.coroutines.yield()
+            siderWarmed = true
+        }
         val searchFrac by androidx.compose.animation.core.animateFloatAsState(
-            targetValue = if (searchExpanded && progress > 0.5f) 1f else 0f,
+            targetValue = if (searchExpanded && drawerPastHalf) 1f else 0f,
             animationSpec = androidx.compose.animation.core.tween(220, easing = androidx.compose.animation.core.FastOutSlowInEasing),
             label = "drawerSearchExpand",
         )
-        LaunchedEffect(progress) {
-            if (progress <= 0.001f && searchExpanded) onCollapseSearch()
+        val curSearchExpanded by rememberUpdatedState(searchExpanded)
+        val curOnCollapseSearch by rememberUpdatedState(onCollapseSearch)
+        LaunchedEffect(Unit) {
+            snapshotFlow { progress <= 0.001f && curSearchExpanded }
+                .distinctUntilChanged()
+                .collect { if (it) curOnCollapseSearch() }
         }
         // Official drawer settle timing ~160ms ease-out.
         val settleScope = rememberCoroutineScope()
@@ -300,7 +314,7 @@ fun DrawerFrame(
 
         // Back gesture closes an open drawer only while on Chat nav; latch active state so first move doesn't self-cancel.
         var drawerBackActive by remember { mutableStateOf(false) }
-        androidx.activity.compose.PredictiveBackHandler(enabled = nav == NavState.Chat && !searchExpanded && (progress >= 0.999f || drawerBackActive)) { flow ->
+        androidx.activity.compose.PredictiveBackHandler(enabled = nav == NavState.Chat && !searchExpanded && (drawerAtRestOpen || drawerBackActive)) { flow ->
             drawerBackActive = true
             try {
                 flow.collect { ev -> progress = (1f - ev.progress).coerceIn(0f, 1f) }
@@ -313,7 +327,7 @@ fun DrawerFrame(
             }
         }
 
-        LaunchedEffect(progress) { /* progress is the single source of truth */ }
+        val curFreePan by rememberUpdatedState(freePan)
 
         class Gesture {
             var downX = 0f; var downY = 0f
@@ -327,7 +341,7 @@ fun DrawerFrame(
             DrawerGestureBus.progressProbe = { progress }
             onDispose { DrawerGestureBus.progressProbe = null }
         }
-        DisposableEffect(edgePx, freePan, nav) {
+        DisposableEffect(edgePx, nav) {
             val slopPx = 8f * density.density
             var g: Gesture? = null
             fun record(g: Gesture, x: Float, t: Long) {
@@ -341,7 +355,7 @@ fun DrawerFrame(
                 val horizontal = abs(dx)
                 if (g.start < 0f) {
                     val dy = abs(y - g.downY)
-                    val canScrollVertically = !freePan || g.startedOpen
+                    val canScrollVertically = !curFreePan || g.startedOpen
                     if (canScrollVertically && dy >= slopPx && dy > horizontal) {
                         g.cancelled = true
                         return
@@ -420,57 +434,81 @@ fun DrawerFrame(
                     Modifier.width(with(density) { activeDrawerWidthPx.toDp() }).fillMaxSize()
                         .graphicsLayer { translationX = -activeDrawerWidthPx * (1f - progress) }
                 ) {
-                    siderContent {
-                        if (closeImmediately) {
-                            settleJob?.cancel()
-                            progress = 0f
-                        } else {
-                            settleTo(0f)
+                    if (siderWarmed || drawerVisible) {
+                        siderContent {
+                            if (closeImmediately) {
+                                settleJob?.cancel()
+                                progress = 0f
+                            } else {
+                                settleTo(0f)
+                            }
                         }
                     }
                 }
             }
-            if (progress > 0f && progress < 1f) {
-                Box(Modifier.fillMaxSize()
-                    .graphicsLayer { alpha = 0.21f * (1f - progress) }.background(Color.Black))
-            }
+            Box(
+                Modifier.fillMaxSize().drawBehind {
+                    val p = progress
+                    if (p > 0f && p < 1f) drawRect(Color.Black, alpha = 0.21f * (1f - p))
+                }
+            )
             // Main content layer (full-height card; inner screens apply statusBarsPadding() so scaled top reaches ~55px under status bar).
-            val radiusDp = (min(1f, progress * 6f) * 32f)
-            val mainOffsetX = (edgePx * (1f - searchFrac) + widthPx * searchFrac) * progress
-            Box(Modifier.fillMaxSize()) {
             Box(
                 Modifier
                     .fillMaxSize()
-                    .offset { IntOffset(mainOffsetX.roundToInt(), 0) }
                     .graphicsLayer {
-                        val s = 1f - 0.051f * progress
-                        scaleX = s; scaleY = s
+                        val p = progress
+                        val mainOffsetX = (edgePx * (1f - searchFrac) + widthPx * searchFrac) * p
+                        val s = 1f - 0.051f * p
+                        translationX = mainOffsetX
+                        scaleX = s
+                        scaleY = s
                         transformOrigin = TransformOrigin(0f, 0.5f)
                     }
-                    .then(
-                        if (progress > 0f && !dark) Modifier.softShadow(
-                            cornerRadius = radiusDp.dp,
-                            blurRadius = 20.dp,
-                            offsetX = (-5).dp,
-                            color = Color.Black.copy(alpha = 0.11f * progress),
-                        ) else Modifier
-                    )
-                    .clip(if (progress > 0f) androidx.compose.foundation.shape.RoundedCornerShape(radiusDp.dp) else RectangleShape)
-                    .background(DsTheme.colors.bgBase)
             ) {
-                mainContent { settleTo(1f) }
-                io.github.lijiahua1024.dsnative.ui.session.DsToastHost()
-                if (progress > 0f) {
-                    // ref: .main::after — washes toward bg (light) or #232324 (blend ~#1D1D1D) card (dark)
-                    Box(Modifier.fillMaxSize()
-                        .graphicsLayer { alpha = 0.7f * progress }
-                        .background(if (dark) Color(0xFF232324) else DsTheme.colors.bgBase)
-                        .semantics { contentDescription = Strings.get("collapseSiderbarButton") }
-                        .pointerInput(Unit) {
-                            detectTapGestures { settleTo(0f) }
-                        })
+                if (!dark && drawerVisible) {
+                    // Pure GPU gradient edge shadow (avoids per-frame full-screen BlurMaskFilter under changing scale).
+                    val edgeShadowBrush = remember {
+                        androidx.compose.ui.graphics.Brush.horizontalGradient(
+                            0.0f to Color.Transparent,
+                            0.35f to Color.Black.copy(alpha = 0.008f),
+                            0.68f to Color.Black.copy(alpha = 0.028f),
+                            1.0f to Color.Black.copy(alpha = 0.068f),
+                        )
+                    }
+                    Box(
+                        Modifier
+                            .width(24.dp)
+                            .fillMaxHeight()
+                            .offset(x = (-24).dp)
+                            .graphicsLayer { alpha = progress }
+                            .background(edgeShadowBrush)
+                    )
                 }
-            }
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            val p = progress
+                            val rInt = if (p > 0f) (((min(1f, p * 6f) * 4f).roundToInt() * 8)).coerceIn(0, 32) else 0
+                            shape = DrawerCornerShapes[rInt]
+                            clip = rInt > 0
+                        }
+                        .background(DsTheme.colors.bgBase)
+                ) {
+                    mainContent { settleTo(1f) }
+                    io.github.lijiahua1024.dsnative.ui.session.DsToastHost()
+                    if (drawerVisible) {
+                        // ref: .main::after — washes toward bg (light) or #232324 (blend ~#1D1D1D) card (dark)
+                        Box(Modifier.fillMaxSize()
+                            .graphicsLayer { alpha = 0.7f * progress }
+                            .background(if (dark) Color(0xFF232324) else DsTheme.colors.bgBase)
+                            .semantics { contentDescription = Strings.get("collapseSiderbarButton") }
+                            .pointerInput(Unit) {
+                                detectTapGestures { settleTo(0f) }
+                            })
+                    }
+                }
             }
         }
     }
@@ -506,15 +544,19 @@ object DrawerGestureBus {
     @Volatile var progressProbe: (() -> Float)? = null
     val trace = java.util.concurrent.CopyOnWriteArrayList<Triple<Long, Float, Float>>()
     private val blockers = java.util.Collections.synchronizedSet(mutableSetOf<Any>())
-    private val excludeZones = java.util.concurrent.ConcurrentHashMap<Any, androidx.compose.ui.geometry.Rect>()
+    private val excludeNodes = java.util.concurrent.ConcurrentHashMap<Any, androidx.compose.ui.layout.LayoutCoordinates>()
 
     fun addBlocker(key: Any) { blockers.add(key) }
     fun removeBlocker(key: Any) { blockers.remove(key) }
     fun isBlocked(): Boolean = blockers.isNotEmpty()
-    fun setExcludeZone(key: Any, rect: androidx.compose.ui.geometry.Rect) { excludeZones[key] = rect }
-    fun removeExcludeZone(key: Any) { excludeZones.remove(key) }
+    fun setExcludeNode(key: Any, coords: androidx.compose.ui.layout.LayoutCoordinates) { excludeNodes[key] = coords }
+    fun removeExcludeZone(key: Any) { excludeNodes.remove(key) }
     fun inExcludedZone(x: Float, y: Float): Boolean =
-        excludeZones.values.any { x in it.left..it.right && y in it.top..it.bottom }
+        excludeNodes.values.any { coords ->
+            if (!coords.isAttached) return@any false
+            val it = coords.boundsInWindow()
+            x in it.left..it.right && y in it.top..it.bottom
+        }
 
     fun dispatch(ev: android.view.MotionEvent) {
         if (ev.actionMasked == android.view.MotionEvent.ACTION_DOWN) {
@@ -539,8 +581,8 @@ fun Modifier.excludeFromDrawerGesture(): Modifier {
     DisposableEffect(Unit) {
         onDispose { DrawerGestureBus.removeExcludeZone(key) }
     }
-    return this.onGloballyPositioned { coords ->
-        if (coords.isAttached) DrawerGestureBus.setExcludeZone(key, coords.boundsInWindow())
+    return this.onPlaced { coords ->
+        if (coords.isAttached) DrawerGestureBus.setExcludeNode(key, coords)
         else DrawerGestureBus.removeExcludeZone(key)
     }
 }

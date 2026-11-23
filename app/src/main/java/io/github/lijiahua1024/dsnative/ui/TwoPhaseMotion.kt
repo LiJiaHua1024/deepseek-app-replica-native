@@ -3,19 +3,23 @@ package io.github.lijiahua1024.dsnative.ui
 import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RenderEffect as ComposeRenderEffect
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -57,19 +61,20 @@ class TwoPhaseController<T>(
         private set
     var interactiveSeek by mutableStateOf(false)
         private set
-    private var seekFraction by mutableStateOf<Float?>(null)
+    private var seekFraction by mutableFloatStateOf(Float.NaN)
 
     val progress = Animatable(1f)
     private var animJob: Job? = null
 
-    val effectiveProgress: Float get() = (seekFraction ?: progress.value).coerceIn(0f, 1f)
+    val effectiveProgress: Float
+        get() = (if (!seekFraction.isNaN()) seekFraction else progress.value).coerceIn(0f, 1f)
     val isTransitioning: Boolean get() = outgoing != null && effectiveProgress < 0.999f
 
     fun navigate(target: T, isForward: Boolean) {
         if (target == current && outgoing == null) return
         animJob?.cancel()
         interactiveSeek = false
-        seekFraction = null
+        seekFraction = Float.NaN
         outgoing = current
         current = target
         forward = isForward
@@ -101,10 +106,10 @@ class TwoPhaseController<T>(
             if (fallbackTarget != null) navigate(fallbackTarget, isForward = false)
             return
         }
-        val start = (seekFraction ?: progress.value).coerceIn(0f, 1f)
+        val start = effectiveProgress
         val ms = ((1f - start) * TwoPhaseSpec.DURATION_MS).toInt().coerceIn(32, TwoPhaseSpec.DURATION_MS)
         interactiveSeek = false
-        seekFraction = null
+        seekFraction = Float.NaN
         animJob?.cancel()
         animJob = scope.launch {
             progress.snapTo(start)
@@ -117,10 +122,10 @@ class TwoPhaseController<T>(
     fun cancelBackSeek() {
         if (!interactiveSeek) return
         val restorePage = outgoing
-        val start = (seekFraction ?: progress.value).coerceIn(0f, 1f)
+        val start = effectiveProgress
         val ms = (start * 180f).toInt().coerceIn(24, 180)
         interactiveSeek = false
-        seekFraction = null
+        seekFraction = Float.NaN
         animJob?.cancel()
         animJob = scope.launch {
             progress.snapTo(start)
@@ -134,11 +139,24 @@ class TwoPhaseController<T>(
     fun reset(value: T) {
         animJob?.cancel()
         interactiveSeek = false
-        seekFraction = null
+        seekFraction = Float.NaN
         outgoing = null
         current = value
         forward = true
         scope.launch { progress.snapTo(1f) }
+    }
+
+    fun overlayBgAlpha(overlayPage: T): Float {
+        val u = effectiveProgress
+        return when {
+            outgoing == null -> if (current == overlayPage) 1f else 0f
+            forward -> TwoPhaseSpec.FadeOutEase.transform((u / TwoPhaseSpec.HANDOFF).coerceIn(0f, 1f))
+            u <= TwoPhaseSpec.HANDOFF -> 1f
+            else -> {
+                val p2 = ((u - TwoPhaseSpec.HANDOFF) / (1f - TwoPhaseSpec.HANDOFF)).coerceIn(0f, 1f)
+                1f - TwoPhaseSpec.FadeInEase.transform(p2)
+            }
+        }
     }
 
     fun layerAlpha(page: T): Float {
@@ -184,14 +202,46 @@ class TwoPhaseController<T>(
     }
 }
 
+private object BlurEffectCache {
+    private val lock = Any()
+    private val cache = object : LinkedHashMap<Int, ComposeRenderEffect>(24, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, ComposeRenderEffect>?): Boolean =
+            size > 24
+    }
+
+    @RequiresApi(Build.VERSION_CODES.S)
+    fun get(radiusPx: Float): ComposeRenderEffect? {
+        val q = (radiusPx * 2f).roundToInt()
+        if (q <= 1) return null
+        synchronized(lock) {
+            cache[q]?.let { return it }
+        }
+        val effect = RenderEffect.createBlurEffect(q / 2f, q / 2f, Shader.TileMode.CLAMP)
+            .asComposeRenderEffect()
+        synchronized(lock) {
+            cache[q] = effect
+        }
+        return effect
+    }
+}
+
 fun Modifier.backdropBlur(radiusDp: Dp): Modifier =
     if (radiusDp > 0.25.dp && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         graphicsLayer {
-            val px = radiusDp.toPx()
-            if (px > 0.5f) {
-                renderEffect = RenderEffect.createBlurEffect(px, px, Shader.TileMode.CLAMP)
-                    .asComposeRenderEffect()
-            }
+            val eff = BlurEffectCache.get(radiusDp.toPx())
+            if (renderEffect !== eff) renderEffect = eff
+        }
+    } else {
+        this
+    }
+
+/** Layer-phase [backdropBlur] avoiding composition invalidations while blur radius animates. */
+fun Modifier.backdropBlur(radiusDp: () -> Dp): Modifier =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        graphicsLayer {
+            val d = radiusDp()
+            val eff = if (d > 0.25.dp) BlurEffectCache.get(d.toPx()) else null
+            if (renderEffect !== eff) renderEffect = eff
         }
     } else {
         this
